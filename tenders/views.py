@@ -1,13 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.db.models import Q, Count
 from django.utils import timezone
 from django.contrib import messages
 from .models import Tender, SavedTender, TenderRecommendation
 from company.models import CompanyProfile
 from .services import TenderRecommendationService
+from .ted_downloader import download_and_save_tenders
+import json
+import threading
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -54,45 +57,152 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 
 class TenderListView(LoginRequiredMixin, ListView):
-    """Vista de listado de licitaciones con búsqueda y filtros"""
+    """Vista de listado de licitaciones con filtros basados en Agent_IA"""
     model = Tender
     template_name = 'tenders/tender_list.html'
     context_object_name = 'tenders'
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = Tender.objects.filter(deadline__gte=timezone.now()).order_by('-publication_date')
+        """
+        Aplica filtros estructurados basados en Agent_IA:
+        - CPV codes
+        - NUTS regions
+        - Contract type
+        - Procedure type
+        - Budget range (min/max)
+        - Publication date range
+        - Deadline date range
+        - Buyer name (partial match)
+        """
+        queryset = Tender.objects.all().order_by('-publication_date')
 
-        # Búsqueda por texto
-        search_query = self.request.GET.get('q')
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(buyer_name__icontains=search_query)
-            )
+        # 1. Filtro por CPV codes (lista separada por comas)
+        cpv_codes = self.request.GET.get('cpv_codes', '').strip()
+        if cpv_codes:
+            # Separar por comas y limpiar
+            cpv_list = [code.strip() for code in cpv_codes.split(',') if code.strip()]
+            if cpv_list:
+                # Usar búsqueda de texto en JSON serializado (compatible con SQLite)
+                q_objects = Q()
+                for cpv in cpv_list:
+                    # Buscar en la representación de texto del JSON
+                    q_objects |= Q(cpv_codes__icontains=f'"{cpv}"')
+                queryset = queryset.filter(q_objects)
 
-        # Filtro por tipo de contrato
-        contract_type = self.request.GET.get('contract_type')
+        # 2. Filtro por NUTS regions (lista separada por comas)
+        nuts_regions = self.request.GET.get('nuts_regions', '').strip()
+        if nuts_regions and nuts_regions.lower() != 'all':  # Permitir "all" para todas las regiones
+            nuts_list = [region.strip() for region in nuts_regions.split(',') if region.strip()]
+            if nuts_list:
+                # Usar búsqueda de texto en JSON serializado (compatible con SQLite)
+                q_objects = Q()
+                for nuts in nuts_list:
+                    # Buscar en la representación de texto del JSON
+                    q_objects |= Q(nuts_regions__icontains=f'"{nuts}"')
+                queryset = queryset.filter(q_objects)
+
+        # 3. Filtro por tipo de contrato
+        contract_type = self.request.GET.get('contract_type', '').strip()
         if contract_type:
             queryset = queryset.filter(contract_type=contract_type)
 
-        # Filtro por presupuesto
-        min_budget = self.request.GET.get('min_budget')
-        max_budget = self.request.GET.get('max_budget')
-        if min_budget:
-            queryset = queryset.filter(budget_amount__gte=min_budget)
-        if max_budget:
-            queryset = queryset.filter(budget_amount__lte=max_budget)
+        # 4. Filtro por tipo de procedimiento
+        procedure_type = self.request.GET.get('procedure_type', '').strip()
+        if procedure_type:
+            queryset = queryset.filter(procedure_type=procedure_type)
+
+        # 5. Filtro por presupuesto (rango)
+        budget_min = self.request.GET.get('budget_min', '').strip()
+        budget_max = self.request.GET.get('budget_max', '').strip()
+        if budget_min:
+            try:
+                queryset = queryset.filter(budget_amount__gte=float(budget_min))
+            except ValueError:
+                pass
+        if budget_max:
+            try:
+                queryset = queryset.filter(budget_amount__lte=float(budget_max))
+            except ValueError:
+                pass
+
+        # 6. Filtro por fecha de publicación (rango O días atrás)
+        # Prioridad: si hay "days_ago", usarlo; sino usar rango from/to
+        days_ago = self.request.GET.get('days_ago', '').strip()
+        if days_ago:
+            # Modo simple: últimos X días
+            try:
+                days = int(days_ago)
+                from datetime import timedelta
+                date_threshold = timezone.now().date() - timedelta(days=days)
+                queryset = queryset.filter(publication_date__gte=date_threshold)
+            except ValueError:
+                pass
+        else:
+            # Modo experto: rango de fechas específicas
+            publication_from = self.request.GET.get('publication_from', '').strip()
+            publication_to = self.request.GET.get('publication_to', '').strip()
+            if publication_from:
+                queryset = queryset.filter(publication_date__gte=publication_from)
+            if publication_to:
+                queryset = queryset.filter(publication_date__lte=publication_to)
+
+        # 7. Filtro por fecha límite (rango) - Opcional
+        deadline_from = self.request.GET.get('deadline_from', '').strip()
+        deadline_to = self.request.GET.get('deadline_to', '').strip()
+        if deadline_from:
+            queryset = queryset.filter(tender_deadline_date__gte=deadline_from)
+        if deadline_to:
+            queryset = queryset.filter(tender_deadline_date__lte=deadline_to)
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('q', '')
+
+        # Verificar si la base de datos está vacía
+        total_tenders = Tender.objects.count()
+        context['db_empty'] = total_tenders == 0
+        context['total_tenders_in_db'] = total_tenders
+
+        # Verificar si se ha realizado una búsqueda
+        has_filters = any([
+            self.request.GET.get('cpv_codes'),
+            self.request.GET.get('nuts_regions'),
+            self.request.GET.get('contract_type'),
+            self.request.GET.get('procedure_type'),
+            self.request.GET.get('budget_min'),
+            self.request.GET.get('budget_max'),
+            self.request.GET.get('days_ago'),
+            self.request.GET.get('publication_from'),
+            self.request.GET.get('publication_to'),
+            self.request.GET.get('deadline_from'),
+            self.request.GET.get('deadline_to'),
+        ])
+        context['has_filters'] = has_filters
+
+        # Pasar todos los filtros al template para mantener el estado
+        context['cpv_codes'] = self.request.GET.get('cpv_codes', '')
+        context['nuts_regions'] = self.request.GET.get('nuts_regions', '')
         context['contract_type'] = self.request.GET.get('contract_type', '')
-        context['min_budget'] = self.request.GET.get('min_budget', '')
-        context['max_budget'] = self.request.GET.get('max_budget', '')
+        context['procedure_type'] = self.request.GET.get('procedure_type', '')
+        context['budget_min'] = self.request.GET.get('budget_min', '')
+        context['budget_max'] = self.request.GET.get('budget_max', '')
+        context['days_ago'] = self.request.GET.get('days_ago', '')
+        context['publication_from'] = self.request.GET.get('publication_from', '')
+        context['publication_to'] = self.request.GET.get('publication_to', '')
+        context['deadline_from'] = self.request.GET.get('deadline_from', '')
+        context['deadline_to'] = self.request.GET.get('deadline_to', '')
+
+        # Construir query string para paginación
+        params = self.request.GET.copy()
+        if 'page' in params:
+            del params['page']
+        if params:
+            context['query_string'] = '&' + params.urlencode()
+        else:
+            context['query_string'] = ''
+
         return context
 
 
@@ -297,3 +407,126 @@ class GenerateRecommendationsView(LoginRequiredMixin, View):
             messages.error(request, f'Error al generar recomendaciones: {str(e)}')
 
         return redirect('tenders:recommended')
+
+
+class DownloadTendersFormView(LoginRequiredMixin, TemplateView):
+    """Vista que muestra el formulario para configurar la descarga de licitaciones"""
+    template_name = 'tenders/tender_download.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pasar el total de licitaciones en la BD
+        context['total_tenders'] = Tender.objects.count()
+        return context
+
+
+class DownloadTendersExecuteView(LoginRequiredMixin, View):
+    """Vista con SSE para descargar licitaciones y enviar progreso en tiempo real"""
+
+    def get(self, request):
+        import sys
+        from datetime import date, datetime
+
+        # Obtener parámetros de la URL
+        days_back = int(request.GET.get('days_back', 30))
+        max_download = int(request.GET.get('max_download', 50))
+
+        # Obtener parámetros de filtros de búsqueda
+        cpv_codes_str = request.GET.get('cpv_codes', '').strip()
+        cpv_codes = [code.strip() for code in cpv_codes_str.split(',') if code.strip()] if cpv_codes_str else None
+
+        place = request.GET.get('place', '').strip() or None
+        notice_type = request.GET.get('notice_type', '').strip() or None
+
+        print(f"\n{'='*60}", file=sys.stderr)
+        print(f"[DOWNLOAD START] Iniciando descarga de licitaciones", file=sys.stderr)
+        print(f"  - Días atrás: {days_back}", file=sys.stderr)
+        print(f"  - Máximo descargas: {max_download}", file=sys.stderr)
+        print(f"  - CPV Codes: {cpv_codes}", file=sys.stderr)
+        print(f"  - Place: {place}", file=sys.stderr)
+        print(f"  - Notice Type: {notice_type}", file=sys.stderr)
+        print(f"{'='*60}\n", file=sys.stderr)
+
+        def json_serial(obj):
+            """JSON serializer para objetos date/datetime"""
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            raise TypeError(f"Type {type(obj)} not serializable")
+
+        def event_stream():
+            """Generador que envía eventos SSE"""
+            try:
+                # Enviar evento de inicio
+                yield f"data: {json.dumps({'type': 'start', 'message': 'Iniciando búsqueda en TED API...'})}\n\n"
+                print("[SSE] Evento START enviado", file=sys.stderr)
+
+                # Queue para comunicación entre el download y SSE
+                import queue
+                event_queue = queue.Queue()
+
+                # Función callback que pone eventos en la queue
+                def progress_callback(data):
+                    print(f"[CALLBACK] Recibido: {data}", file=sys.stderr)
+                    event_queue.put(data)
+
+                # Ejecutar descarga en thread separado
+                def run_download():
+                    try:
+                        print("[THREAD] Iniciando download_and_save_tenders", file=sys.stderr)
+                        result = download_and_save_tenders(
+                            days_back=days_back,
+                            max_download=max_download,
+                            cpv_codes=cpv_codes,
+                            place=place,
+                            notice_type=notice_type,
+                            progress_callback=progress_callback
+                        )
+                        print(f"[THREAD] Descarga completada: {result}", file=sys.stderr)
+                        event_queue.put({'type': 'complete', 'result': result})
+                    except Exception as e:
+                        print(f"[THREAD ERROR] {e}", file=sys.stderr)
+                        import traceback
+                        traceback.print_exc(file=sys.stderr)
+                        event_queue.put({'type': 'error', 'message': str(e)})
+                    finally:
+                        event_queue.put(None)  # Señal de fin
+
+                import threading
+                download_thread = threading.Thread(target=run_download)
+                download_thread.daemon = True
+                download_thread.start()
+                print("[THREAD] Thread de descarga iniciado", file=sys.stderr)
+
+                # Procesar eventos de la queue y enviarlos como SSE
+                while True:
+                    try:
+                        # Esperar evento con timeout
+                        event_data = event_queue.get(timeout=1.0)
+
+                        if event_data is None:
+                            # Fin de descarga
+                            print("[SSE] Fin de eventos", file=sys.stderr)
+                            break
+
+                        # Serializar y enviar
+                        print(f"[SSE] Enviando evento: {event_data.get('type', 'unknown')}", file=sys.stderr)
+                        json_data = json.dumps(event_data, default=json_serial)
+                        yield f"data: {json_data}\n\n"
+
+                    except queue.Empty:
+                        # Timeout - enviar heartbeat para mantener conexión viva
+                        yield f": heartbeat\n\n"
+                        continue
+
+                print("[SSE] Stream completado", file=sys.stderr)
+
+            except Exception as e:
+                print(f"[SSE ERROR] {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        return response

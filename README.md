@@ -7,6 +7,7 @@ Plataforma inteligente de análisis de licitaciones públicas con IA integrada.
 - **Recomendaciones IA**: Sistema de recomendaciones multicriteria usando Google Gemini
 - **Chat Inteligente**: Asistente conversacional con RAG (Retrieval-Augmented Generation)
 - **Gestión de Licitaciones**: Búsqueda, filtrado y seguimiento de ofertas públicas
+- **Descarga TED API**: Obtención automatizada de licitaciones europeas con progreso en tiempo real
 - **Perfiles Empresariales**: Personalización completa para recomendaciones precisas
 - **Análisis Multicriteria**: Evaluación técnica, presupuestaria, geográfica, de experiencia y competencia
 
@@ -85,6 +86,16 @@ Accede a http://127.0.0.1:8000
 
 ### 1. Configurar Perfil de Empresa
 
+#### Opción A: Autocompletar con IA ⭐ (Recomendado)
+1. Ir a **Mi Empresa**
+2. En la sección "Autocompletar con IA", escribe un párrafo describiendo tu empresa
+   - Incluye: nombre, sector, empleados, facturación, tecnologías, experiencia, ubicación, clientes
+3. Click en **"Extraer Información con IA"**
+4. La IA rellenará automáticamente los campos del formulario
+5. Revisa y ajusta la información si es necesario
+6. **Importante**: Marcar el perfil como completo
+
+#### Opción B: Completar Manualmente
 1. Ir a **Mi Empresa**
 2. Completar toda la información:
    - Datos básicos (nombre, descripción, tamaño)
@@ -110,9 +121,33 @@ Accede a http://127.0.0.1:8000
    - "Dame detalles de la licitación 2024-123456"
    - "¿Cuáles son las fechas límite de esta semana?"
 
-### 4. Gestionar Licitaciones
+### 4. Descargar Licitaciones de TED API
 
-- **Buscar**: Filtrar por texto, tipo de contrato, presupuesto
+1. Ir a **Licitaciones** → **Obtener desde TED**
+2. Configurar parámetros de búsqueda:
+   - **Período**: Días hacia atrás (ej: 30 días)
+   - **Máximo a descargar**: Límite de licitaciones (ej: 50)
+   - **Códigos CPV**: Códigos separados por coma (ej: 7226,7240)
+   - **País/Región**: ESP, FRA, DEU, ITA, PRT, o todos
+   - **Tipo de Aviso**: cn-standard, pin-only, can-standard
+3. Click en **Iniciar Descarga**
+4. Ver progreso en tiempo real:
+   - Log estilo terminal con colores
+   - Barra de progreso con porcentaje
+   - Ventanas de fechas analizadas
+   - Licitaciones encontradas y guardadas
+5. Esperar notificación de completado
+
+**Características de la Descarga**:
+- Búsqueda por ventanas de fechas para evitar límites de API
+- Detección automática de duplicados
+- Progreso en tiempo real con Server-Sent Events (SSE)
+- Log detallado en terminal del servidor
+- Parseo y guardado automático en base de datos
+
+### 5. Gestionar Licitaciones
+
+- **Buscar**: Filtrar por CPV, NUTS, tipo de contrato, presupuesto, fechas
 - **Guardar**: Marcar licitaciones de interés
 - **Estados**: Interesado → Oferta Presentada → Ganada/Perdida
 
@@ -137,7 +172,7 @@ TenderAI_Platform/
 - **authentication**: Registro, login, recuperación de contraseña
 - **core**: Home, perfil de usuario
 - **company**: Perfiles empresariales detallados
-- **tenders**: CRUD de licitaciones, recomendaciones, búsqueda
+- **tenders**: CRUD de licitaciones, recomendaciones, búsqueda, descarga desde TED API
 - **chat**: Sesiones de chat, integración con Agent_IA
 
 ## 🤖 Integración Agent_IA
@@ -209,26 +244,56 @@ python manage.py test
 python manage.py collectstatic
 ```
 
+## 🎨 Interfaz de Chat
+
+El chat ha sido completamente rediseñado con un estilo minimalista inspirado en Apple:
+
+- **Diseño Limpio**: Paleta de colores #007AFF, tipografía San Francisco
+- **Animaciones Suaves**: Transiciones fluidas con cubic-bezier
+- **AJAX sin Recargas**: Experiencia de usuario fluida
+- **Auto-scroll Inteligente**: Scroll automático solo cuando es necesario
+- **Typing Indicator**: Indicador animado mientras la IA responde
+- **Metadata Visible**: Documentos consultados, tokens usados, ruta del agente
+- **Responsive Design**: Adaptado para móvil, tablet y desktop
+- **Dark Mode Ready**: Soporte automático para modo oscuro
+
+### Archivos de Interfaz
+```
+static/
+├── chat/
+│   ├── css/chat.css       # Estilos Apple-inspired del chat
+│   └── js/chat.js         # Interactividad AJAX y animaciones
+└── core/
+    ├── css/style.css      # Estilos globales
+    └── js/main.js         # Utilidades generales
+```
+
 ## 📝 Notas de la Versión 1.0.0
 
 ### ✅ Implementado
 - Sistema completo de autenticación
+- **Autocompletado de perfil de empresa con IA** (texto libre → campos estructurados)
 - Perfiles de empresa con 20+ campos
-- Motor de recomendaciones IA
-- Chat conversacional con RAG
+- Motor de recomendaciones IA multicriteria
+- **Chat estilo Apple con diseño minimalista**
+- **Interfaz AJAX sin recargas**
 - Gestión de licitaciones (CRUD)
+- **Descarga automatizada desde TED API** con progreso en tiempo real (SSE)
+- **Búsqueda avanzada** con filtros CPV, NUTS, presupuesto, fechas
+- **Filtros configurables** en descarga TED (CPV, país, tipo de aviso)
 - Admin interface completo
 - Templates Bootstrap 5
 - API key por usuario
 
 ### 🔜 Roadmap
-- Importación masiva de XMLs TED
-- Notificaciones por email
-- Dashboard con gráficos
+- Notificaciones por email cuando hay nuevas licitaciones
+- Dashboard con gráficos y estadísticas
 - Exportación de recomendaciones a PDF
 - API REST para integraciones
 - Sistema de suscripciones
 - Mejoras en chunking y embeddings
+- Indexación automática post-descarga
+- Programación de descargas periódicas
 
 ## 🐛 Solución de Problemas
 
@@ -242,6 +307,13 @@ python manage.py collectstatic
 ### Chat no responde
 - Revisa que haya licitaciones indexadas en ChromaDB
 - Verifica la conexión a internet
+
+### CSS/JS no se cargan (imágenes vacías)
+1. Verifica que `DEBUG=True` en `.env`
+2. Asegúrate de que Django esté instalado: `pip install django`
+3. Los archivos estáticos deben estar en `static/chat/` y `static/core/`
+4. Limpia caché del navegador: `Ctrl + Shift + R`
+5. Reinicia el servidor
 
 ## 📄 Licencia
 

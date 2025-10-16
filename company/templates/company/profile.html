@@ -1,155 +1,581 @@
 {% extends 'core/base.html' %}
+{% load static %}
 
-{% block title %}Perfil de Empresa - TenderAI{% endblock %}
+{% block title %}Mi Empresa{% endblock %}
+
+{% block extra_css %}
+<style>
+    .company-profile-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+    }
+
+    .profile-card h2 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 8px;
+    }
+
+    .profile-card .subtitle {
+        color: #86868b;
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: #1d1d1f;
+        margin-bottom: 8px;
+        font-size: 15px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #d2d2d7;
+        border-radius: 8px;
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #007aff;
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    }
+
+    textarea.form-input {
+        resize: vertical;
+        min-height: 120px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .help-text {
+        font-size: 13px;
+        color: #86868b;
+        margin-top: 6px;
+    }
+
+    /* Tags Input Styling */
+    .tags-container {
+        border: 1px solid #d2d2d7;
+        border-radius: 8px;
+        padding: 8px;
+        min-height: 48px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        transition: all 0.2s;
+        background: white;
+        cursor: text;
+    }
+
+    .tags-container:focus-within {
+        border-color: #007aff;
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    }
+
+    .tag {
+        background: #f5f5f7;
+        color: #1d1d1f;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .tag:hover {
+        background: #e8e8ed;
+    }
+
+    .tag-remove {
+        cursor: pointer;
+        color: #86868b;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0 2px;
+    }
+
+    .tag-remove:hover {
+        color: #ff3b30;
+    }
+
+    .tag-input {
+        border: none;
+        outline: none;
+        flex: 1;
+        min-width: 120px;
+        font-size: 15px;
+        padding: 6px 4px;
+    }
+
+    .budget-range {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .btn-primary {
+        background: #007aff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .btn-primary:hover {
+        background: #0051d5;
+    }
+
+    .btn-secondary {
+        background: #f5f5f7;
+        color: #1d1d1f;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #e8e8ed;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .alert-success {
+        background: #d1f2e6;
+        color: #00843d;
+        border: 1px solid #34c759;
+    }
+
+    .alert-error {
+        background: #fde8e8;
+        color: #c41e3a;
+        border: 1px solid #ff3b30;
+    }
+
+    .extract-btn-container {
+        margin-top: 12px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007aff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spinner.active {
+        display: inline-block;
+    }
+
+    /* Autocomplete Dropdown */
+    .autocomplete-dropdown {
+        position: absolute;
+        background: white;
+        border: 1px solid #d2d2d7;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        min-width: 300px;
+    }
+
+    .autocomplete-dropdown.active {
+        display: block;
+    }
+
+    .autocomplete-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f5f5f7;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+        background: #f5f5f7;
+    }
+
+    .autocomplete-item.selected {
+        background: #e8f4fd;
+    }
+
+    .autocomplete-code {
+        font-weight: 600;
+        color: #007aff;
+    }
+
+    .autocomplete-name {
+        color: #1d1d1f;
+    }
+
+    .tag-code {
+        opacity: 0.7;
+        font-size: 12px;
+        margin-left: 4px;
+    }
+
+    /* Position relative for tags container to position dropdown */
+    .form-group {
+        position: relative;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Perfil de Empresa</h1>
+<div class="company-profile-container">
+    <div class="profile-card">
+        <h2>Mi Empresa</h2>
+        <p class="subtitle">Completa tu perfil para recibir recomendaciones personalizadas de licitaciones</p>
 
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i>
-        <strong>Importante:</strong> Completa tu perfil de empresa para obtener recomendaciones personalizadas de licitaciones.
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-
-                <!-- Información Básica -->
-                <h5 class="mb-3">Información Básica</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="id_company_name" class="form-label">Nombre de la Empresa *</label>
-                        {{ form.company_name }}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="id_size" class="form-label">Tamaño *</label>
-                        {{ form.size }}
-                    </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
                 </div>
+            {% endfor %}
+        {% endif %}
 
-                <div class="mb-3">
-                    <label for="id_description" class="form-label">Descripción</label>
-                    {{ form.description }}
-                </div>
+        <form method="post" id="profileForm">
+            {% csrf_token %}
 
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="id_employees" class="form-label">Empleados</label>
-                        {{ form.employees }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_annual_revenue_eur" class="form-label">Facturación Anual (EUR)</label>
-                        {{ form.annual_revenue_eur }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_years_in_business" class="form-label">Años en el Negocio</label>
-                        {{ form.years_in_business }}
-                    </div>
-                </div>
+            <!-- Nombre de la Empresa -->
+            <div class="form-group">
+                <label class="form-label" for="id_company_name">Nombre de la empresa *</label>
+                <input
+                    type="text"
+                    class="form-input"
+                    id="id_company_name"
+                    name="company_name"
+                    value="{{ form.company_name.value|default:'' }}"
+                    required
+                >
+            </div>
 
-                <!-- Capacidades Técnicas -->
-                <h5 class="mb-3 mt-4">Capacidades Técnicas</h5>
-                <div class="mb-3">
-                    <label for="id_sectors" class="form-label">Sectores (JSON array)</label>
-                    {{ form.sectors }}
-                    <small class="form-text text-muted">Ejemplo: ["Tecnología", "Salud", "Educación"]</small>
-                </div>
+            <!-- Descripción Libre -->
+            <div class="form-group">
+                <label class="form-label" for="id_company_description_text">Cuéntanos sobre tu empresa</label>
+                <textarea
+                    class="form-input"
+                    id="id_company_description_text"
+                    name="company_description_text"
+                    placeholder="Ejemplo: Somos una empresa de desarrollo de software especializada en soluciones cloud. Contamos con 15 empleados y trabajamos principalmente en Madrid y Barcelona. Ofrecemos servicios de consultoría tecnológica, desarrollo web y aplicaciones móviles..."
+                >{{ form.company_description_text.value|default:'' }}</textarea>
+                <p class="help-text">Describe tu empresa, qué hacéis, en qué sectores trabajáis, ubicación, etc. Esta información ayudará a encontrar las licitaciones más relevantes.</p>
 
-                <div class="mb-3">
-                    <label for="id_technical_areas" class="form-label">Áreas Técnicas (JSON array)</label>
-                    {{ form.technical_areas }}
-                    <small class="form-text text-muted">Ejemplo: ["Desarrollo Web", "Cloud Computing", "IA"]</small>
-                </div>
-
-                <!-- Preferencias de Licitación -->
-                <h5 class="mb-3 mt-4">Preferencias de Licitación</h5>
-                <div class="mb-3">
-                    <label for="id_preferred_cpv_codes" class="form-label">Códigos CPV Preferidos (JSON array)</label>
-                    {{ form.preferred_cpv_codes }}
-                    <small class="form-text text-muted">Ejemplo: ["72000000", "48000000"]</small>
-                </div>
-
-                <div class="mb-3">
-                    <label for="id_preferred_contract_types" class="form-label">Tipos de Contrato Preferidos (JSON array)</label>
-                    {{ form.preferred_contract_types }}
-                    <small class="form-text text-muted">Ejemplo: ["services", "supplies"]</small>
-                </div>
-
-                <div class="mb-3">
-                    <label for="id_budget_range" class="form-label">Rango de Presupuesto (JSON object)</label>
-                    {{ form.budget_range }}
-                    <small class="form-text text-muted">Ejemplo: {"min_eur": 200000, "max_eur": 3000000}</small>
-                </div>
-
-                <div class="mb-3">
-                    <label for="id_preferred_regions" class="form-label">Regiones Preferidas NUTS (JSON array)</label>
-                    {{ form.preferred_regions }}
-                    <small class="form-text text-muted">Ejemplo: ["ES", "ES51", "ES52"]</small>
-                </div>
-
-                <!-- Experiencia -->
-                <h5 class="mb-3 mt-4">Experiencia</h5>
-                <div class="mb-3">
-                    <div class="form-check">
-                        {{ form.public_sector_experience }}
-                        <label class="form-check-label" for="id_public_sector_experience">
-                            Experiencia en Sector Público
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Capacidades -->
-                <h5 class="mb-3 mt-4">Capacidades y Riesgos</h5>
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="id_financial_capacity" class="form-label">Capacidad Financiera</label>
-                        {{ form.financial_capacity }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_team_availability" class="form-label">Disponibilidad del Equipo</label>
-                        {{ form.team_availability }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_overcommitment_risk" class="form-label">Riesgo de Sobrecarga</label>
-                        {{ form.overcommitment_risk }}
-                    </div>
-                </div>
-
-                <!-- Perfil Completo -->
-                <div class="mb-3">
-                    <div class="form-check">
-                        {{ form.is_complete }}
-                        <label class="form-check-label" for="id_is_complete">
-                            <strong>Marcar perfil como completo</strong> (necesario para recomendaciones)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save"></i> Guardar Perfil
+                <div class="extract-btn-container">
+                    <button type="button" class="btn-secondary" id="extractBtn">
+                        Autocompletar campos
                     </button>
-                    <a href="{% url 'tenders:dashboard' %}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Volver al Dashboard
-                    </a>
+                    <div class="spinner" id="extractSpinner"></div>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- Sectores (Tags) -->
+            <div class="form-group">
+                <label class="form-label" for="sectors_input">Sectores</label>
+                <div class="tags-container" id="sectorsContainer" data-field="sectors">
+                    <input
+                        type="text"
+                        class="tag-input"
+                        id="sectors_input"
+                        placeholder="Escribe y presiona Enter..."
+                    >
+                </div>
+                <input type="hidden" name="sectors" id="sectors_hidden">
+                <p class="help-text">Ej: Tecnología, Construcción, Consultoría</p>
+            </div>
+
+            <!-- Número de Empleados -->
+            <div class="form-group">
+                <label class="form-label" for="id_employees">Número de empleados</label>
+                <input
+                    type="number"
+                    class="form-input"
+                    id="id_employees"
+                    name="employees"
+                    value="{{ form.employees.value|default:'' }}"
+                    min="1"
+                >
+            </div>
+
+            <!-- Códigos CPV (Tags) -->
+            <div class="form-group">
+                <label class="form-label" for="cpv_input">Códigos CPV de interés</label>
+                <div class="tags-container" id="cpvContainer" data-field="preferred_cpv_codes">
+                    <input
+                        type="text"
+                        class="tag-input"
+                        id="cpv_input"
+                        placeholder="Ej: 7226, 4500..."
+                    >
+                </div>
+                <input type="hidden" name="preferred_cpv_codes" id="preferred_cpv_codes_hidden">
+                <p class="help-text">Códigos CPV relacionados con tu actividad</p>
+            </div>
+
+            <!-- Regiones NUTS (Tags) -->
+            <div class="form-group">
+                <label class="form-label" for="nuts_input">Regiones de interés (NUTS)</label>
+                <div class="tags-container" id="nutsContainer" data-field="preferred_nuts_regions">
+                    <input
+                        type="text"
+                        class="tag-input"
+                        id="nuts_input"
+                        placeholder="Ej: ES30, ES51..."
+                    >
+                </div>
+                <input type="hidden" name="preferred_nuts_regions" id="preferred_nuts_regions_hidden">
+                <p class="help-text">Ej: ES30 (Madrid), ES51 (Barcelona)</p>
+            </div>
+
+            <!-- Rango de Presupuesto -->
+            <div class="form-group">
+                <label class="form-label">Rango de presupuesto de proyectos</label>
+                <div class="budget-range">
+                    <div>
+                        <input
+                            type="number"
+                            class="form-input"
+                            id="id_budget_min"
+                            name="budget_min"
+                            placeholder="Mínimo (€)"
+                            min="0"
+                            value="{{ budget_min }}"
+                        >
+                    </div>
+                    <div>
+                        <input
+                            type="number"
+                            class="form-input"
+                            id="id_budget_max"
+                            name="budget_max"
+                            placeholder="Máximo (€)"
+                            min="0"
+                            value="{{ budget_max }}"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón de Guardar -->
+            <button type="submit" class="btn-primary">
+                Guardar Perfil
+            </button>
+        </form>
     </div>
 </div>
 
-<style>
-    {{ form.media }}
-    input[type="text"], input[type="number"], textarea, select {
-        width: 100%;
-        padding: 0.375rem 0.75rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.375rem;
+<script>
+// ================================================
+// TAGS INPUT FUNCTIONALITY
+// ================================================
+class TagsInput {
+    constructor(containerId, hiddenInputId, initialTags = []) {
+        this.container = document.getElementById(containerId);
+        this.hiddenInput = document.getElementById(hiddenInputId);
+        this.input = this.container.querySelector('.tag-input');
+        this.tags = initialTags;
+
+        this.init();
     }
-    textarea {
-        min-height: 100px;
+
+    init() {
+        // Render initial tags
+        this.renderTags();
+
+        // Event listeners
+        this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+        this.container.addEventListener('click', () => this.input.focus());
     }
-</style>
+
+    handleKeydown(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            this.addTag();
+        } else if (e.key === 'Backspace' && this.input.value === '' && this.tags.length > 0) {
+            this.removeTag(this.tags[this.tags.length - 1]);
+        }
+    }
+
+    addTag() {
+        const value = this.input.value.trim();
+        if (value && !this.tags.includes(value)) {
+            this.tags.push(value);
+            this.input.value = '';
+            this.renderTags();
+            this.updateHiddenInput();
+        }
+    }
+
+    removeTag(tag) {
+        this.tags = this.tags.filter(t => t !== tag);
+        this.renderTags();
+        this.updateHiddenInput();
+    }
+
+    renderTags() {
+        // Remove existing tags
+        this.container.querySelectorAll('.tag').forEach(tag => tag.remove());
+
+        // Add tags before input
+        this.tags.forEach(tag => {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'tag';
+            tagEl.innerHTML = `
+                ${tag}
+                <span class="tag-remove" data-tag="${tag}">&times;</span>
+            `;
+            tagEl.querySelector('.tag-remove').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeTag(tag);
+            });
+            this.container.insertBefore(tagEl, this.input);
+        });
+    }
+
+    updateHiddenInput() {
+        this.hiddenInput.value = JSON.stringify(this.tags);
+    }
+
+    setTags(tags) {
+        this.tags = tags || [];
+        this.renderTags();
+        this.updateHiddenInput();
+    }
+}
+
+// Initialize tags inputs
+const sectorsInput = new TagsInput('sectorsContainer', 'sectors_hidden', {{ sectors_json|safe }});
+const cpvInput = new TagsInput('cpvContainer', 'preferred_cpv_codes_hidden', {{ cpv_codes_json|safe }});
+const nutsInput = new TagsInput('nutsContainer', 'preferred_nuts_regions_hidden', {{ nuts_regions_json|safe }});
+
+// ================================================
+// AUTO-EXTRACT FUNCTIONALITY
+// ================================================
+document.getElementById('extractBtn').addEventListener('click', async function() {
+    const text = document.getElementById('id_company_description_text').value.trim();
+
+    if (!text) {
+        alert('Por favor, escribe una descripción de tu empresa primero.');
+        return;
+    }
+
+    const btn = this;
+    const spinner = document.getElementById('extractSpinner');
+    btn.disabled = true;
+    spinner.classList.add('active');
+    btn.textContent = 'Procesando...';
+
+    try {
+        const formData = new FormData();
+        formData.append('company_text', text);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        const response = await fetch('{% url "company:extract_info" %}', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Fill company name
+            if (data.data.company_name) {
+                document.getElementById('id_company_name').value = data.data.company_name;
+            }
+
+            // Fill employees
+            if (data.data.employees) {
+                document.getElementById('id_employees').value = data.data.employees;
+            }
+
+            // Fill sectors
+            if (data.data.sectors && data.data.sectors.length > 0) {
+                sectorsInput.setTags(data.data.sectors);
+            }
+
+            // Fill CPV codes
+            if (data.data.preferred_cpv_codes && data.data.preferred_cpv_codes.length > 0) {
+                cpvInput.setTags(data.data.preferred_cpv_codes);
+            }
+
+            // Fill NUTS regions
+            if (data.data.preferred_nuts_regions && data.data.preferred_nuts_regions.length > 0) {
+                nutsInput.setTags(data.data.preferred_nuts_regions);
+            }
+
+            // Fill budget
+            if (data.data.budget_min) {
+                document.getElementById('id_budget_min').value = data.data.budget_min;
+            }
+            if (data.data.budget_max) {
+                document.getElementById('id_budget_max').value = data.data.budget_max;
+            }
+
+            alert('Información extraída correctamente. Revisa y ajusta los campos si es necesario.');
+        } else {
+            alert('Error: ' + (data.message || 'No se pudo extraer la información'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al procesar la solicitud. Por favor, intenta de nuevo.');
+    } finally {
+        btn.disabled = false;
+        spinner.classList.remove('active');
+        btn.textContent = 'Autocompletar campos';
+    }
+});
+</script>
 {% endblock %}

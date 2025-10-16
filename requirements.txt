@@ -5,7 +5,7 @@
 # ------------------------------------------------
 # Django Core
 # ------------------------------------------------
-Django==5.2.6
+Django==5.1.6
 django-cors-headers==4.8.0
 djangorestframework==3.16.1
 python-decouple==3.8
@@ -32,7 +32,6 @@ langchain-openai==0.2.0
 langchain-google-genai==2.0.10
 langchain-community==0.3.0
 langgraph==0.2.63
-langchain-core==0.3.28
 langchain-chroma==0.2.0
 
 # ------------------------------------------------

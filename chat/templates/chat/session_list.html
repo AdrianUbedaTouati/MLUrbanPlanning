@@ -1,69 +1,251 @@
 {% extends 'core/base.html' %}
+{% load static %}
 
-{% block title %}Mis Chats - TenderAI{% endblock %}
+{% block title %}Mis Conversaciones - TenderAI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'chat/css/chat.css' %}">
+<style>
+    .sessions-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+
+    .sessions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+    }
+
+    .sessions-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        letter-spacing: -1px;
+    }
+
+    .sessions-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .session-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        border: 1px solid var(--border-color);
+        transition: all var(--transition-smooth);
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .session-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .session-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .session-card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        flex: 1;
+        margin-right: 16px;
+    }
+
+    .session-card-date {
+        font-size: 13px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    .session-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    .session-card-meta i {
+        color: var(--primary-color);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 24px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .empty-state-icon {
+        font-size: 80px;
+        color: var(--text-tertiary);
+        margin-bottom: 24px;
+        opacity: 0.4;
+    }
+
+    .empty-state-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+
+    .empty-state-text {
+        font-size: 16px;
+        color: var(--text-secondary);
+        margin-bottom: 32px;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 32px;
+    }
+
+    .pagination {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .page-link {
+        color: var(--text-primary);
+        border-color: var(--border-color);
+        padding: 10px 18px;
+        font-weight: 500;
+        transition: all var(--transition-fast);
+    }
+
+    .page-link:hover {
+        background: var(--bg-secondary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="bi bi-chat-dots"></i> Mis Conversaciones</h1>
+<div class="sessions-container">
+    <div class="sessions-header">
+        <h1 class="sessions-title">
+            <i class="bi bi-chat-dots-fill"></i> Mis Conversaciones
+        </h1>
         <form method="post" action="{% url 'chat:session_create' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Nueva Conversación
+            <button type="submit" class="btn-new-chat">
+                <i class="bi bi-plus-circle-fill"></i>
+                Nueva Conversación
             </button>
         </form>
     </div>
 
     {% if sessions %}
-    <div class="list-group">
-        {% for session in sessions %}
-        <a href="{% url 'chat:session_detail' session.id %}" class="list-group-item list-group-item-action">
-            <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">{{ session.title|default:"Nueva conversación"|truncatechars:80 }}</h6>
-                <small class="text-muted">{{ session.updated_at|date:"d/m/Y H:i" }}</small>
-            </div>
-            <p class="mb-1 text-muted small">
-                <i class="bi bi-chat-left-text"></i> {{ session.get_message_count }} mensajes
-            </p>
-        </a>
-        {% endfor %}
-    </div>
+        <div class="sessions-grid">
+            {% for session in sessions %}
+            <a href="{% url 'chat:session_detail' session.id %}" class="session-card">
+                <div class="session-card-header">
+                    <h3 class="session-card-title">
+                        {{ session.title|default:"Nueva conversación"|truncatechars:80 }}
+                    </h3>
+                    <span class="session-card-date">
+                        {{ session.updated_at|date:"d/m/Y" }}
+                    </span>
+                </div>
+                <div class="session-card-meta">
+                    <span>
+                        <i class="bi bi-chat-left-text"></i>
+                        {{ session.get_message_count }} mensaje{{ session.get_message_count|pluralize }}
+                    </span>
+                    <span>
+                        <i class="bi bi-clock"></i>
+                        {{ session.updated_at|date:"H:i" }}
+                    </span>
+                    {% if session.is_archived %}
+                    <span class="badge badge-warning">
+                        <i class="bi bi-archive"></i> Archivada
+                    </span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
 
-    <!-- Paginación -->
-    {% if is_paginated %}
-    <nav aria-label="Paginación" class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-            </li>
-            {% endif %}
+        <!-- Paginación -->
+        {% if is_paginated %}
+        <div class="pagination-wrapper">
+            <nav aria-label="Paginación">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i> Anterior
+                        </a>
+                    </li>
+                    {% endif %}
 
-            <li class="page-item active">
-                <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-            </li>
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
 
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                            Siguiente <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
 
     {% else %}
-    <div class="alert alert-info text-center">
-        <i class="bi bi-chat-dots fs-1"></i>
-        <h5 class="mt-3">No tienes conversaciones</h5>
-        <p>Crea una nueva conversación para consultar con el asistente IA sobre licitaciones.</p>
-        <form method="post" action="{% url 'chat:session_create' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Crear Primera Conversación
-            </button>
-        </form>
-    </div>
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="bi bi-chat-dots"></i>
+            </div>
+            <h2 class="empty-state-title">No tienes conversaciones</h2>
+            <p class="empty-state-text">
+                Crea una nueva conversación para comenzar a consultar con el asistente IA sobre licitaciones públicas.
+            </p>
+            <form method="post" action="{% url 'chat:session_create' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-new-chat" style="width: auto; padding: 14px 32px;">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    Crear Primera Conversación
+                </button>
+            </form>
+        </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'chat/js/chat.js' %}"></script>
 {% endblock %}

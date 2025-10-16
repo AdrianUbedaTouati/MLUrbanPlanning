@@ -1,0 +1,353 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Obtener Licitaciones - TenderAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 40px; margin-top: 40px;">
+                <h1 style="font-size: 48px; font-weight: 700; color: #1d1d1f; margin-bottom: 16px;">
+                    Obtener Licitaciones
+                </h1>
+                <p style="font-size: 18px; color: #6e6e73; max-width: 600px; margin: 0 auto;">
+                    Descarga licitaciones directamente desde la API de TED (Tenders Electronic Daily) de la Unión Europea.
+                </p>
+            </div>
+
+            <!-- Card principal -->
+            <div style="background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 40px; margin-bottom: 24px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🚀</div>
+                    <h2 style="font-size: 28px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;">
+                        Configurar Descarga
+                    </h2>
+                    <p style="color: #6e6e73; font-size: 16px;">
+                        Actualmente tienes <strong style="color: #1d1d1f;">{{ total_tenders }} licitaciones</strong> en tu base de datos
+                    </p>
+                </div>
+
+                <!-- Formulario de descarga -->
+                <form id="downloadForm">
+                    <!-- Parámetros Básicos -->
+                    <div style="margin-bottom: 32px;">
+                        <h3 style="font-size: 18px; font-weight: 600; color: #1d1d1f; margin-bottom: 16px; border-bottom: 2px solid #f5f5f7; padding-bottom: 8px;">
+                            ⏱️ Parámetros de Tiempo y Cantidad
+                        </h3>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label for="days_back" style="display: block; margin-bottom: 10px; font-weight: 600; color: #1d1d1f; font-size: 15px;">
+                                    <i class="bi bi-calendar-range"></i> Período (días hacia atrás)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="days_back"
+                                    id="days_back"
+                                    value="30"
+                                    min="1"
+                                    max="365"
+                                    required
+                                    style="width: 100%; padding: 14px; border: 2px solid #d2d2d7; border-radius: 10px; font-size: 16px;">
+                                <small style="color: #6e6e73; display: block; margin-top: 8px; font-size: 13px;">
+                                    Recomendado: 30 días
+                                </small>
+                            </div>
+
+                            <div>
+                                <label for="max_download" style="display: block; margin-bottom: 10px; font-weight: 600; color: #1d1d1f; font-size: 15px;">
+                                    <i class="bi bi-download"></i> Máximo a descargar
+                                </label>
+                                <input
+                                    type="number"
+                                    name="max_download"
+                                    id="max_download"
+                                    value="50"
+                                    min="10"
+                                    max="200"
+                                    required
+                                    style="width: 100%; padding: 14px; border: 2px solid #d2d2d7; border-radius: 10px; font-size: 16px;">
+                                <small style="color: #6e6e73; display: block; margin-top: 8px; font-size: 13px;">
+                                    Recomendado: 50
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtros de Búsqueda TED API -->
+                    <div style="margin-bottom: 32px;">
+                        <h3 style="font-size: 18px; font-weight: 600; color: #1d1d1f; margin-bottom: 16px; border-bottom: 2px solid #f5f5f7; padding-bottom: 8px;">
+                            🔍 Filtros de Búsqueda en TED
+                        </h3>
+
+                        <!-- Códigos CPV -->
+                        <div style="margin-bottom: 20px;">
+                            <label for="cpv_codes" style="display: block; margin-bottom: 10px; font-weight: 600; color: #1d1d1f; font-size: 15px;">
+                                <i class="bi bi-tag"></i> Códigos CPV (separados por coma)
+                            </label>
+                            <input
+                                type="text"
+                                name="cpv_codes"
+                                id="cpv_codes"
+                                value="7226"
+                                placeholder="7226,7240,7210"
+                                style="width: 100%; padding: 14px; border: 2px solid #d2d2d7; border-radius: 10px; font-size: 16px;">
+                            <small style="color: #6e6e73; display: block; margin-top: 8px; font-size: 13px;">
+                                <i class="bi bi-info-circle"></i> Ejemplos: <strong>7226</strong> (software), <strong>7240</strong> (consultoría), <strong>7210</strong> (procesamiento datos)
+                            </small>
+                        </div>
+
+                        <!-- País/Región -->
+                        <div style="margin-bottom: 20px;">
+                            <label for="place" style="display: block; margin-bottom: 10px; font-weight: 600; color: #1d1d1f; font-size: 15px;">
+                                <i class="bi bi-geo-alt"></i> País/Región
+                            </label>
+                            <select
+                                name="place"
+                                id="place"
+                                style="width: 100%; padding: 14px; border: 2px solid #d2d2d7; border-radius: 10px; font-size: 16px;">
+                                <option value="ESP">España (ESP)</option>
+                                <option value="FRA">Francia (FRA)</option>
+                                <option value="DEU">Alemania (DEU)</option>
+                                <option value="ITA">Italia (ITA)</option>
+                                <option value="PRT">Portugal (PRT)</option>
+                                <option value="">Todos los países</option>
+                            </select>
+                            <small style="color: #6e6e73; display: block; margin-top: 8px; font-size: 13px;">
+                                Selecciona el país donde se ejecutará el contrato
+                            </small>
+                        </div>
+
+                        <!-- Tipo de Aviso -->
+                        <div style="margin-bottom: 20px;">
+                            <label for="notice_type" style="display: block; margin-bottom: 10px; font-weight: 600; color: #1d1d1f; font-size: 15px;">
+                                <i class="bi bi-file-earmark-text"></i> Tipo de Aviso
+                            </label>
+                            <select
+                                name="notice_type"
+                                id="notice_type"
+                                style="width: 100%; padding: 14px; border: 2px solid #d2d2d7; border-radius: 10px; font-size: 16px;">
+                                <option value="cn-standard">Aviso de contrato (cn-standard)</option>
+                                <option value="pin-only">Información previa (pin-only)</option>
+                                <option value="can-standard">Aviso de adjudicación (can-standard)</option>
+                                <option value="">Todos los tipos</option>
+                            </select>
+                            <small style="color: #6e6e73; display: block; margin-top: 8px; font-size: 13px;">
+                                "Aviso de contrato" es el más común para buscar oportunidades
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Advertencia -->
+                    <div style="margin-bottom: 24px; padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+                        <div style="display: flex; align-items: start;">
+                            <i class="bi bi-clock-history" style="font-size: 20px; color: #856404; margin-right: 12px; margin-top: 2px;"></i>
+                            <div>
+                                <strong style="color: #856404; font-size: 14px;">Tiempo de procesamiento</strong>
+                                <p style="margin: 4px 0 0 0; color: #856404; font-size: 13px;">
+                                    Este proceso puede tardar varios minutos. Verás el progreso en tiempo real.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón de descarga -->
+                    <button
+                        type="submit"
+                        style="width: 100%; padding: 16px; background: linear-gradient(135deg, #007aff 0%, #0051d5 100%); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);">
+                        <i class="bi bi-rocket-takeoff"></i> Iniciar Descarga
+                    </button>
+                </form>
+            </div>
+
+            <!-- Panel de progreso (oculto inicialmente) -->
+            <div id="progressPanel" style="display: none; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 40px; margin-bottom: 24px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <div style="font-size: 64px; margin-bottom: 16px;" id="progressEmoji">⏳</div>
+                    <h2 style="font-size: 28px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px;" id="progressTitle">
+                        Descargando...
+                    </h2>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div style="margin-bottom: 32px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-weight: 600; color: #1d1d1f;" id="progressText">Iniciando...</span>
+                        <span style="font-weight: 600; color: #007aff;" id="progressPercentage">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 24px; background: #f5f5f7; border-radius: 12px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                        <div id="progressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #007aff 0%, #00c7ff 100%); border-radius: 12px; transition: width 0.3s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">
+                            <span style="color: white; font-size: 12px; font-weight: 600;" id="progressCount"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log de actividad -->
+                <div style="background: #1d1d1f; border-radius: 12px; padding: 24px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; color: #00ff00;" id="logContainer">
+                    <div id="logContent"></div>
+                </div>
+
+                <!-- Botón para ir a buscar (oculto hasta completar) -->
+                <div id="completeActions" style="display: none; margin-top: 24px; text-align: center;">
+                    <a href="{% url 'tenders:list' %}" style="display: inline-block; padding: 14px 32px; background: #34c759; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; transition: all 0.2s;">
+                        <i class="bi bi-search"></i> Ir a Buscar Licitaciones
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('downloadForm');
+    const progressPanel = document.getElementById('progressPanel');
+    const logContent = document.getElementById('logContent');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressPercentage = document.getElementById('progressPercentage');
+    const progressCount = document.getElementById('progressCount');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressEmoji = document.getElementById('progressEmoji');
+    const completeActions = document.getElementById('completeActions');
+
+    let totalToDownload = 0;
+    let currentDownload = 0;
+
+    function addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        let color = '#00ff00';
+        let icon = '•';
+
+        switch(type) {
+            case 'success': color = '#34c759'; icon = '✓'; break;
+            case 'error': color = '#ff3b30'; icon = '✗'; break;
+            case 'warning': color = '#ffcc00'; icon = '⚠'; break;
+            case 'info': color = '#00c7ff'; icon = 'ℹ'; break;
+            case 'window': color = '#af52de'; icon = '📅'; break;
+        }
+
+        const logLine = document.createElement('div');
+        logLine.style.color = color;
+        logLine.style.marginBottom = '8px';
+        logLine.innerHTML = `<span style="color: #888;">[${timestamp}]</span> <span style="color: ${color};">${icon}</span> ${message}`;
+        logContent.appendChild(logLine);
+        logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+    }
+
+    function updateProgress(current, total) {
+        const percentage = Math.round((current / total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressPercentage.textContent = percentage + '%';
+        progressCount.textContent = `${current}/${total}`;
+        progressText.textContent = `Procesando licitación ${current} de ${total}`;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData).toString();
+
+        // Ocultar formulario y mostrar progreso
+        form.parentElement.style.display = 'none';
+        progressPanel.style.display = 'block';
+
+        // Iniciar SSE
+        const eventSource = new EventSource(`{% url 'tenders:download_tenders_execute' %}?${params}`);
+
+        addLog('🚀 Conectando con TED API...', 'info');
+
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            switch(data.type) {
+                case 'start':
+                    addLog(data.message, 'info');
+                    progressEmoji.textContent = '🔍';
+                    progressTitle.textContent = 'Buscando licitaciones...';
+                    break;
+
+                case 'window':
+                    addLog(`📅 Analizando período: ${data.start} a ${data.end} (encontradas: ${data.total})`, 'window');
+                    break;
+
+                case 'window_result':
+                    addLog(`   → Nuevas encontradas: ${data.added} (total acumulado: ${data.total})`, 'info');
+                    break;
+
+                case 'search_complete':
+                    totalToDownload = data.to_download;
+                    addLog(`🎯 Búsqueda completada: ${data.total_found} licitaciones encontradas`, 'success');
+                    addLog(`📥 Descargando ${data.to_download} licitaciones...`, 'info');
+                    progressEmoji.textContent = '⬇️';
+                    progressTitle.textContent = 'Descargando XMLs...';
+                    break;
+
+                case 'download':
+                    currentDownload = data.current;
+                    updateProgress(data.current, data.total);
+                    addLog(`⬇️  Descargando: ${data.pub_number}`, 'info');
+                    break;
+
+                case 'saved':
+                    addLog(`✓ Guardado (${data.saved_count}): ${data.title}`, 'success');
+                    break;
+
+                case 'skip':
+                    addLog(`⊘ Omitido: ${data.pub_number} - ${data.reason}`, 'warning');
+                    break;
+
+                case 'error':
+                    addLog(`✗ Error en ${data.pub_number}: ${data.message}`, 'error');
+                    break;
+
+                case 'complete':
+                    progressEmoji.textContent = '🎉';
+                    progressTitle.textContent = '¡Descarga completada!';
+                    progressBar.style.width = '100%';
+                    progressPercentage.textContent = '100%';
+
+                    addLog('═══════════════════════════════════', 'info');
+                    addLog(`🎉 DESCARGA COMPLETADA`, 'success');
+                    addLog(`   • Licitaciones guardadas: ${data.result.saved}`, 'success');
+                    addLog(`   • XMLs descargados: ${data.result.downloaded}`, 'info');
+                    if(data.result.errors > 0) {
+                        addLog(`   • Errores: ${data.result.errors}`, 'error');
+                    }
+                    addLog('═══════════════════════════════════', 'info');
+
+                    completeActions.style.display = 'block';
+                    eventSource.close();
+                    break;
+            }
+        };
+
+        eventSource.onerror = function(error) {
+            addLog('✗ Error de conexión con el servidor', 'error');
+            progressEmoji.textContent = '❌';
+            progressTitle.textContent = 'Error en la descarga';
+            eventSource.close();
+        };
+    });
+});
+</script>
+
+<style>
+    #logContainer::-webkit-scrollbar {
+        width: 8px;
+    }
+    #logContainer::-webkit-scrollbar-track {
+        background: #2d2d2d;
+        border-radius: 4px;
+    }
+    #logContainer::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 4px;
+    }
+    #logContainer::-webkit-scrollbar-thumb:hover {
+        background: #777;
+    }
+</style>
+{% endblock %}

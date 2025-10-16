@@ -15,7 +15,8 @@
 
 ### Frontend
 - Bootstrap 5.3
-- JavaScript vanilla
+- JavaScript vanilla (AJAX, animaciones CSS)
+- Diseño Apple-inspired (#007AFF, tipografía San Francisco)
 
 ## Arquitectura de Apps
 
@@ -37,9 +38,10 @@ core/                          # Vistas base
 └── templates/core/            # Base template, home
 
 company/                       # Perfiles empresariales
-├── models.py                  # CompanyProfile
-├── views.py                   # ProfileView, ProfileDetailView
-└── templates/company/         # Formulario de perfil
+├── models.py                  # CompanyProfile (con campo company_description_text)
+├── views.py                   # ProfileView, ProfileDetailView, ExtractCompanyInfoView
+├── services.py                # CompanyProfileAIService (extracción con IA)
+└── templates/company/         # Formulario de perfil con autocompletado IA
 
 tenders/                       # Gestión de licitaciones
 ├── models.py                  # Tender, SavedTender, TenderRecommendation
@@ -47,11 +49,14 @@ tenders/                       # Gestión de licitaciones
 ├── services.py                # TenderRecommendationService, TenderIndexingService
 └── templates/tenders/         # Templates para licitaciones
 
-chat/                          # Chat con IA
+chat/                          # Chat con IA (Interfaz Apple-style)
 ├── models.py                  # ChatSession, ChatMessage
 ├── views.py                   # SessionList, SessionDetail, MessageCreate
 ├── services.py                # ChatAgentService
-└── templates/chat/            # Templates de chat
+├── templates/chat/            # Templates de chat rediseñados
+└── static/chat/               # CSS/JS minimalista estilo Apple
+    ├── css/chat.css           # Diseño limpio (#007AFF)
+    └── js/chat.js             # AJAX sin recargas
 
 agent_ia_core/                 # Motor de IA
 ├── agent_graph.py             # LangGraph workflow
@@ -76,6 +81,7 @@ agent_ia_core/                 # Motor de IA
 ### CompanyProfile (company.models)
 ```python
 - user (OneToOne)
+- company_description_text (TextField) # Texto libre para extracción IA
 - company_name, description, size
 - sectors, certifications (JSONField)
 - cpv_codes, nuts_regions (JSONField)
@@ -184,6 +190,40 @@ TenderIndexingService.index_tender()
 tender.indexed_at = now()
 ```
 
+### 4. Flujo de Autocompletado de Perfil con IA
+
+```
+User → Escribe texto libre sobre empresa
+  ↓
+"Extraer Información con IA" button (AJAX)
+  ↓
+ExtractCompanyInfoView.post()
+  ↓
+CompanyProfileAIService.extract_company_info()
+  ├→ Define Pydantic schema (20+ campos)
+  ├→ Create LangChain prompt
+  ├→ LLM invocation (Google Gemini, temperature=0)
+  └→ PydanticOutputParser
+      ├→ Extrae: nombre, sectores, empleados, ingresos, etc.
+      ├→ Infiere CPV codes desde servicios mencionados
+      ├→ Detecta NUTS regions desde ubicaciones
+      └→ Estructura budget_range, relevant_projects
+  ↓
+validate_extracted_data()
+  ├→ Elimina duplicados en listas
+  ├→ Valida rangos numéricos
+  └→ Verifica budget_range (min < max)
+  ↓
+JSON response → JavaScript auto-fill
+  ├→ Rellena campos del formulario
+  ├→ Animación de highlight en campos modificados
+  └→ Usuario revisa y ajusta manualmente
+  ↓
+User → "Guardar" button
+  ↓
+CompanyProfile.objects.update()
+```
+
 ## Servicios de Integración
 
 ### ChatAgentService (chat/services.py)
@@ -209,6 +249,29 @@ def generate_recommendations(tenders_queryset):
     #    - Convert to dict
     #    - Evaluate with recommendation_engine
     # 4. Return list of recommendations
+```
+
+### CompanyProfileAIService (company/services.py)
+```python
+def __init__(self, user):
+    self.api_key = user.llm_api_key
+
+def extract_company_info(company_text):
+    # 1. Define Pydantic schema (CompanyInfoExtraction)
+    # 2. Create LangChain parser
+    # 3. Create prompt with extraction instructions
+    # 4. Invoke LLM (Google Gemini 2.0 Flash, temperature=0)
+    # 5. Parse structured output
+    # 6. Infer CPV codes and NUTS regions
+    # 7. Structure budget_range dict
+    # 8. Convert relevant_projects to List[Dict]
+    return extracted_data
+
+def validate_extracted_data(data):
+    # 1. Remove duplicates from lists
+    # 2. Ensure numeric fields are positive
+    # 3. Validate budget_range (min < max)
+    return validated_data
 ```
 
 ## Configuración
