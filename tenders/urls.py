@@ -17,6 +17,7 @@ urlpatterns = [
     # Descarga de licitaciones desde TED (debe estar ANTES de los paths con parámetros dinámicos)
     path('obtener/', views.DownloadTendersFormView.as_view(), name='download_tenders'),
     path('descargar-licitaciones/', views.DownloadTendersExecuteView.as_view(), name='download_tenders_execute'),
+    path('cancelar-descarga/', views.CancelDownloadView.as_view(), name='cancel_download'),
 
     # Generación de recomendaciones
     path('generar-recomendaciones/', views.GenerateRecommendationsView.as_view(), name='generate_recommendations'),

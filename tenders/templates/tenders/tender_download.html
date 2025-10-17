@@ -186,7 +186,7 @@
                 </div>
 
                 <!-- Barra de progreso -->
-                <div style="margin-bottom: 32px;">
+                <div style="margin-bottom: 24px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                         <span style="font-weight: 600; color: #1d1d1f;" id="progressText">Iniciando...</span>
                         <span style="font-weight: 600; color: #007aff;" id="progressPercentage">0%</span>
@@ -196,6 +196,18 @@
                             <span style="color: white; font-size: 12px; font-weight: 600;" id="progressCount"></span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Botón de cancelación -->
+                <div style="text-align: center; margin-bottom: 24px;" id="cancelButtonContainer">
+                    <button
+                        id="cancelBtn"
+                        type="button"
+                        style="padding: 12px 32px; background: #ff3b30; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);"
+                        onmouseover="this.style.background='#ff1f0f'"
+                        onmouseout="this.style.background='#ff3b30'">
+                        <i class="bi bi-stop-circle"></i> Cancelar Descarga
+                    </button>
                 </div>
 
                 <!-- Log de actividad -->
@@ -229,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let totalToDownload = 0;
     let currentDownload = 0;
+    let eventSource = null;
 
     function addLog(message, type = 'info') {
         const timestamp = new Date().toLocaleTimeString();
@@ -270,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
         progressPanel.style.display = 'block';
 
         // Iniciar SSE
-        const eventSource = new EventSource(`{% url 'tenders:download_tenders_execute' %}?${params}`);
+        eventSource = new EventSource(`{% url 'tenders:download_tenders_execute' %}?${params}`);
 
         addLog('🚀 Conectando con TED API...', 'info');
 
@@ -318,6 +331,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     addLog(`✗ Error en ${data.pub_number}: ${data.message}`, 'error');
                     break;
 
+                case 'cancelled':
+                    progressEmoji.textContent = '🛑';
+                    progressTitle.textContent = 'Descarga cancelada';
+                    progressBar.style.background = 'linear-gradient(90deg, #ff3b30 0%, #ff6b60 100%)';
+
+                    addLog('═══════════════════════════════════', 'warning');
+                    addLog(`🛑 DESCARGA CANCELADA POR EL USUARIO`, 'warning');
+                    addLog(`   • Licitaciones guardadas: ${data.saved}`, 'success');
+                    addLog(`   • XMLs descargados: ${data.downloaded}`, 'info');
+                    addLog('═══════════════════════════════════', 'warning');
+
+                    document.getElementById('cancelButtonContainer').style.display = 'none';
+                    completeActions.style.display = 'block';
+                    eventSource.close();
+                    break;
+
                 case 'complete':
                     progressEmoji.textContent = '🎉';
                     progressTitle.textContent = '¡Descarga completada!';
@@ -333,6 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     addLog('═══════════════════════════════════', 'info');
 
+                    document.getElementById('cancelButtonContainer').style.display = 'none';
                     completeActions.style.display = 'block';
                     eventSource.close();
                     break;
@@ -343,8 +373,41 @@ document.addEventListener('DOMContentLoaded', function() {
             addLog('✗ Error de conexión con el servidor', 'error');
             progressEmoji.textContent = '❌';
             progressTitle.textContent = 'Error en la descarga';
+            document.getElementById('cancelButtonContainer').style.display = 'none';
             eventSource.close();
         };
+    });
+
+    // Botón de cancelación
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+        if (confirm('¿Estás seguro de que deseas cancelar la descarga?')) {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cancelando...';
+
+            fetch("{% url 'tenders:cancel_download' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addLog('⚠️ Cancelación solicitada. Esperando a que termine el archivo actual...', 'warning');
+                } else {
+                    addLog('✗ Error al solicitar cancelación', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-stop-circle"></i> Cancelar Descarga';
+                }
+            })
+            .catch(error => {
+                addLog('✗ Error al solicitar cancelación', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-stop-circle"></i> Cancelar Descarga';
+            });
+        }
     });
 });
 
@@ -638,7 +701,7 @@ const cpvTagsDownload = new AutocompleteTagsInput(
     'cpvDropdownDownload',
     'cpv_codes_hidden',
     '/empresa/api/autocomplete/cpv/',
-    '7226' // Default CPV code
+    '{{ default_cpv_codes }}' // Preloaded from company profile
 );
 
 // Función para borrar todos los XMLs

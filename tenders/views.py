@@ -181,13 +181,30 @@ class TenderListView(LoginRequiredMixin, ListView):
         ])
         context['has_filters'] = has_filters
 
-        # Pasar todos los filtros al template para mantener el estado
-        context['cpv_codes'] = self.request.GET.get('cpv_codes', '')
-        context['nuts_regions'] = self.request.GET.get('nuts_regions', '')
+        # Precargar datos del perfil de empresa si existe (solo si no hay filtros activos)
+        if not has_filters:
+            try:
+                profile = self.request.user.company_profile
+                # Precargar códigos CPV del perfil (sectores de la empresa)
+                if profile.preferred_cpv_codes:
+                    context['cpv_codes'] = ','.join(profile.preferred_cpv_codes)
+                # Precargar regiones NUTS del perfil
+                if profile.preferred_nuts_regions:
+                    context['nuts_regions'] = ','.join(profile.preferred_nuts_regions)
+                # Precargar rango de presupuesto del perfil
+                if profile.budget_range:
+                    context['budget_min'] = profile.budget_range.get('min', '')
+                    context['budget_max'] = profile.budget_range.get('max', '')
+            except CompanyProfile.DoesNotExist:
+                pass
+
+        # Pasar todos los filtros al template para mantener el estado (sobrescribir solo si vienen del GET)
+        context['cpv_codes'] = self.request.GET.get('cpv_codes', context.get('cpv_codes', ''))
+        context['nuts_regions'] = self.request.GET.get('nuts_regions', context.get('nuts_regions', ''))
         context['contract_type'] = self.request.GET.get('contract_type', '')
         context['procedure_type'] = self.request.GET.get('procedure_type', '')
-        context['budget_min'] = self.request.GET.get('budget_min', '')
-        context['budget_max'] = self.request.GET.get('budget_max', '')
+        context['budget_min'] = self.request.GET.get('budget_min', context.get('budget_min', ''))
+        context['budget_max'] = self.request.GET.get('budget_max', context.get('budget_max', ''))
         context['days_ago'] = self.request.GET.get('days_ago', '')
         context['publication_from'] = self.request.GET.get('publication_from', '')
         context['publication_to'] = self.request.GET.get('publication_to', '')
@@ -417,7 +434,28 @@ class DownloadTendersFormView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         # Pasar el total de licitaciones en la BD
         context['total_tenders'] = Tender.objects.count()
+
+        # Precargar datos del perfil de empresa si existe (recargar siempre del DB)
+        try:
+            # Force refresh from database to get latest data
+            profile = CompanyProfile.objects.get(user=self.request.user)
+            # Precargar códigos CPV del perfil (sectores de la empresa)
+            if profile.preferred_cpv_codes:
+                context['default_cpv_codes'] = ','.join(profile.preferred_cpv_codes)
+            else:
+                context['default_cpv_codes'] = '7226'  # Default: Software
+        except CompanyProfile.DoesNotExist:
+            context['default_cpv_codes'] = '7226'  # Default: Software
+
         return context
+
+    def dispatch(self, request, *args, **kwargs):
+        """Evitar cache del navegador para siempre obtener datos frescos"""
+        response = super().dispatch(request, *args, **kwargs)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
 
 
 class DownloadTendersExecuteView(LoginRequiredMixin, View):
@@ -479,7 +517,8 @@ class DownloadTendersExecuteView(LoginRequiredMixin, View):
                             cpv_codes=cpv_codes,
                             place=place,
                             notice_type=notice_type,
-                            progress_callback=progress_callback
+                            progress_callback=progress_callback,
+                            user_id=request.user.id
                         )
                         print(f"[THREAD] Descarga completada: {result}", file=sys.stderr)
                         event_queue.put({'type': 'complete', 'result': result})
@@ -530,6 +569,27 @@ class DownloadTendersExecuteView(LoginRequiredMixin, View):
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
         return response
+
+
+class CancelDownloadView(LoginRequiredMixin, View):
+    """Vista para cancelar la descarga en proceso"""
+
+    def post(self, request):
+        from .ted_downloader import set_cancel_flag
+        try:
+            # Establecer el flag de cancelación para este usuario
+            set_cancel_flag(request.user.id)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Cancelación solicitada. La descarga se detendrá después del archivo actual.'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
 
 class DeleteAllXMLsView(LoginRequiredMixin, View):

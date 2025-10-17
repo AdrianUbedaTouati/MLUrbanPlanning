@@ -31,9 +31,8 @@ class CompanyProfileAIService:
         Returns:
             Dict with extracted fields:
                 - company_name: str
-                - sectors: List[str]
                 - employees: int
-                - preferred_cpv_codes: List[str]
+                - preferred_cpv_codes: List[str] (códigos CPV de sectores/actividad)
                 - preferred_nuts_regions: List[str]
                 - budget_min: int
                 - budget_max: int
@@ -63,21 +62,17 @@ class CompanyProfileAIService:
             # Define simplified output schema (only essential fields)
             class CompanyInfoExtraction(BaseModel):
                 company_name: str = Field(description="Nombre de la empresa")
-                sectors: List[str] = Field(
-                    default_factory=list,
-                    description="Sectores en los que opera (ej: Tecnología, Construcción, Consultoría)"
-                )
                 employees: int = Field(
                     default=0,
                     description="Número aproximado de empleados"
                 )
                 preferred_cpv_codes: List[str] = Field(
                     default_factory=list,
-                    description="Códigos CPV de 4 dígitos relacionados con la actividad (ej: 7226, 4500)"
+                    description="Códigos CPV de 4 dígitos relacionados con los sectores y actividad de la empresa (ej: 7226 para software, 4500 para construcción, 7210 para consultoría). Identifica los sectores de la empresa y devuelve los códigos CPV correspondientes."
                 )
                 preferred_nuts_regions: List[str] = Field(
                     default_factory=list,
-                    description="Códigos NUTS de regiones donde opera (ej: ES30, ES51)"
+                    description="Códigos NUTS de regiones donde opera (ej: ES30 para Madrid, ES51 para Cataluña)"
                 )
                 budget_min: int = Field(
                     default=50000,
@@ -135,7 +130,7 @@ class CompanyProfileAIService:
             Validated and cleaned data
         """
         # Ensure lists are unique and not empty
-        for key in ['sectors', 'preferred_cpv_codes', 'preferred_nuts_regions']:
+        for key in ['preferred_cpv_codes', 'preferred_nuts_regions']:
             if key in data and isinstance(data[key], list):
                 # Remove duplicates and empty strings
                 data[key] = list(set(filter(None, data[key])))

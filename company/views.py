@@ -19,7 +19,6 @@ class CompanyProfileView(LoginRequiredMixin, View):
         # Preparar datos para el template
         context = {
             'form': profile,  # Usamos el objeto directamente
-            'sectors_json': json.dumps(profile.sectors or []),
             'cpv_codes_json': json.dumps(profile.preferred_cpv_codes or []),
             'nuts_regions_json': json.dumps(profile.preferred_nuts_regions or []),
             'budget_min': profile.budget_range.get('min', '') if profile.budget_range else '',
@@ -43,9 +42,6 @@ class CompanyProfileView(LoginRequiredMixin, View):
 
             # Campos JSON (tags)
             # Los campos vienen como JSON strings desde los inputs ocultos
-            sectors_json = request.POST.get('sectors', '[]')
-            profile.sectors = json.loads(sectors_json) if sectors_json else []
-
             cpv_codes_json = request.POST.get('preferred_cpv_codes', '[]')
             profile.preferred_cpv_codes = json.loads(cpv_codes_json) if cpv_codes_json else []
 

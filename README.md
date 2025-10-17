@@ -1,4 +1,4 @@
-# TenderAI Platform v1.2.0
+# TenderAI Platform v1.3.0
 
 Plataforma inteligente de análisis de licitaciones públicas con IA integrada.
 
@@ -124,26 +124,34 @@ Accede a http://127.0.0.1:8000
 ### 4. Descargar Licitaciones de TED API
 
 1. Ir a **Licitaciones** → **Obtener desde TED**
-2. Configurar parámetros de búsqueda:
+2. **Precarga automática**: El formulario se rellena con tu perfil de empresa
+   - Códigos CPV de tu sector
+   - (Solo si es tu primera visita sin filtros activos)
+3. Configurar o ajustar parámetros de búsqueda:
    - **Período**: Días hacia atrás (ej: 30 días)
    - **Máximo a descargar**: Límite de licitaciones (ej: 50)
-   - **Códigos CPV**: Códigos separados por coma (ej: 7226,7240)
+   - **Códigos CPV**: Usa autocomplete con burbujas (ej: 7226 - Software)
    - **País/Región**: ESP, FRA, DEU, ITA, PRT, o todos
    - **Tipo de Aviso**: cn-standard, pin-only, can-standard
-3. Click en **Iniciar Descarga**
-4. Ver progreso en tiempo real:
+4. Click en **Iniciar Descarga**
+5. Ver progreso en tiempo real:
    - Log estilo terminal con colores
    - Barra de progreso con porcentaje
    - Ventanas de fechas analizadas
    - Licitaciones encontradas y guardadas
-5. Esperar notificación de completado
+   - **Botón "Cancelar Descarga"** para detener en cualquier momento
+6. Esperar notificación de completado o cancelar si es necesario
 
 **Características de la Descarga**:
+- **Precarga inteligente** de datos del perfil de empresa
+- **Cancelación en tiempo real** con botón dedicado
+- **Filtros CPV múltiples** con precedencia correcta en queries
 - Búsqueda por ventanas de fechas para evitar límites de API
 - Detección automática de duplicados
 - Progreso en tiempo real con Server-Sent Events (SSE)
 - Log detallado en terminal del servidor
 - Parseo y guardado automático en base de datos
+- **Manejo robusto de errores** (DNS, conexión, HTTP 406)
 
 ### 5. Gestionar Licitaciones
 
@@ -268,9 +276,19 @@ static/
     └── js/main.js         # Utilidades generales
 ```
 
-## 📝 Notas de la Versión 1.2.0
+## 📝 Notas de la Versión 1.3.0
 
-### ✅ Implementado
+### ✅ Nuevo en v1.3.0
+- **Cancelación de descargas en tiempo real** con botón dedicado
+- **Precarga automática de datos** del perfil en formularios
+- **Corrección de filtros CPV múltiples** con paréntesis correctos
+- **Solución error HTTP 406** en descarga de XMLs
+- **Persistencia de datos** en perfil de empresa (nombre, descripción, empleados)
+- Sistema de flags de cancelación por usuario thread-safe
+- Headers anti-caché para datos siempre actualizados
+- Logging mejorado con queries completas de TED API
+
+### ✅ Implementado (versiones anteriores)
 - Sistema completo de autenticación
 - **Autocompletado de perfil de empresa con IA** (texto libre → campos estructurados)
 - Perfiles de empresa con 20+ campos
@@ -328,4 +346,4 @@ Desarrollado con Django 5.2 + LangChain 0.3 + Google Gemini 2.5 Flash
 
 ---
 
-**TenderAI Platform v1.2.0** - Encuentra las mejores oportunidades de licitación con IA
+**TenderAI Platform v1.3.0** - Encuentra las mejores oportunidades de licitación con IA

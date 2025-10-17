@@ -5,6 +5,61 @@ Todas las cambios notables en TenderAI Platform serán documentados en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.3.0] - 2025-10-17
+
+### Añadido
+- **Sistema de cancelación de descargas en tiempo real**
+  - Botón "Cancelar Descarga" visible durante el proceso
+  - Cancelación graceful que espera al XML actual antes de detener
+  - Flag de cancelación por usuario (`_cancel_flags` en ted_downloader)
+  - Funciones: `set_cancel_flag()`, `clear_cancel_flag()`, `should_cancel()`
+  - Nueva vista: `CancelDownloadView` para manejar peticiones de cancelación
+  - Endpoint: `/licitaciones/cancelar-descarga/`
+  - Evento SSE `cancelled` con estadísticas finales
+  - Confirmación de usuario antes de cancelar
+  - Feedback visual: botón cambia a "Cancelando..." y se deshabilita
+  - Mensaje en log: "🛑 DESCARGA CANCELADA POR EL USUARIO"
+
+- **Precarga de datos del perfil de empresa**
+  - Formulario de descarga ("Obtener") precarga códigos CPV del perfil
+  - Formulario de búsqueda ("Buscar") precarga CPV, NUTS y presupuesto
+  - Solo aplica cuando NO hay filtros activos (primera visita)
+  - Evita caché de navegador con headers: `Cache-Control: no-cache`
+  - Consulta directa a DB con `CompanyProfile.objects.get()` para datos frescos
+
+### Mejorado
+- **Corrección de filtros CPV múltiples en descarga TED**
+  - Paréntesis automáticos en expresiones OR: `(classification-cpv=7226* or classification-cpv=4500*)`
+  - Prevención de problemas de precedencia de operadores AND/OR
+  - Query correcta: `notice-type=X and (cpv1 or cpv2) and place=Y`
+  - Logging mejorado: muestra query final enviada a TED API
+
+- **Solución de error 406 en descarga de XMLs**
+  - Headers específicos para descarga: `Accept: application/xml, text/xml, */*`
+  - User-Agent personalizado: `TenderAI-Platform/1.0 (Python requests)`
+  - Parámetro `session` en `download_xml_content()` para reutilizar conexión
+  - Manejo robusto de errores HTTP con raise_for_status()
+
+- **Persistencia de datos en perfil de empresa**
+  - Corrección de campos value en template: `{{ form.company_name }}` en lugar de `{{ form.company_name.value }}`
+  - Nombre de empresa, descripción y empleados ahora persisten después de guardar
+  - Eliminación de referencias obsoletas al campo `sectors` en services.py y views.py
+
+### Corregido
+- Error 406 "Not Acceptable" al descargar XMLs de TED
+- Nombre de empresa desaparecía después de guardar el perfil
+- Filtros CPV múltiples generaban queries incorrectas en TED API
+- Datos del perfil no se actualizaban en formularios de descarga/búsqueda
+
+### Técnico
+- Sistema de flags thread-safe para cancelación por usuario
+- Verificación de cancelación en cada iteración del bucle de descarga
+- Event listener JavaScript con fetch API para cancelación
+- Manejo de evento `cancelled` en SSE con estadísticas parciales
+- Logging detallado: `[FILTROS APLICADOS]` y `[QUERY TED API]`
+- Headers HTTP anti-caché en `DownloadTendersFormView.dispatch()`
+- Función `download_xml_content()` acepta sesión opcional para reutilización
+
 ## [1.2.0] - 2025-10-17
 
 ### Añadido

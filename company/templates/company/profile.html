@@ -320,7 +320,7 @@
                     class="form-input"
                     id="id_company_name"
                     name="company_name"
-                    value="{{ form.company_name.value|default:'' }}"
+                    value="{{ form.company_name|default:'' }}"
                     required
                 >
             </div>
@@ -333,7 +333,7 @@
                     id="id_company_description_text"
                     name="company_description_text"
                     placeholder="Ejemplo: Somos una empresa de desarrollo de software especializada en soluciones cloud. Contamos con 15 empleados y trabajamos principalmente en Madrid y Barcelona. Ofrecemos servicios de consultoría tecnológica, desarrollo web y aplicaciones móviles..."
-                >{{ form.company_description_text.value|default:'' }}</textarea>
+                >{{ form.company_description_text|default:'' }}</textarea>
                 <p class="help-text">Describe tu empresa, qué hacéis, en qué sectores trabajáis, ubicación, etc. Esta información ayudará a encontrar las licitaciones más relevantes.</p>
 
                 <div class="extract-btn-container">
@@ -352,7 +352,7 @@
                     class="form-input"
                     id="id_employees"
                     name="employees"
-                    value="{{ form.employees.value|default:'' }}"
+                    value="{{ form.employees|default:'' }}"
                     min="1"
                 >
             </div>

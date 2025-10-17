@@ -34,6 +34,24 @@ BACKOFF_FACTOR = 2  # Factor de backoff exponencial
 # Regex para números de publicación
 PUBNUM_RE = re.compile(r"\b\d{6,8}-\d{4}\b")
 
+# Diccionario global para flags de cancelación por usuario
+_cancel_flags = {}
+
+
+def set_cancel_flag(user_id: int):
+    """Establece el flag de cancelación para un usuario"""
+    _cancel_flags[user_id] = True
+
+
+def clear_cancel_flag(user_id: int):
+    """Limpia el flag de cancelación para un usuario"""
+    _cancel_flags[user_id] = False
+
+
+def should_cancel(user_id: int) -> bool:
+    """Verifica si se debe cancelar la descarga para un usuario"""
+    return _cancel_flags.get(user_id, False)
+
 
 def create_session_with_retries() -> requests.Session:
     """
@@ -162,13 +180,20 @@ def extract_publication_numbers(obj: Any) -> List[str]:
     return uniq
 
 
-def download_xml_content(pub_number: str) -> bytes:
+def download_xml_content(pub_number: str, session: Optional[requests.Session] = None) -> bytes:
     """
     Descarga el XML de un aviso por número de publicación.
     Formato: https://ted.europa.eu/en/notice/{publication-number}/xml
     """
     url = f"https://ted.europa.eu/en/notice/{pub_number}/xml"
-    r = http_get(url, timeout=TIMEOUT)
+
+    # Headers específicos para descargar XML
+    headers = {
+        'Accept': 'application/xml, text/xml, */*',
+        'User-Agent': 'TenderAI-Platform/1.0 (Python requests)',
+    }
+
+    r = http_get(url, session=session, headers=headers, timeout=TIMEOUT)
     r.raise_for_status()
     return r.content
 
@@ -278,6 +303,12 @@ def search_tenders_by_date_windows(
         win_start = max(total_start, win_end - timedelta(days=window_days))
         q = expert_query_with_range(win_start, win_end, cpv_expr, place, notice_type)
 
+        # Debug: mostrar query construida
+        import sys
+        print(f"\n[QUERY TED API]", file=sys.stderr)
+        print(f"  Window: {win_start} -> {win_end}", file=sys.stderr)
+        print(f"  Query: {q}", file=sys.stderr)
+
         if progress_callback:
             progress_callback({
                 'type': 'window',
@@ -343,7 +374,8 @@ def download_and_save_tenders(
     cpv_codes: Optional[List[str]] = None,
     place: Optional[str] = None,
     notice_type: Optional[str] = None,
-    progress_callback=None
+    progress_callback=None,
+    user_id: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Función principal: busca, descarga y guarda licitaciones en la BD.
@@ -355,22 +387,41 @@ def download_and_save_tenders(
         place: País/región (ej: 'ESP', 'FRA'). Si es None, usa DEFAULT_PLACE
         notice_type: Tipo de aviso (ej: 'cn-standard'). Si es None, usa DEFAULT_NOTICE_TYPE
         progress_callback: Función opcional para reportar progreso
+        user_id: ID del usuario (para control de cancelación)
 
     Returns:
         Dict con estadísticas: total_found, downloaded, saved, errors
     """
+    # Limpiar flag de cancelación al inicio
+    if user_id is not None:
+        clear_cancel_flag(user_id)
+
     # Crear sesión reutilizable con reintentos
     session = create_session_with_retries()
 
     # Construir expresión CPV
     if cpv_codes:
-        cpv_expr = " or ".join([f"classification-cpv={code}*" for code in cpv_codes])
+        if len(cpv_codes) == 1:
+            # Un solo código: no necesita paréntesis
+            cpv_expr = f"classification-cpv={cpv_codes[0]}*"
+        else:
+            # Múltiples códigos: envolver en paréntesis para correcta precedencia
+            cpv_parts = " or ".join([f"classification-cpv={code}*" for code in cpv_codes])
+            cpv_expr = f"({cpv_parts})"
     else:
         cpv_expr = DEFAULT_CPV
 
     # Usar valores proporcionados o defaults
     place_expr = f"place-of-performance={place}" if place else DEFAULT_PLACE
     notice_type_expr = f"notice-type={notice_type}" if notice_type else DEFAULT_NOTICE_TYPE
+
+    # Debug: mostrar filtros aplicados
+    import sys
+    print(f"\n[FILTROS APLICADOS]", file=sys.stderr)
+    print(f"  CPV Expression: {cpv_expr}", file=sys.stderr)
+    print(f"  Place: {place_expr}", file=sys.stderr)
+    print(f"  Notice Type: {notice_type_expr}", file=sys.stderr)
+    print(f"  Days Back: {days_back}", file=sys.stderr)
 
     # 1. Buscar licitaciones
     if progress_callback:
@@ -432,6 +483,17 @@ def download_and_save_tenders(
     errors = []
 
     for idx, pub_num in enumerate(pub_numbers, 1):
+        # Verificar cancelación
+        if user_id is not None and should_cancel(user_id):
+            if progress_callback:
+                progress_callback({
+                    'type': 'cancelled',
+                    'message': 'Descarga cancelada por el usuario',
+                    'saved': saved,
+                    'downloaded': downloaded
+                })
+            break
+
         try:
             if progress_callback:
                 progress_callback({
@@ -452,7 +514,7 @@ def download_and_save_tenders(
                 continue
 
             # Descargar XML
-            xml_content = download_xml_content(pub_num)
+            xml_content = download_xml_content(pub_num, session=session)
             downloaded += 1
 
             # Parsear
