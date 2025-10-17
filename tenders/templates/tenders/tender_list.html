@@ -785,19 +785,26 @@ class AutocompleteTagsInput {
         this.tags = [];
         this.selectedIndex = -1;
         this.searchTimeout = null;
-
-        // Parse initial tags from comma-separated string
-        if (initialTags) {
-            const tagsArray = typeof initialTags === 'string'
-                ? initialTags.split(',').map(t => t.trim()).filter(t => t)
-                : initialTags;
-            this.tags = tagsArray.map(code => ({code, name: code}));
-        }
+        this.initialTagCodes = initialTags;
 
         this.init();
     }
 
-    init() {
+    async init() {
+        // Load initial tags with proper names from API
+        if (this.initialTagCodes) {
+            const tagsArray = typeof this.initialTagCodes === 'string'
+                ? this.initialTagCodes.split(',').map(t => t.trim()).filter(t => t)
+                : this.initialTagCodes;
+
+            // Fetch names for initial tags
+            for (const code of tagsArray) {
+                if (code) {
+                    await this.loadTagName(code);
+                }
+            }
+        }
+
         this.renderTags();
         this.updateHiddenInput();
 
@@ -972,6 +979,32 @@ class AutocompleteTagsInput {
                 item.classList.remove('selected');
             }
         });
+    }
+
+    async loadTagName(code) {
+        try {
+            // Search for the code to get its name
+            const response = await fetch(`${this.apiUrl}?q=${encodeURIComponent(code)}`);
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                // Find exact match
+                const match = data.results.find(r => r.code === code);
+                if (match) {
+                    this.tags.push({ code: match.code, name: match.name });
+                } else {
+                    // Use first result if no exact match
+                    this.tags.push({ code: data.results[0].code, name: data.results[0].name });
+                }
+            } else {
+                // If no match found, add with code as name
+                this.tags.push({ code, name: code });
+            }
+        } catch (error) {
+            console.error('Error loading tag name:', error);
+            // Fallback to code as name
+            this.tags.push({ code, name: code });
+        }
     }
 
     addTag(code, name) {
