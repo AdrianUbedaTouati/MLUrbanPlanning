@@ -24,34 +24,53 @@ class ChatAgentService:
         """
         self.user = user
         self.api_key = user.llm_api_key
+        self._agent = None
 
-    def _get_agent_graph(self):
+    def _get_agent(self):
         """
-        Initialize and return the agent graph
-        Returns the compiled graph for processing queries
+        Initialize and return the EFormsRAGAgent
+        Cached per service instance
         """
+        if self._agent is not None:
+            return self._agent
+
+        if not self.api_key:
+            raise ValueError("No API key configured for user")
+
         try:
-            from agent_graph import create_agent_graph
+            # Import agent_graph module
+            from agent_ia_core import agent_graph
+            from agent_ia_core import config
 
-            # Set API key temporarily for this operation
-            original_key = os.environ.get('GOOGLE_API_KEY')
-            if self.api_key:
-                os.environ['GOOGLE_API_KEY'] = self.api_key
+            # Temporarily set API key in config module
+            original_key = getattr(config, 'API_KEY', None)
+            config.API_KEY = self.api_key
+
+            # Also set in environment for fallback
+            os.environ['GOOGLE_API_KEY'] = self.api_key
 
             try:
-                graph = create_agent_graph()
-                return graph
+                # Create agent instance
+                self._agent = agent_graph.EFormsRAGAgent(
+                    llm_provider="google",
+                    llm_model="gemini-2.0-flash-exp",
+                    temperature=0.3,
+                    k_retrieve=6,
+                    use_grading=True,
+                    use_verification=False  # Disable verification for faster responses
+                )
+
+                return self._agent
+
             finally:
-                # Restore original key
+                # Restore original config
                 if original_key:
-                    os.environ['GOOGLE_API_KEY'] = original_key
-                elif 'GOOGLE_API_KEY' in os.environ:
-                    del os.environ['GOOGLE_API_KEY']
+                    config.API_KEY = original_key
 
         except ImportError as e:
-            raise Exception(f"Error importing agent_graph: {e}")
+            raise Exception(f"Error importing agent modules: {e}")
         except Exception as e:
-            raise Exception(f"Error creating agent graph: {e}")
+            raise Exception(f"Error creating agent: {e}")
 
     def process_message(self, message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """
@@ -59,7 +78,7 @@ class ChatAgentService:
 
         Args:
             message: User's question/message
-            conversation_history: Previous messages in the conversation
+            conversation_history: Previous messages in the conversation (not used yet)
 
         Returns:
             Dict with:
@@ -74,67 +93,81 @@ class ChatAgentService:
                     'route': 'error',
                     'documents_used': [],
                     'verified_fields': [],
-                    'tokens_used': 0
+                    'iterations': 0
                 }
             }
 
         try:
-            # Get the agent graph
-            graph = self._get_agent_graph()
+            # Get the agent
+            agent = self._get_agent()
 
-            # Prepare the input state
-            state = {
-                'question': message,
-                'conversation_history': conversation_history or []
+            # Set API key in environment for this request
+            os.environ['GOOGLE_API_KEY'] = self.api_key
+
+            # Execute query through the agent
+            result = agent.query(message)
+
+            # Extract response content
+            response_content = result.get('answer', 'No se pudo generar una respuesta.')
+
+            # Format document metadata for frontend
+            documents_used = [
+                {
+                    'id': doc.get('ojs_notice_id', 'unknown'),
+                    'section': doc.get('section', 'unknown'),
+                    'content_preview': doc.get('content', '')[:150] + '...'
+                }
+                for doc in result.get('documents', [])
+            ]
+
+            # Build metadata response
+            metadata = {
+                'route': result.get('route', 'unknown'),
+                'documents_used': documents_used,
+                'verified_fields': result.get('verified_fields', []),
+                'iterations': result.get('iterations', 0),
+                'num_documents': len(documents_used)
             }
 
-            # Set API key in environment
-            original_key = os.environ.get('GOOGLE_API_KEY')
-            if self.api_key:
-                os.environ['GOOGLE_API_KEY'] = self.api_key
-
-            try:
-                # Invoke the graph
-                result = graph.invoke(state)
-
-                # Extract response and metadata
-                response_content = result.get('generation', 'No se pudo generar una respuesta.')
-
-                # Extract metadata
-                metadata = {
-                    'route': result.get('route_decision', 'unknown'),
-                    'documents_used': [
-                        {
-                            'id': doc.metadata.get('ojs_notice_id', 'unknown'),
-                            'title': doc.metadata.get('title', 'Sin título')
-                        }
-                        for doc in result.get('documents', [])
-                    ],
-                    'verified_fields': result.get('verified_fields', []),
-                    'tokens_used': result.get('tokens_used', 0)
-                }
-
-                return {
-                    'content': response_content,
-                    'metadata': metadata
-                }
-
-            finally:
-                # Restore original key
-                if original_key:
-                    os.environ['GOOGLE_API_KEY'] = original_key
-                elif 'GOOGLE_API_KEY' in os.environ:
-                    del os.environ['GOOGLE_API_KEY']
-
-        except Exception as e:
             return {
-                'content': f'Lo siento, ocurrió un error al procesar tu mensaje: {str(e)}',
+                'content': response_content,
+                'metadata': metadata
+            }
+
+        except ValueError as e:
+            # API key or configuration error
+            return {
+                'content': f'Error de configuración: {str(e)}',
                 'metadata': {
-                    'error': str(e),
+                    'error': 'CONFIGURATION_ERROR',
                     'route': 'error',
                     'documents_used': [],
                     'verified_fields': [],
-                    'tokens_used': 0
+                    'iterations': 0
+                }
+            }
+
+        except Exception as e:
+            # General error
+            error_msg = str(e)
+
+            # Check for specific error types
+            if 'ChromaDB' in error_msg or 'collection' in error_msg.lower():
+                error_msg = (
+                    'El sistema de búsqueda no está inicializado. '
+                    'Por favor, ve a la sección de "Vectorización" para indexar '
+                    'las licitaciones antes de usar el chat.'
+                )
+
+            return {
+                'content': f'Lo siento, ocurrió un error al procesar tu mensaje: {error_msg}',
+                'metadata': {
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'route': 'error',
+                    'documents_used': [],
+                    'verified_fields': [],
+                    'iterations': 0
                 }
             }
 
@@ -150,3 +183,10 @@ class ChatAgentService:
         """
         question = f"Dame toda la información detallada sobre la licitación con ID {ojs_notice_id}"
         return self.process_message(question)
+
+    def reset_agent(self):
+        """
+        Reset the cached agent instance
+        Useful when configuration changes or to free memory
+        """
+        self._agent = None
