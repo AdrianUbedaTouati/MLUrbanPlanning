@@ -30,28 +30,30 @@ argon2-cffi==23.1.0      # Strong password hashing
 # Agent_IA Core - LangChain & LangGraph
 # IMPORTANTE: Versiones compatibles con Ollama
 # ------------------------------------------------
-# LangChain Core (version 1.x necesaria para Ollama)
-langchain==0.3.27
-langchain-core==1.0.0
-langchain-community==0.3.0
-langgraph==0.2.63
+# LangChain Core - Usar version flexible compatible
+langchain>=0.3.27
+langchain-core>=1.0.0
+langchain-community>=0.3.0
+langgraph>=0.2.63
+langchain-text-splitters>=0.3.0
 
 # LangChain Providers
-langchain-openai==0.3.35           # OpenAI GPT-4
-langchain-google-genai==2.0.10     # Google Gemini
-langchain-nvidia-ai-endpoints==0.3.18  # NVIDIA NIM
-langchain-ollama==1.0.0            # Ollama (Local) - NUEVO
+langchain-openai>=0.3.35           # OpenAI GPT-4
+langchain-google-genai>=2.0.10     # Google Gemini
+langchain-nvidia-ai-endpoints>=0.3.18  # NVIDIA NIM
+langchain-ollama>=1.0.0            # Ollama (Local) - NUEVO
 
 # Vector Store
-langchain-chroma==0.2.0
+langchain-chroma>=0.2.0
 
 # ------------------------------------------------
 # LLM APIs
 # ------------------------------------------------
-openai==1.61.0          # OpenAI API client
-google-generativeai==0.8.3  # Google Gemini API
-tiktoken==0.8.0         # OpenAI tokenizer
+openai>=1.61.0          # OpenAI API client
+google-generativeai>=0.8.3  # Google Gemini API
+tiktoken>=0.8.0         # OpenAI tokenizer
 httpx>=0.28.0           # Required by Ollama
+ollama>=0.6.0           # Ollama Python SDK
 
 # ------------------------------------------------
 # Vector Database
