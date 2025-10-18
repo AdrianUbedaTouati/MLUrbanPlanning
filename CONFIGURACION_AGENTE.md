@@ -119,6 +119,35 @@ OLLAMA_CONTEXT_LENGTH=4096
 
 ---
 
+## Sistema de Routing
+
+### Cómo Funciona el Routing
+
+El sistema utiliza **routing 100% LLM** para clasificar automáticamente cada conversación por tema e intención. Esto significa que el agente:
+
+1. **Analiza cada mensaje** con el LLM para entender la intención
+2. **Clasifica automáticamente** en una de dos categorías:
+   - `vectorstore`: Necesita buscar en documentos de licitaciones
+   - `general`: Conversación general sin necesidad de documentos
+3. **Decide la ruta** según la clasificación
+
+**Ventajas:**
+- ✅ Entiende **sinónimos automáticamente** ("licitaciones", "ofertas", "propuestas", "contratos")
+- ✅ Detecta **intención** sin necesidad de keywords exactas
+- ✅ Se **adapta a lenguaje natural** sin rigidez
+- ✅ **Sin mantenimiento** - no requiere añadir keywords manualmente
+
+**Ejemplos de clasificación:**
+- "cual es la mejor oferta en software" → `vectorstore` (busca documentos)
+- "busca propuestas de desarrollo web" → `vectorstore` (sinónimo detectado)
+- "hola que tal" → `general` (saludo)
+- "qué es una licitación pública" → `general` (pregunta conceptual)
+
+**Configuración relacionada:**
+El routing utiliza `LLM_TEMPERATURE` y `LLM_TIMEOUT` del `.env` para la clasificación.
+
+---
+
 ## Características del Agente
 
 ### `USE_GRADING`
