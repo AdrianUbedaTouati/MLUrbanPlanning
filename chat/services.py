@@ -61,6 +61,31 @@ class ChatAgentService:
 
             # Create agent instance with user's API key and provider
             if self.provider == 'ollama':
+                # Verificar que Ollama está disponible antes de crear el agente
+                import requests
+                try:
+                    response = requests.get('http://localhost:11434/api/tags', timeout=2)
+                    if response.status_code != 200:
+                        raise ValueError("Ollama no está respondiendo correctamente en http://localhost:11434")
+
+                    # Verificar que el modelo está descargado
+                    models = response.json().get('models', [])
+                    model_names = [m['name'] for m in models]
+                    if model_name not in model_names:
+                        available = ', '.join(model_names[:5]) if model_names else 'ninguno'
+                        raise ValueError(
+                            f"El modelo '{model_name}' no está descargado en Ollama. "
+                            f"Modelos disponibles: {available}. "
+                            f"Descárgalo con: ollama pull {model_name}"
+                        )
+                except requests.exceptions.ConnectionError:
+                    raise ValueError(
+                        "No se puede conectar con Ollama. "
+                        "Verifica que Ollama esté ejecutándose: ollama serve"
+                    )
+                except requests.exceptions.Timeout:
+                    raise ValueError("Timeout al conectar con Ollama. Verifica que esté funcionando correctamente.")
+
                 # Ollama doesn't need API key
                 self._agent = agent_graph.EFormsRAGAgent(
                     api_key=None,  # No API key for Ollama

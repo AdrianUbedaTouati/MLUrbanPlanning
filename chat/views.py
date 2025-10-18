@@ -113,14 +113,45 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
             )
 
         except Exception as e:
+            # Log completo del error para debugging
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"[CHAT ERROR] {error_trace}")  # Log en consola del servidor
+
+            # Mensaje de error más descriptivo según el tipo
+            error_msg = str(e)
+            if 'ollama' in error_msg.lower() or 'connection' in error_msg.lower():
+                assistant_content = (
+                    "❌ **Error de conexión con Ollama**\n\n"
+                    "Por favor verifica:\n"
+                    "1. Ollama está ejecutándose: `ollama serve`\n"
+                    "2. El modelo está descargado: `ollama list`\n"
+                    "3. Si no está, descárgalo: `ollama pull qwen2.5:72b`\n\n"
+                    f"Error técnico: {error_msg}"
+                )
+            elif 'API key' in error_msg or 'api_key' in error_msg:
+                assistant_content = (
+                    "🔑 **Falta configurar tu API key**\n\n"
+                    "Ve a tu perfil y configura tu API key del proveedor que estás usando."
+                )
+            elif 'ChromaDB' in error_msg or 'collection' in error_msg:
+                assistant_content = (
+                    "📊 **Base de datos de licitaciones no inicializada**\n\n"
+                    "Ve a /licitaciones/vectorizacion/ y haz clic en 'Indexar Todas' "
+                    "para crear la base de datos antes de usar el chat."
+                )
+            else:
+                assistant_content = f"Lo siento, ocurrió un error al procesar tu mensaje: {error_msg}"
+
             # Fallback in case of error
             assistant_message = ChatMessage.objects.create(
                 session=session,
                 role='assistant',
-                content=f'Lo siento, ocurrió un error al procesar tu mensaje. Por favor, verifica que tu API key esté configurada correctamente en tu perfil. Error: {str(e)}',
+                content=assistant_content,
                 metadata={
                     'route': 'error',
                     'error': str(e),
+                    'error_type': type(e).__name__,
                     'documents_used': [],
                     'verified_fields': [],
                     'tokens_used': 0

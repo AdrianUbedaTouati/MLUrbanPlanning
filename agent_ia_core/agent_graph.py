@@ -398,7 +398,19 @@ class EFormsRAGAgent:
 
         except Exception as e:
             logger.error(f"[ANSWER] Error generando respuesta: {e}")
-            state["answer"] = "Lo siento, hubo un error generando la respuesta. Por favor, intenta de nuevo."
+            import traceback
+            traceback.print_exc()
+
+            # Mensaje de error más descriptivo según el tipo de error
+            error_msg = str(e)
+            if 'connection' in error_msg.lower() or 'ollama' in error_msg.lower():
+                state["answer"] = "❌ Error de conexión con Ollama. Verifica que Ollama esté ejecutándose (http://localhost:11434) y que el modelo esté descargado."
+            elif 'timeout' in error_msg.lower():
+                state["answer"] = "⏱️ Timeout al generar respuesta. El modelo puede estar sobrecargado. Intenta de nuevo."
+            elif 'memory' in error_msg.lower() or 'out of memory' in error_msg.lower():
+                state["answer"] = "💾 Memoria insuficiente para el modelo. Considera usar un modelo más pequeño."
+            else:
+                state["answer"] = f"❌ Error generando respuesta: {error_msg}"
 
         return state
 
