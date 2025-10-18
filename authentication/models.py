@@ -22,13 +22,14 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
 
-    # API Key for LLM (Google Gemini, OpenAI, NVIDIA)
+    # API Key for LLM (Google Gemini, OpenAI, NVIDIA, Ollama)
     llm_provider = models.CharField(
         max_length=20,
         choices=[
             ('gemini', 'Google Gemini'),
             ('openai', 'OpenAI'),
             ('nvidia', 'NVIDIA NIM'),
+            ('ollama', 'Ollama (Local)'),
         ],
         default='gemini',
         verbose_name='Proveedor de IA',
@@ -38,7 +39,23 @@ class User(AbstractUser):
         max_length=255,
         blank=True,
         verbose_name='API Key',
-        help_text='Tu API key del proveedor seleccionado'
+        help_text='Tu API key del proveedor seleccionado (no necesaria para Ollama)'
+    )
+
+    # Ollama specific fields
+    ollama_model = models.CharField(
+        max_length=100,
+        blank=True,
+        default='qwen2.5:72b',
+        verbose_name='Modelo Ollama',
+        help_text='Modelo de chat para Ollama (ej: qwen2.5:72b, llama3.3:70b)'
+    )
+    ollama_embedding_model = models.CharField(
+        max_length=100,
+        blank=True,
+        default='nomic-embed-text',
+        verbose_name='Modelo Embeddings Ollama',
+        help_text='Modelo de embeddings para Ollama (ej: nomic-embed-text, mxbai-embed-large)'
     )
 
     # Shipping address fields

@@ -10,13 +10,13 @@ class LLMProviderFactory:
     """Factory for creating LLM instances based on provider type"""
 
     @staticmethod
-    def get_llm(provider: str, api_key: str, model_name: Optional[str] = None, **kwargs):
+    def get_llm(provider: str, api_key: str = None, model_name: Optional[str] = None, **kwargs):
         """
         Get LLM instance for the specified provider
 
         Args:
-            provider: Provider name ('gemini', 'openai', 'nvidia')
-            api_key: API key for the provider
+            provider: Provider name ('gemini', 'openai', 'nvidia', 'ollama')
+            api_key: API key for the provider (not needed for Ollama)
             model_name: Optional custom model name
             **kwargs: Additional provider-specific arguments
 
@@ -29,6 +29,8 @@ class LLMProviderFactory:
             return LLMProviderFactory._get_openai_llm(api_key, model_name, **kwargs)
         elif provider == 'nvidia':
             return LLMProviderFactory._get_nvidia_llm(api_key, model_name, **kwargs)
+        elif provider == 'ollama':
+            return LLMProviderFactory._get_ollama_llm(model_name, **kwargs)
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
 
@@ -78,13 +80,27 @@ class LLMProviderFactory:
         )
 
     @staticmethod
-    def get_embeddings(provider: str, api_key: str, model_name: Optional[str] = None):
+    def _get_ollama_llm(model_name: Optional[str] = None, **kwargs):
+        """Get Ollama local LLM instance"""
+        from langchain_ollama import ChatOllama
+
+        model = model_name or "qwen2.5:72b"
+
+        return ChatOllama(
+            model=model,
+            base_url="http://localhost:11434",
+            temperature=kwargs.get('temperature', 0.7),
+            **{k: v for k, v in kwargs.items() if k != 'temperature'}
+        )
+
+    @staticmethod
+    def get_embeddings(provider: str, api_key: str = None, model_name: Optional[str] = None):
         """
         Get embeddings instance for the specified provider
 
         Args:
-            provider: Provider name ('gemini', 'openai', 'nvidia')
-            api_key: API key for the provider
+            provider: Provider name ('gemini', 'openai', 'nvidia', 'ollama')
+            api_key: API key for the provider (not needed for Ollama)
             model_name: Optional custom model name
 
         Returns:
@@ -96,6 +112,8 @@ class LLMProviderFactory:
             return LLMProviderFactory._get_openai_embeddings(api_key, model_name)
         elif provider == 'nvidia':
             return LLMProviderFactory._get_nvidia_embeddings(api_key, model_name)
+        elif provider == 'ollama':
+            return LLMProviderFactory._get_ollama_embeddings(model_name)
         else:
             raise ValueError(f"Unsupported embeddings provider: {provider}")
 
@@ -139,6 +157,18 @@ class LLMProviderFactory:
         )
 
     @staticmethod
+    def _get_ollama_embeddings(model_name: Optional[str] = None):
+        """Get Ollama local embeddings"""
+        from langchain_ollama import OllamaEmbeddings
+
+        model = model_name or "nomic-embed-text"
+
+        return OllamaEmbeddings(
+            model=model,
+            base_url="http://localhost:11434"
+        )
+
+    @staticmethod
     def get_provider_info(provider: str) -> Dict[str, Any]:
         """
         Get information about a provider
@@ -176,6 +206,15 @@ class LLMProviderFactory:
                 'api_key_url': 'https://build.nvidia.com/settings/api-keys',
                 'free_tier': True,
                 'description': 'Modelos open-source optimizados en infraestructura NVIDIA'
+            },
+            'ollama': {
+                'name': 'Ollama (Local)',
+                'llm_models': ['qwen2.5:72b', 'llama3.3:70b', 'llama3.1:70b', 'deepseek-r1:14b', 'mistral:7b'],
+                'embedding_models': ['nomic-embed-text', 'mxbai-embed-large'],
+                'docs_url': 'https://ollama.com/library',
+                'api_key_url': None,
+                'free_tier': True,
+                'description': 'Modelos LLM ejecutándose localmente en tu máquina. Máxima privacidad, costo cero, sin límites de uso'
             }
         }
 

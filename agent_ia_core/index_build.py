@@ -90,8 +90,8 @@ class IndexBuilder:
         self.api_key = api_key
         self.provider = provider or LLM_PROVIDER
 
-        # Verificar API key
-        if not self.api_key:
+        # Verificar API key (no necesaria para Ollama)
+        if not self.api_key and self.provider != 'ollama':
             raise ValueError(
                 f"API key no configurada para {self.provider}. "
                 f"Por favor, configura tu API key en tu perfil de usuario."
@@ -102,7 +102,8 @@ class IndexBuilder:
 
         # Inicializar embeddings según el proveedor
         logger.info(f"Inicializando embeddings con {self.provider} - Modelo: {self.embedding_model}")
-        logger.info(f"API Key (primeros 20 chars): {self.api_key[:20] if self.api_key else 'None'}...")
+        if self.provider != 'ollama':
+            logger.info(f"API Key (primeros 20 chars): {self.api_key[:20] if self.api_key else 'None'}...")
 
         try:
             import os
@@ -120,6 +121,13 @@ class IndexBuilder:
                 self.embeddings = NVIDIAEmbeddings(
                     model=self.embedding_model,
                     nvidia_api_key=self.api_key
+                )
+            elif self.provider == "ollama":
+                from langchain_ollama import OllamaEmbeddings
+                logger.info(f"Inicializando Ollama embeddings locales")
+                self.embeddings = OllamaEmbeddings(
+                    model=self.embedding_model,
+                    base_url="http://localhost:11434"
                 )
             else:  # openai
                 from langchain_openai import OpenAIEmbeddings

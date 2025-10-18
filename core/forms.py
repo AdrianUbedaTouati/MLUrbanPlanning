@@ -49,6 +49,7 @@ class EditProfileForm(forms.ModelForm):
             ('gemini', 'Google Gemini'),
             ('openai', 'OpenAI'),
             ('nvidia', 'NVIDIA NIM'),
+            ('ollama', 'Ollama (Local)'),
         ],
         widget=forms.Select(attrs={
             'class': 'form-select',
@@ -60,10 +61,33 @@ class EditProfileForm(forms.ModelForm):
         label='API Key',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Tu API key del proveedor seleccionado',
+            'placeholder': 'Tu API key del proveedor seleccionado (no necesaria para Ollama)',
             'type': 'password',
             'id': 'llm_api_key_input'
-        })
+        }),
+        help_text='No es necesaria para Ollama (modelo local)'
+    )
+    ollama_model = forms.CharField(
+        required=False,
+        label='Modelo Ollama',
+        initial='qwen2.5:72b',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: qwen2.5:72b, llama3.3:70b, mistral:7b',
+            'id': 'ollama_model_input'
+        }),
+        help_text='Solo se usa si seleccionas Ollama como proveedor'
+    )
+    ollama_embedding_model = forms.CharField(
+        required=False,
+        label='Modelo de Embeddings Ollama',
+        initial='nomic-embed-text',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: nomic-embed-text, mxbai-embed-large',
+            'id': 'ollama_embedding_input'
+        }),
+        help_text='Modelo para vectorización (solo para Ollama)'
     )
 
     # Campos de dirección
@@ -119,7 +143,7 @@ class EditProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'phone',
-                 'llm_provider', 'llm_api_key',
+                 'llm_provider', 'llm_api_key', 'ollama_model', 'ollama_embedding_model',
                  'address_line1', 'address_line2', 'city', 'state_province',
                  'postal_code', 'country')
 

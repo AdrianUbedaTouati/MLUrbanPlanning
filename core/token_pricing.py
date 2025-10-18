@@ -41,6 +41,13 @@ PRICING_EUR = {
             'note': 'Requiere licencia NVIDIA AI Enterprise para producción'
         },
         'note': '✅ Gratis hasta 10,000 requests. Después: $4,500/GPU/año o self-hosted'
+    },
+    'ollama': {
+        'name': 'Ollama (Local)',
+        'input': 0.0,           # GRATIS - ejecuta localmente
+        'output': 0.0,
+        'embeddings': 0.0,
+        'note': '✅ Completamente GRATIS - Modelo local sin límites. Máxima privacidad'
     }
 }
 

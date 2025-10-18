@@ -44,11 +44,19 @@ try:
 except ImportError:
     ChatOpenAI = None
 
+try:
+    from langchain_ollama import ChatOllama, OllamaEmbeddings
+except ImportError:
+    ChatOllama = None
+    OllamaEmbeddings = None
+
 # Determinar LLM_CLASS por defecto según configuración
 if LLM_PROVIDER == "google":
     LLM_CLASS = ChatGoogleGenerativeAI
 elif LLM_PROVIDER == "nvidia":
     LLM_CLASS = ChatNVIDIA
+elif LLM_PROVIDER == "ollama":
+    LLM_CLASS = ChatOllama
 else:  # openai
     LLM_CLASS = ChatOpenAI
 
@@ -94,24 +102,27 @@ class EFormsRAGAgent:
         temperature: float = None,
         k_retrieve: int = 6,
         use_grading: bool = True,
-        use_verification: bool = True
+        use_verification: bool = True,
+        ollama_embedding_model: str = None
     ):
         """
         Inicializa el agente.
 
         Args:
-            api_key: API key del usuario (REQUERIDO)
-            llm_provider: Proveedor de LLM ("google", "nvidia", "openai") (REQUERIDO)
+            api_key: API key del usuario (REQUERIDO, excepto para Ollama)
+            llm_provider: Proveedor de LLM ("google", "nvidia", "openai", "ollama") (REQUERIDO)
             llm_model: Modelo de LLM
             temperature: Temperatura del LLM
             k_retrieve: Número de documentos a recuperar
             use_grading: Activar nodo de grading
             use_verification: Activar nodo de verificación
+            ollama_embedding_model: Modelo de embeddings para Ollama (default: nomic-embed-text)
         """
-        if not api_key:
-            raise ValueError("API key es requerida. Configura tu API key en tu perfil de usuario.")
+        # API key no es necesaria para Ollama
+        if not api_key and llm_provider != 'ollama':
+            raise ValueError("API key es requerida para proveedores cloud. Configura tu API key en tu perfil de usuario.")
         if not llm_provider:
-            raise ValueError("llm_provider es requerido ('google', 'nvidia', 'openai')")
+            raise ValueError("llm_provider es requerido ('google', 'nvidia', 'openai', 'ollama')")
 
         self.api_key = api_key
         self.llm_provider = llm_provider
@@ -120,10 +131,12 @@ class EFormsRAGAgent:
         self.k_retrieve = k_retrieve
         self.use_grading = use_grading
         self.use_verification = use_verification
+        self.ollama_embedding_model = ollama_embedding_model or "nomic-embed-text"
 
         # Inicializar LLM
         logger.info(f"Inicializando LLM: {self.llm_provider} - {self.llm_model}")
-        logger.info(f"Using API Key: {self.api_key[:20]}...")
+        if self.llm_provider != 'ollama':
+            logger.info(f"Using API Key: {self.api_key[:20]}...")
 
         if self.llm_provider == "google":
             # Para Gemini, usar el nombre sin el prefijo "models/"
@@ -138,6 +151,14 @@ class EFormsRAGAgent:
                 model=self.llm_model,
                 temperature=self.temperature,
                 nvidia_api_key=self.api_key
+            )
+        elif self.llm_provider == "ollama":
+            # Ollama corre localmente, no necesita API key
+            logger.info(f"Inicializando Ollama local con modelo: {self.llm_model}")
+            self.llm = ChatOllama(
+                model=self.llm_model,
+                temperature=self.temperature,
+                base_url="http://localhost:11434"
             )
         else:  # openai
             self.llm = ChatOpenAI(
@@ -154,12 +175,14 @@ class EFormsRAGAgent:
             embedding_model = "nvidia/nv-embedqa-e5-v5"
         elif self.llm_provider == "openai":
             embedding_model = "text-embedding-3-small"
+        elif self.llm_provider == "ollama":
+            embedding_model = self.ollama_embedding_model
 
         logger.info(f"Creating retriever with provider={self.llm_provider}, embedding_model={embedding_model}")
         self.retriever = create_retriever(
             k=self.k_retrieve,
             provider=self.llm_provider,
-            api_key=self.api_key,
+            api_key=self.api_key if self.llm_provider != 'ollama' else None,
             embedding_model=embedding_model
         )
         self.xml_lookup = XmlLookupTool()
