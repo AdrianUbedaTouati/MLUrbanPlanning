@@ -216,6 +216,46 @@
                             </div>
                         </div>
 
+                        <!-- Chat Agent Settings -->
+                        <div class="card border-secondary mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title mb-3">
+                                    <i class="bi bi-gear"></i> Configuración del Agente de Chat
+                                </h5>
+                                <p class="text-muted small">
+                                    Personaliza el comportamiento del agente RAG (Retrieval-Augmented Generation)
+                                </p>
+
+                                <div class="form-check mb-3">
+                                    {{ form.use_grading }}
+                                    <label class="form-check-label" for="{{ form.use_grading.id_for_label }}">
+                                        <strong>{{ form.use_grading.label }}</strong>
+                                        <small class="text-muted d-block">
+                                            {{ form.use_grading.help_text }}
+                                        </small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.use_verification }}
+                                    <label class="form-check-label" for="{{ form.use_verification.id_for_label }}">
+                                        <strong>{{ form.use_verification.label }}</strong>
+                                        <small class="text-muted d-block">
+                                            {{ form.use_verification.help_text }}
+                                        </small>
+                                    </label>
+                                </div>
+
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle"></i>
+                                    <small>
+                                        <strong>Nota:</strong> Estas opciones están desactivadas por defecto para obtener respuestas más rápidas.
+                                        Actívalas si necesitas mayor precisión y relevancia, aunque las respuestas tardarán un poco más.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <script>
                             // Cambiar la UI según el proveedor seleccionado
                             document.addEventListener('DOMContentLoaded', function() {

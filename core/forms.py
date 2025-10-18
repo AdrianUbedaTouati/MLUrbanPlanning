@@ -90,6 +90,24 @@ class EditProfileForm(forms.ModelForm):
         help_text='Modelo para vectorización (solo para Ollama)'
     )
 
+    # Chat agent settings
+    use_grading = forms.BooleanField(
+        required=False,
+        label='Activar Grading de Documentos',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        help_text='Filtra documentos irrelevantes del chat (más preciso pero más lento)'
+    )
+    use_verification = forms.BooleanField(
+        required=False,
+        label='Activar Verificación XML',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        help_text='Valida campos críticos con el XML original (más preciso pero más lento)'
+    )
+
     # Campos de dirección
     address_line1 = forms.CharField(
         required=False,
@@ -144,6 +162,7 @@ class EditProfileForm(forms.ModelForm):
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'phone',
                  'llm_provider', 'llm_api_key', 'ollama_model', 'ollama_embedding_model',
+                 'use_grading', 'use_verification',
                  'address_line1', 'address_line2', 'city', 'state_province',
                  'postal_code', 'country')
 
