@@ -54,10 +54,16 @@ class ChatAgentService:
                 'ollama': ('ollama', self.ollama_model)  # Use user's configured model
             }
 
-            agent_provider, model_name = provider_map.get(
-                self.provider,
-                ('google', 'gemini-2.0-flash-exp')
-            )
+            # IMPORTANTE: NO usar fallback. Si el provider no está en el map, es un error.
+            # Esto asegura que siempre se use la configuración del perfil del usuario.
+            if self.provider not in provider_map:
+                raise ValueError(
+                    f"Proveedor LLM no válido: '{self.provider}'. "
+                    f"Por favor, ve a tu perfil y selecciona un proveedor válido: "
+                    f"{', '.join(provider_map.keys())}"
+                )
+
+            agent_provider, model_name = provider_map[self.provider]
 
             # Create agent instance with user's API key and provider
             if self.provider == 'ollama':

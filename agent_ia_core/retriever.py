@@ -323,13 +323,15 @@ def create_retriever(
     Args:
         k: Número de documentos a recuperar
         min_score: Umbral mínimo de similaridad
-        provider: Provider name ('google', 'openai', 'nvidia')
-        api_key: API key for the provider
+        provider: Provider name ('google', 'openai', 'nvidia', 'ollama')
+        api_key: API key for the provider (not needed for ollama)
         embedding_model: Model name
 
     Returns:
         Instancia de HybridRetriever
     """
+    # IMPORTANTE: Siempre pasar provider, api_key y embedding_model
+    # para asegurar que el vectorstore use la configuración del usuario
     vectorstore = get_vectorstore(provider=provider, api_key=api_key, embedding_model=embedding_model)
     return HybridRetriever(vectorstore=vectorstore, k=k, min_score=min_score)
 
