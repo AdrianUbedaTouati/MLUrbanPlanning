@@ -10,6 +10,7 @@ from typing_extensions import TypedDict
 from pathlib import Path
 import sys
 import logging
+import re
 
 # LangGraph y LangChain imports
 from langgraph.graph import StateGraph, END
@@ -254,34 +255,47 @@ class EFormsRAGAgent:
 
     def _route_node(self, state: AgentState) -> AgentState:
         """
-        Nodo de routing: clasifica la consulta.
-        Decide si es: conversación general, búsqueda específica, o consulta vectorstore
+        Nodo de routing: clasifica la consulta usando detección de palabras clave.
+        Decide si es: conversación general o consulta vectorstore.
+
+        Esta implementación NO usa el LLM para evitar problemas de memoria con modelos grandes.
         """
         question = state["question"]
         logger.info(f"[ROUTE] Clasificando consulta: {question}")
 
-        # Usar el LLM para clasificar la consulta
-        routing_prompt = create_routing_prompt(question)
+        # Normalizar la pregunta para análisis
+        question_lower = question.lower().strip()
 
-        try:
-            response = self.llm.invoke([
-                SystemMessage(content=ROUTING_SYSTEM_PROMPT),
-                HumanMessage(content=routing_prompt)
-            ])
-            route = response.content.strip().lower()
+        # Palabras clave que indican conversación general/casual
+        general_keywords = [
+            # Saludos
+            'hola', 'hi', 'hello', 'hey', 'buenos días', 'buenas tardes', 'buenas noches',
+            'qué tal', 'cómo estás', 'cómo va',
+            # Despedidas
+            'adiós', 'hasta luego', 'chao', 'bye', 'nos vemos',
+            # Agradecimientos
+            'gracias', 'muchas gracias', 'te agradezco', 'thanks',
+            # Preguntas generales (sin especificidad)
+            'qué es', 'qué son', 'explica', 'explícame', 'ayuda', 'ayúdame',
+            'cómo funciona', 'para qué sirve', 'cuál es', 'dime',
+            # Conversación casual
+            'amigo', 'colega', 'tío', 'tía'
+        ]
 
-            # Mapear respuesta a ruta válida
-            if "general" in route:
-                state["route"] = "general"
-            elif "specific" in route:
-                state["route"] = "vectorstore"  # También usa vectorstore por ahora
-            else:
-                state["route"] = "vectorstore"
+        # Verificar si contiene palabras clave generales
+        has_general_keyword = any(keyword in question_lower for keyword in general_keywords)
 
-        except Exception as e:
-            logger.error(f"[ROUTE] Error clasificando consulta: {e}")
-            # Por defecto, asumir vectorstore
+        # Si es corto (< 30 caracteres) Y tiene palabra clave general -> conversación general
+        # Esto captura: "hola", "hola amigo :)", "gracias", "qué es una licitación?"
+        is_short = len(question_lower) < 30
+
+        if has_general_keyword and is_short:
+            state["route"] = "general"
+            logger.info(f"[ROUTE] Detectada conversación GENERAL (keyword: general, corta)")
+        else:
+            # Para preguntas específicas, largas o que buscan datos concretos -> vectorstore
             state["route"] = "vectorstore"
+            logger.info(f"[ROUTE] Detectada consulta VECTORSTORE (específica o larga)")
 
         state["iteration"] = state.get("iteration", 0) + 1
         logger.info(f"[ROUTE] Ruta decidida: {state['route']}")
