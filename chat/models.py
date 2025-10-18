@@ -99,4 +99,19 @@ class ChatMessage(models.Model):
     @property
     def tokens_used(self):
         """Retorna el número de tokens utilizados"""
-        return self.metadata.get('tokens_used', 0)
+        return self.metadata.get('total_tokens', 0)
+
+    @property
+    def input_tokens(self):
+        """Retorna los tokens de entrada"""
+        return self.metadata.get('input_tokens', 0)
+
+    @property
+    def output_tokens(self):
+        """Retorna los tokens de salida"""
+        return self.metadata.get('output_tokens', 0)
+
+    @property
+    def cost_eur(self):
+        """Retorna el coste en EUR"""
+        return self.metadata.get('cost_eur', 0.0)

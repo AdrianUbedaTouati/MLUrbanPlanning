@@ -84,17 +84,19 @@ class ChatAgentService:
         Returns:
             Dict with:
                 - content: Agent's response
-                - metadata: Information about the response (route, documents, etc.)
+                - metadata: Information about the response (route, documents, tokens, cost, etc.)
         """
         if not self.api_key:
             return {
-                'content': 'Por favor, configura tu API key de Google Gemini en tu perfil de usuario para usar el chat IA.',
+                'content': 'Por favor, configura tu API key de LLM en tu perfil de usuario para usar el chat IA.',
                 'metadata': {
                     'error': 'NO_API_KEY',
                     'route': 'error',
                     'documents_used': [],
                     'verified_fields': [],
-                    'iterations': 0
+                    'iterations': 0,
+                    'total_tokens': 0,
+                    'cost_eur': 0.0
                 }
             }
 
@@ -127,13 +129,34 @@ class ChatAgentService:
                 for doc in result.get('documents', [])
             ]
 
-            # Build metadata response
+            # Calculate token usage and cost
+            from core.token_pricing import calculate_chat_cost
+
+            # Prepare full input (includes retrieved documents in the context)
+            full_input = message
+            if documents_used:
+                # Approximate: add document content to input token count
+                docs_text = '\n'.join([doc.get('content_preview', '') for doc in documents_used])
+                full_input = f"{message}\n\nContext:\n{docs_text}"
+
+            cost_data = calculate_chat_cost(
+                input_text=full_input,
+                output_text=response_content,
+                provider=self.provider
+            )
+
+            # Build metadata response with token/cost info
             metadata = {
                 'route': result.get('route', 'unknown'),
                 'documents_used': documents_used,
                 'verified_fields': result.get('verified_fields', []),
                 'iterations': result.get('iterations', 0),
-                'num_documents': len(documents_used)
+                'num_documents': len(documents_used),
+                # Token and cost tracking
+                'input_tokens': cost_data['input_tokens'],
+                'output_tokens': cost_data['output_tokens'],
+                'total_tokens': cost_data['total_tokens'],
+                'cost_eur': cost_data['total_cost_eur']
             }
 
             return {

@@ -95,21 +95,25 @@ class VectorizationService:
                 'error': str(e)
             }
 
-    def index_all_tenders(self, progress_callback=None) -> Dict[str, Any]:
+    def index_all_tenders(self, progress_callback=None, cancel_flag_checker=None) -> Dict[str, Any]:
         """
         Index all tenders from the database into ChromaDB
+        Uses temporary collection strategy: creates new collection, then swaps with old one
 
         Args:
             progress_callback: Optional callback function(data: dict) for progress updates
+            cancel_flag_checker: Optional function() -> bool that returns True if cancellation requested
 
         Returns:
-            Dict with indexing results
+            Dict with indexing results including token usage and costs
         """
         try:
             from agent_ia_core import config
             from agent_ia_core.chunking import chunk_eforms_record
             from core.llm_providers import LLMProviderFactory
+            from core.token_pricing import calculate_embedding_cost, format_cost
             import chromadb
+            from datetime import datetime
 
             # Validate API key
             if not self.api_key:
@@ -137,23 +141,32 @@ class VectorizationService:
                     'message': f'Iniciando indexación de {total_tenders} licitaciones...'
                 })
 
-            # Get ChromaDB configuration (usar la misma ubicación que agent_ia_core)
+            # Get ChromaDB configuration
             persist_dir = getattr(config, 'CHROMA_PERSIST_DIRECTORY', str(config.INDEX_DIR / 'chroma'))
             collection_name = getattr(config, 'CHROMA_COLLECTION_NAME', 'eforms_notices')
 
-            # Create ChromaDB client and collection
+            # Create TEMPORARY collection name with timestamp
+            temp_collection_name = f"{collection_name}_temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            # Create ChromaDB client
             client = chromadb.PersistentClient(path=persist_dir)
 
-            # Delete existing collection if it exists
+            # Check if old collection exists (to preserve it during indexing)
+            old_collection_exists = False
             try:
-                client.delete_collection(name=collection_name)
+                old_collection = client.get_collection(name=collection_name)
+                old_collection_exists = True
                 if progress_callback:
                     progress_callback({
                         'type': 'info',
-                        'message': 'Colección anterior eliminada. Creando nueva...'
+                        'message': f'✓ Colección anterior detectada ({old_collection.count()} chunks). Se mantendrá activa durante la indexación.'
                     })
             except:
-                pass
+                if progress_callback:
+                    progress_callback({
+                        'type': 'info',
+                        'message': 'No hay colección anterior. Creando primera indexación...'
+                    })
 
             # Create embeddings using the selected provider
             embeddings = LLMProviderFactory.get_embeddings(
@@ -161,18 +174,52 @@ class VectorizationService:
                 api_key=self.api_key
             )
 
-            # Create new collection
-            collection = client.create_collection(
-                name=collection_name,
-                metadata={"description": "Licitaciones eForms indexadas"}
+            # Create new TEMPORARY collection
+            if progress_callback:
+                progress_callback({
+                    'type': 'info',
+                    'message': f'Creando colección temporal: {temp_collection_name}'
+                })
+
+            temp_collection = client.create_collection(
+                name=temp_collection_name,
+                metadata={"description": "Indexación temporal de licitaciones eForms"}
             )
 
             indexed_count = 0
             error_count = 0
             total_chunks = 0
 
+            # Token and cost tracking
+            total_tokens = 0
+            total_cost_eur = 0.0
+
             # Index each tender
             for idx, tender in enumerate(tenders, 1):
+                # Check for cancellation before processing each tender
+                if cancel_flag_checker and cancel_flag_checker():
+                    if progress_callback:
+                        progress_callback({
+                            'type': 'cancelled',
+                            'message': '⚠️ Indexación cancelada por el usuario. Limpiando colección temporal...'
+                        })
+
+                    # Delete temporary collection
+                    try:
+                        client.delete_collection(name=temp_collection_name)
+                    except:
+                        pass
+
+                    return {
+                        'success': False,
+                        'cancelled': True,
+                        'indexed': indexed_count,
+                        'total_chunks': total_chunks,
+                        'total_tokens': total_tokens,
+                        'total_cost_eur': total_cost_eur,
+                        'message': 'Indexación cancelada. La colección anterior sigue activa.'
+                    }
+
                 try:
                     if progress_callback:
                         progress_callback({
@@ -180,7 +227,9 @@ class VectorizationService:
                             'current': idx,
                             'total': total_tenders,
                             'tender_id': tender.ojs_notice_id,
-                            'message': f'Indexando {tender.ojs_notice_id}...'
+                            'message': f'Indexando {tender.ojs_notice_id}...',
+                            'total_tokens': total_tokens,
+                            'total_cost_eur': total_cost_eur
                         })
 
                     # Parse and chunk the XML
@@ -203,12 +252,20 @@ class VectorizationService:
                     # Chunk the tender (returns list of Chunk dataclass objects)
                     chunks = chunk_eforms_record(parsed_data)
 
+                    tender_tokens = 0
+                    tender_cost = 0.0
+
                     # Add chunks to collection
                     for chunk_idx, chunk in enumerate(chunks):
                         # Truncate text if needed (NVIDIA has 512 token limit ≈ 2000 chars)
                         chunk_text = chunk.text
                         if self.provider == 'nvidia' and len(chunk_text) > 2000:
                             chunk_text = chunk_text[:2000] + "..."
+
+                        # Calculate cost BEFORE generating embedding
+                        chunk_tokens, chunk_cost = calculate_embedding_cost(chunk_text, self.provider)
+                        tender_tokens += chunk_tokens
+                        tender_cost += chunk_cost
 
                         # Generate embedding
                         try:
@@ -221,8 +278,8 @@ class VectorizationService:
                             else:
                                 raise
 
-                        # Add to collection
-                        collection.add(
+                        # Add to TEMPORARY collection
+                        temp_collection.add(
                             ids=[chunk.chunk_id],
                             embeddings=[embedding],
                             documents=[chunk_text],
@@ -239,6 +296,8 @@ class VectorizationService:
                         )
 
                     total_chunks += len(chunks)
+                    total_tokens += tender_tokens
+                    total_cost_eur += tender_cost
                     indexed_count += 1
 
                     if progress_callback:
@@ -246,7 +305,11 @@ class VectorizationService:
                             'type': 'indexed',
                             'tender_id': tender.ojs_notice_id,
                             'chunks': len(chunks),
-                            'message': f'✓ {tender.ojs_notice_id} indexado ({len(chunks)} chunks)'
+                            'tender_tokens': tender_tokens,
+                            'tender_cost_eur': tender_cost,
+                            'total_tokens': total_tokens,
+                            'total_cost_eur': total_cost_eur,
+                            'message': f'✓ {tender.ojs_notice_id}: {len(chunks)} chunks, {tender_tokens} tokens, {format_cost(tender_cost)}'
                         })
 
                 except Exception as e:
@@ -259,13 +322,73 @@ class VectorizationService:
                             'message': f'✗ Error en {tender.ojs_notice_id}: {str(e)}'
                         })
 
+            # SWAP: Replace old collection with new one (atomic operation)
+            if progress_callback:
+                progress_callback({
+                    'type': 'info',
+                    'message': '🔄 Finalizando indexación. Activando nueva colección...'
+                })
+
+            # Delete old collection if it exists
+            if old_collection_exists:
+                try:
+                    client.delete_collection(name=collection_name)
+                    if progress_callback:
+                        progress_callback({
+                            'type': 'info',
+                            'message': '✓ Colección anterior eliminada'
+                        })
+                except Exception as e:
+                    if progress_callback:
+                        progress_callback({
+                            'type': 'warning',
+                            'message': f'⚠️ No se pudo eliminar colección anterior: {str(e)}'
+                        })
+
+            # Rename temporary collection to main collection name
+            # Note: ChromaDB doesn't support rename, so we need to recreate
+            try:
+                # Create final collection
+                final_collection = client.create_collection(
+                    name=collection_name,
+                    metadata={"description": "Licitaciones eForms indexadas"}
+                )
+
+                # Copy all data from temp to final
+                temp_data = temp_collection.get(include=['embeddings', 'documents', 'metadatas'])
+                if temp_data['ids']:
+                    final_collection.add(
+                        ids=temp_data['ids'],
+                        embeddings=temp_data['embeddings'],
+                        documents=temp_data['documents'],
+                        metadatas=temp_data['metadatas']
+                    )
+
+                # Delete temporary collection
+                client.delete_collection(name=temp_collection_name)
+
+                if progress_callback:
+                    progress_callback({
+                        'type': 'info',
+                        'message': '✓ Nueva colección activada correctamente'
+                    })
+
+            except Exception as e:
+                if progress_callback:
+                    progress_callback({
+                        'type': 'error',
+                        'message': f'✗ Error al activar colección: {str(e)}'
+                    })
+
             if progress_callback:
                 progress_callback({
                     'type': 'complete',
                     'indexed': indexed_count,
                     'errors': error_count,
                     'total_chunks': total_chunks,
-                    'message': f'Indexación completada: {indexed_count} licitaciones, {total_chunks} chunks'
+                    'total_tokens': total_tokens,
+                    'total_cost_eur': total_cost_eur,
+                    'message': f'✅ Indexación completada: {indexed_count} licitaciones, {total_chunks} chunks, {total_tokens:,} tokens, {format_cost(total_cost_eur)}'
                 })
 
             return {
@@ -273,18 +396,27 @@ class VectorizationService:
                 'indexed': indexed_count,
                 'errors': error_count,
                 'total_chunks': total_chunks,
-                'total': total_tenders
+                'total': total_tenders,
+                'total_tokens': total_tokens,
+                'total_cost_eur': total_cost_eur
             }
 
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
 
+            # Clean up temporary collection on fatal error
+            try:
+                if 'temp_collection_name' in locals():
+                    client.delete_collection(name=temp_collection_name)
+            except:
+                pass
+
             if progress_callback:
                 progress_callback({
                     'type': 'fatal_error',
                     'error': str(e),
-                    'message': f'Error fatal: {str(e)}'
+                    'message': f'❌ Error fatal: {str(e)}. La colección anterior se mantiene intacta.'
                 })
 
             return {

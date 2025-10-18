@@ -683,17 +683,22 @@ class IndexAllTendersView(LoginRequiredMixin, View):
     def get(self, request):
         import sys
         from datetime import date, datetime
+        from .cancel_flags import check_cancel_flag, clear_cancel_flag
 
         # Verificar API key
         if not request.user.llm_api_key:
             return JsonResponse({
-                'error': 'Por favor, configura tu API key de Google Gemini en tu perfil.'
+                'error': 'Por favor, configura tu API key de LLM en tu perfil.'
             }, status=400)
 
         print(f"\n{'='*60}", file=sys.stderr)
         print(f"[INDEXING START] Iniciando indexación de licitaciones", file=sys.stderr)
         print(f"  - Usuario: {request.user.username}", file=sys.stderr)
+        print(f"  - Proveedor: {request.user.llm_provider}", file=sys.stderr)
         print(f"{'='*60}\n", file=sys.stderr)
+
+        # Clear any previous cancel flags for this user
+        clear_cancel_flag(request.user.id, 'indexing')
 
         def json_serial(obj):
             """JSON serializer para objetos date/datetime"""
@@ -717,6 +722,13 @@ class IndexAllTendersView(LoginRequiredMixin, View):
                     print(f"[CALLBACK] Recibido: {data}", file=sys.stderr)
                     event_queue.put(data)
 
+                # Función para checkear cancelación
+                def cancel_flag_checker():
+                    is_cancelled = check_cancel_flag(request.user.id, 'indexing')
+                    if is_cancelled:
+                        print(f"[CANCEL CHECK] Cancelación detectada para user {request.user.id}", file=sys.stderr)
+                    return is_cancelled
+
                 # Ejecutar indexación en thread separado
                 def run_indexing():
                     try:
@@ -724,7 +736,10 @@ class IndexAllTendersView(LoginRequiredMixin, View):
 
                         print("[THREAD] Iniciando indexación", file=sys.stderr)
                         service = VectorizationService(user=request.user)
-                        result = service.index_all_tenders(progress_callback=progress_callback)
+                        result = service.index_all_tenders(
+                            progress_callback=progress_callback,
+                            cancel_flag_checker=cancel_flag_checker
+                        )
 
                         print(f"[THREAD] Indexación completada: {result}", file=sys.stderr)
                         event_queue.put({'type': 'complete', 'result': result})
@@ -734,6 +749,8 @@ class IndexAllTendersView(LoginRequiredMixin, View):
                         traceback.print_exc(file=sys.stderr)
                         event_queue.put({'type': 'error', 'message': str(e)})
                     finally:
+                        # Clear cancel flag when done
+                        clear_cancel_flag(request.user.id, 'indexing')
                         event_queue.put(None)  # Señal de fin
 
                 download_thread = threading.Thread(target=run_indexing)
@@ -796,6 +813,27 @@ class ClearVectorstoreView(LoginRequiredMixin, View):
                     'success': False,
                     'error': result.get('error', 'Error desconocido')
                 }, status=500)
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
+class CancelIndexingView(LoginRequiredMixin, View):
+    """Vista para cancelar la indexación en proceso"""
+
+    def post(self, request):
+        from .cancel_flags import set_cancel_flag
+        try:
+            # Establecer el flag de cancelación para este usuario
+            set_cancel_flag(request.user.id, 'indexing')
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Cancelación solicitada. La indexación se detendrá después del chunk actual.'
+            })
 
         except Exception as e:
             return JsonResponse({

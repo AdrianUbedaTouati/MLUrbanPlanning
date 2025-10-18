@@ -29,6 +29,7 @@ urlpatterns = [
     # Vectorización y gestión de ChromaDB
     path('vectorizacion/', views.VectorizationDashboardView.as_view(), name='vectorization_dashboard'),
     path('vectorizacion/indexar/', views.IndexAllTendersView.as_view(), name='index_all_tenders'),
+    path('vectorizacion/cancelar/', views.CancelIndexingView.as_view(), name='cancel_indexing'),
     path('vectorizacion/limpiar/', views.ClearVectorstoreView.as_view(), name='clear_vectorstore'),
     path('vectorizacion/estado/', views.VectorstoreStatusAPIView.as_view(), name='vectorstore_status'),
 
