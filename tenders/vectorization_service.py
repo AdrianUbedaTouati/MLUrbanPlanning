@@ -257,10 +257,11 @@ class VectorizationService:
 
                     # Add chunks to collection
                     for chunk_idx, chunk in enumerate(chunks):
-                        # Truncate text if needed (NVIDIA has 512 token limit ≈ 2000 chars)
+                        # Truncate text if needed (NVIDIA has 512 token limit)
+                        # Conservative approach: 512 tokens ≈ 1800 characters (3.5 chars/token)
                         chunk_text = chunk.text
-                        if self.provider == 'nvidia' and len(chunk_text) > 2000:
-                            chunk_text = chunk_text[:2000] + "..."
+                        if self.provider == 'nvidia' and len(chunk_text) > 1800:
+                            chunk_text = chunk_text[:1800] + "..."
 
                         # Calculate cost BEFORE generating embedding
                         chunk_tokens, chunk_cost = calculate_embedding_cost(chunk_text, self.provider)
@@ -273,7 +274,10 @@ class VectorizationService:
                         except Exception as embed_error:
                             # If still too long, truncate more aggressively
                             if "token" in str(embed_error).lower() or "length" in str(embed_error).lower():
-                                chunk_text = chunk_text[:1500] + "..."
+                                # Truncate to ~400 tokens max to be safe
+                                chunk_text = chunk_text[:1400] + "..."
+                                # Recalculate cost after truncation
+                                chunk_tokens, chunk_cost = calculate_embedding_cost(chunk_text, self.provider)
                                 embedding = embeddings.embed_query(chunk_text)
                             else:
                                 raise
