@@ -33,6 +33,10 @@ class ChatSession(models.Model):
         """Retorna el número de mensajes en la sesión"""
         return self.messages.count()
 
+    def get_last_message(self):
+        """Retorna el último mensaje de la sesión"""
+        return self.messages.order_by('-created_at').first()
+
     def generate_title(self):
         """Genera un título basado en el primer mensaje del usuario"""
         first_message = self.messages.filter(role='user').first()

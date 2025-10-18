@@ -22,8 +22,8 @@ import config  # Import module instead of specific values to allow dynamic updat
 from config import LLM_PROVIDER, LLM_MODEL, LLM_TEMPERATURE
 from retriever import create_retriever
 from prompts import (
-    SYSTEM_PROMPT, create_answer_prompt, create_grading_prompt,
-    create_routing_prompt, NO_CONTEXT_MESSAGE
+    SYSTEM_PROMPT, ROUTING_SYSTEM_PROMPT, create_answer_prompt,
+    create_grading_prompt, create_routing_prompt, NO_CONTEXT_MESSAGE
 )
 from tools_xml import XmlLookupTool
 
