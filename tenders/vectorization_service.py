@@ -26,11 +26,13 @@ class VectorizationService:
         Initialize vectorization service
 
         Args:
-            user: Django User instance with llm_api_key and llm_provider (optional)
+            user: Django User instance with llm_api_key, llm_provider, ollama_model, ollama_embedding_model (optional)
         """
         self.user = user
         self.api_key = user.llm_api_key if user else None
-        self.provider = user.llm_provider if user else 'gemini'
+        self.provider = getattr(user, 'llm_provider', 'gemini') if user else 'gemini'
+        self.ollama_model = getattr(user, 'ollama_model', 'qwen2.5:72b') if user else 'qwen2.5:72b'
+        self.ollama_embedding_model = getattr(user, 'ollama_embedding_model', 'nomic-embed-text') if user else 'nomic-embed-text'
 
     def get_vectorstore_status(self) -> Dict[str, Any]:
         """
@@ -115,8 +117,8 @@ class VectorizationService:
             import chromadb
             from datetime import datetime
 
-            # Validate API key
-            if not self.api_key:
+            # Validate API key (Ollama doesn't need one)
+            if not self.api_key and self.provider != 'ollama':
                 provider_info = LLMProviderFactory.get_provider_info(self.provider)
                 provider_name = provider_info.get('name', self.provider)
                 return {
@@ -169,10 +171,17 @@ class VectorizationService:
                     })
 
             # Create embeddings using the selected provider
-            embeddings = LLMProviderFactory.get_embeddings(
-                provider=self.provider,
-                api_key=self.api_key
-            )
+            if self.provider == 'ollama':
+                embeddings = LLMProviderFactory.get_embeddings(
+                    provider=self.provider,
+                    api_key=None,  # Ollama doesn't need API key
+                    model_name=self.ollama_embedding_model
+                )
+            else:
+                embeddings = LLMProviderFactory.get_embeddings(
+                    provider=self.provider,
+                    api_key=self.api_key
+                )
 
             # Create new TEMPORARY collection
             if progress_callback:
