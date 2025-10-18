@@ -91,43 +91,74 @@
                         <hr class="my-4">
 
                         <!-- Sección de Configuración de IA -->
-                        <div class="card bg-light mb-4">
+                        <div class="card border-primary mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                             <div class="card-body">
-                                <h5 class="card-title mb-3">
+                                <h5 class="card-title mb-3 text-white">
                                     <i class="bi bi-robot"></i> Configuración de IA
                                 </h5>
 
                                 <div class="mb-3">
-                                    <label for="{{ form.llm_provider.id_for_label }}" class="form-label fw-bold">
+                                    <label for="{{ form.llm_provider.id_for_label }}" class="form-label fw-bold text-white">
                                         <i class="bi bi-cloud-fill"></i> Proveedor de IA
                                     </label>
                                     {{ form.llm_provider }}
-                                    <small class="form-text text-muted">
+                                    <small class="form-text text-white-50 d-block mt-1">
                                         Selecciona el proveedor de IA que prefieras utilizar
                                     </small>
                                     {% if form.llm_provider.errors %}
-                                        <div class="text-danger small mt-1">
+                                        <div class="text-warning small mt-1">
                                             {{ form.llm_provider.errors }}
                                         </div>
                                     {% endif %}
                                 </div>
 
-                                <div class="mb-3">
-                                    <label for="{{ form.llm_api_key.id_for_label }}" class="form-label fw-bold">
+                                <!-- Campo API Key (oculto para Ollama) -->
+                                <div class="mb-3" id="api_key_section">
+                                    <label for="{{ form.llm_api_key.id_for_label }}" class="form-label fw-bold text-white">
                                         <i class="bi bi-key-fill"></i> API Key
                                     </label>
                                     {{ form.llm_api_key }}
-                                    <small class="form-text text-muted" id="api_key_help">
+                                    <small class="form-text text-white-50 d-block mt-1" id="api_key_help">
                                         Ingresa tu API key del proveedor seleccionado
                                     </small>
                                     {% if form.llm_api_key.errors %}
-                                        <div class="text-danger small mt-1">
+                                        <div class="text-warning small mt-1">
                                             {{ form.llm_api_key.errors }}
                                         </div>
                                     {% endif %}
                                 </div>
 
-                                <div class="alert alert-info mb-0">
+                                <!-- Sección de modelos Ollama -->
+                                <div class="mb-3" id="ollama_models_section" style="display:none;">
+                                    <label for="{{ form.ollama_model.id_for_label }}" class="form-label fw-bold text-white">
+                                        <i class="bi bi-cpu"></i> Modelo de Chat
+                                    </label>
+                                    {{ form.ollama_model }}
+                                    <small class="form-text text-white-50 d-block mt-1">
+                                        Modelo local para conversaciones (ej: qwen2.5:72b, llama3.3:70b)
+                                    </small>
+
+                                    <label for="{{ form.ollama_embedding_model.id_for_label }}" class="form-label fw-bold text-white mt-3">
+                                        <i class="bi bi-diagram-3"></i> Modelo de Embeddings
+                                    </label>
+                                    {{ form.ollama_embedding_model }}
+                                    <small class="form-text text-white-50 d-block mt-1">
+                                        Modelo para vectorización (ej: nomic-embed-text, mxbai-embed-large)
+                                    </small>
+
+                                    <!-- Botón de verificación -->
+                                    <div class="mt-3">
+                                        <a href="{% url 'core:ollama_check' %}" target="_blank" class="btn btn-light btn-sm w-100">
+                                            <i class="bi bi-check-circle"></i> Verificar Configuración de Ollama
+                                        </a>
+                                        <small class="form-text text-white-50 d-block mt-2">
+                                            <i class="bi bi-info-circle"></i> Asegúrate de que Ollama esté instalado y corriendo antes de usar
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Info sobre APIs cloud -->
+                                <div class="alert alert-light mb-0" id="cloud_provider_info">
                                     <h6 class="alert-heading">
                                         <i class="bi bi-info-circle"></i> ¿Para qué necesitas una API Key?
                                     </h6>
@@ -153,11 +184,25 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Info sobre Ollama local -->
+                                <div class="alert alert-light mb-0" id="ollama_info" style="display:none;">
+                                    <h6 class="alert-heading">
+                                        <i class="bi bi-laptop"></i> Ollama - IA Local
+                                    </h6>
+                                    <p class="mb-2"><strong>Ventajas de usar Ollama:</strong></p>
+                                    <ul class="mb-0">
+                                        <li><strong>100% Privado</strong>: Tus datos nunca salen de tu ordenador</li>
+                                        <li><strong>Sin costes</strong>: No necesitas pagar por API calls</li>
+                                        <li><strong>Sin límites</strong>: Usa la IA tanto como quieras</li>
+                                        <li><strong>Offline</strong>: Funciona sin conexión a internet</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
 
                         <script>
-                            // Cambiar el enlace de API key según el proveedor seleccionado
+                            // Cambiar la UI según el proveedor seleccionado
                             document.addEventListener('DOMContentLoaded', function() {
                                 const providerSelect = document.getElementById('llm_provider_select');
 
@@ -169,24 +214,45 @@
                                     const apiKeyInput = document.getElementById('llm_api_key_input');
                                     const helpText = document.getElementById('api_key_help');
 
-                                    // Ocultar todos
+                                    // Secciones a mostrar/ocultar
+                                    const apiKeySection = document.getElementById('api_key_section');
+                                    const ollamaModelsSection = document.getElementById('ollama_models_section');
+                                    const cloudProviderInfo = document.getElementById('cloud_provider_info');
+                                    const ollamaInfo = document.getElementById('ollama_info');
+
+                                    // Ocultar todos los enlaces
                                     geminiLink.style.display = 'none';
                                     openaiLink.style.display = 'none';
                                     nvidiaLink.style.display = 'none';
 
-                                    // Mostrar el correcto y actualizar placeholder
-                                    if (provider === 'gemini') {
-                                        geminiLink.style.display = 'block';
-                                        apiKeyInput.placeholder = 'AIza...';
-                                        helpText.textContent = 'Comienza con AIza (ej: AIzaSyA...)';
-                                    } else if (provider === 'openai') {
-                                        openaiLink.style.display = 'block';
-                                        apiKeyInput.placeholder = 'sk-...';
-                                        helpText.textContent = 'Comienza con sk- o sk-proj- (ej: sk-proj-...)';
-                                    } else if (provider === 'nvidia') {
-                                        nvidiaLink.style.display = 'block';
-                                        apiKeyInput.placeholder = 'nvapi-...';
-                                        helpText.textContent = 'Comienza con nvapi- (ej: nvapi-...)';
+                                    // Mostrar/ocultar secciones según el proveedor
+                                    if (provider === 'ollama') {
+                                        // Ollama: ocultar API key, mostrar modelos locales
+                                        apiKeySection.style.display = 'none';
+                                        ollamaModelsSection.style.display = 'block';
+                                        cloudProviderInfo.style.display = 'none';
+                                        ollamaInfo.style.display = 'block';
+                                    } else {
+                                        // Proveedores cloud: mostrar API key, ocultar modelos Ollama
+                                        apiKeySection.style.display = 'block';
+                                        ollamaModelsSection.style.display = 'none';
+                                        cloudProviderInfo.style.display = 'block';
+                                        ollamaInfo.style.display = 'none';
+
+                                        // Actualizar placeholder según proveedor
+                                        if (provider === 'gemini') {
+                                            geminiLink.style.display = 'block';
+                                            apiKeyInput.placeholder = 'AIza...';
+                                            helpText.textContent = 'Comienza con AIza (ej: AIzaSyA...)';
+                                        } else if (provider === 'openai') {
+                                            openaiLink.style.display = 'block';
+                                            apiKeyInput.placeholder = 'sk-...';
+                                            helpText.textContent = 'Comienza con sk- o sk-proj- (ej: sk-proj-...)';
+                                        } else if (provider === 'nvidia') {
+                                            nvidiaLink.style.display = 'block';
+                                            apiKeyInput.placeholder = 'nvapi-...';
+                                            helpText.textContent = 'Comienza con nvapi- (ej: nvapi-...)';
+                                        }
                                     }
                                 }
 

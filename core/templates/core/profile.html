@@ -68,39 +68,118 @@
 
                     <hr class="my-3">
 
-                    <h5 class="mb-3">
-                        <i class="bi bi-robot"></i> Configuración de IA
-                    </h5>
+                    <div class="card mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <div class="card-body text-white">
+                            <h5 class="mb-3 text-white">
+                                <i class="bi bi-robot"></i> Configuración de IA
+                            </h5>
 
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <strong>API Key de Google Gemini:</strong>
-                        </div>
-                        <div class="col-md-8">
-                            {% if user.llm_api_key %}
-                                <div class="d-flex align-items-center">
-                                    <code class="bg-light p-2 rounded flex-grow-1" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis;">
-                                        {{ user.llm_api_key|slice:":20" }}••••••••••••••••
-                                    </code>
-                                    <span class="badge bg-success ms-2">
-                                        <i class="bi bi-check-circle"></i> Configurada
-                                    </span>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <strong class="text-white">Proveedor:</strong>
                                 </div>
-                                <small class="text-muted d-block mt-1">
-                                    <i class="bi bi-info-circle"></i> Tu API key está configurada y lista para usar el Chat IA y la Vectorización.
-                                </small>
+                                <div class="col-md-8">
+                                    {% if user.llm_provider == 'gemini' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-google"></i> Google Gemini
+                                        </span>
+                                    {% elif user.llm_provider == 'openai' %}
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-lightning-fill"></i> OpenAI
+                                        </span>
+                                    {% elif user.llm_provider == 'nvidia' %}
+                                        <span class="badge bg-dark">
+                                            <i class="bi bi-gpu-card"></i> NVIDIA NIM
+                                        </span>
+                                    {% elif user.llm_provider == 'ollama' %}
+                                        <span class="badge bg-light text-dark">
+                                            <i class="bi bi-laptop"></i> Ollama (Local)
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No configurado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if user.llm_provider == 'ollama' %}
+                                <!-- Configuración de Ollama -->
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <strong class="text-white">Modelo de Chat:</strong>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <code class="bg-light text-dark p-2 rounded d-inline-block">
+                                            {{ user.ollama_model|default:"qwen2.5:72b" }}
+                                        </code>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <strong class="text-white">Modelo de Embeddings:</strong>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <code class="bg-light text-dark p-2 rounded d-inline-block">
+                                            {{ user.ollama_embedding_model|default:"nomic-embed-text" }}
+                                        </code>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-light mt-3 mb-0">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <i class="bi bi-info-circle"></i>
+                                            <strong>IA Local</strong> - Sin costes, 100% privado
+                                        </div>
+                                        <a href="{% url 'core:ollama_check' %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-check-circle"></i> Verificar Configuración
+                                        </a>
+                                    </div>
+                                </div>
                             {% else %}
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    <strong>No configurada</strong>
-                                    <p class="mb-2 mt-2">Para usar el <strong>Chat IA</strong> y la <strong>Vectorización</strong>, necesitas una API key de Google Gemini.</p>
-                                    <div class="d-flex gap-2">
-                                        <a href="https://aistudio.google.com/apikey" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-box-arrow-up-right"></i> Obtener API Key
-                                        </a>
-                                        <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-gear"></i> Configurar Ahora
-                                        </a>
+                                <!-- Configuración de proveedores cloud -->
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <strong class="text-white">API Key:</strong>
+                                    </div>
+                                    <div class="col-md-8">
+                                        {% if user.llm_api_key %}
+                                            <div class="d-flex align-items-center">
+                                                <code class="bg-light text-dark p-2 rounded flex-grow-1" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis;">
+                                                    {{ user.llm_api_key|slice:":20" }}••••••••••••••••
+                                                </code>
+                                                <span class="badge bg-light text-success ms-2">
+                                                    <i class="bi bi-check-circle"></i> Configurada
+                                                </span>
+                                            </div>
+                                            <small class="text-white-50 d-block mt-1">
+                                                <i class="bi bi-info-circle"></i> Lista para Chat IA y Vectorización
+                                            </small>
+                                        {% else %}
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                                <strong>No configurada</strong>
+                                                <p class="mb-2 mt-2">Para usar el <strong>Chat IA</strong> y la <strong>Vectorización</strong>, necesitas configurar una API key.</p>
+                                                <div class="d-flex gap-2">
+                                                    {% if user.llm_provider == 'gemini' %}
+                                                        <a href="https://aistudio.google.com/apikey" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-box-arrow-up-right"></i> Obtener API Key
+                                                        </a>
+                                                    {% elif user.llm_provider == 'openai' %}
+                                                        <a href="https://platform.openai.com/api-keys" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-box-arrow-up-right"></i> Obtener API Key
+                                                        </a>
+                                                    {% elif user.llm_provider == 'nvidia' %}
+                                                        <a href="https://build.nvidia.com/settings/api-keys" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-box-arrow-up-right"></i> Obtener API Key
+                                                        </a>
+                                                    {% endif %}
+                                                    <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-gear"></i> Configurar Ahora
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% endif %}
