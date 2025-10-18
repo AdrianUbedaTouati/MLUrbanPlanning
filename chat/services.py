@@ -20,11 +20,13 @@ class ChatAgentService:
         Initialize the chat agent service
 
         Args:
-            user: Django User instance with llm_api_key and llm_provider
+            user: Django User instance with llm_api_key, llm_provider, ollama_model, ollama_embedding_model
         """
         self.user = user
-        self.api_key = user.llm_api_key
+        self.api_key = user.llm_api_key if hasattr(user, 'llm_api_key') else None
         self.provider = user.llm_provider if hasattr(user, 'llm_provider') else 'gemini'
+        self.ollama_model = user.ollama_model if hasattr(user, 'ollama_model') else 'qwen2.5:72b'
+        self.ollama_embedding_model = user.ollama_embedding_model if hasattr(user, 'ollama_embedding_model') else 'nomic-embed-text'
         self._agent = None
 
     def _get_agent(self):
@@ -35,7 +37,8 @@ class ChatAgentService:
         if self._agent is not None:
             return self._agent
 
-        if not self.api_key:
+        # Ollama doesn't need API key
+        if not self.api_key and self.provider != 'ollama':
             raise ValueError("No API key configured for user")
 
         try:
@@ -47,7 +50,8 @@ class ChatAgentService:
             provider_map = {
                 'gemini': ('google', 'gemini-2.0-flash-exp'),
                 'openai': ('openai', 'gpt-4o-mini'),
-                'nvidia': ('nvidia', 'meta/llama-3.1-8b-instruct')
+                'nvidia': ('nvidia', 'meta/llama-3.1-8b-instruct'),
+                'ollama': ('ollama', self.ollama_model)  # Use user's configured model
             }
 
             agent_provider, model_name = provider_map.get(
@@ -56,15 +60,29 @@ class ChatAgentService:
             )
 
             # Create agent instance with user's API key and provider
-            self._agent = agent_graph.EFormsRAGAgent(
-                api_key=self.api_key,
-                llm_provider=agent_provider,
-                llm_model=model_name,
-                temperature=0.3,
-                k_retrieve=6,
-                use_grading=False,  # Disabled: grading too strict with NVIDIA
-                use_verification=False  # Disable verification for faster responses
-            )
+            if self.provider == 'ollama':
+                # Ollama doesn't need API key
+                self._agent = agent_graph.EFormsRAGAgent(
+                    api_key=None,  # No API key for Ollama
+                    llm_provider=agent_provider,
+                    llm_model=model_name,
+                    ollama_embedding_model=self.ollama_embedding_model,
+                    temperature=0.3,
+                    k_retrieve=6,
+                    use_grading=False,
+                    use_verification=False
+                )
+            else:
+                # Cloud providers need API key
+                self._agent = agent_graph.EFormsRAGAgent(
+                    api_key=self.api_key,
+                    llm_provider=agent_provider,
+                    llm_model=model_name,
+                    temperature=0.3,
+                    k_retrieve=6,
+                    use_grading=False,  # Disabled: grading too strict with NVIDIA
+                    use_verification=False  # Disable verification for faster responses
+                )
 
             return self._agent
 
@@ -142,7 +160,8 @@ class ChatAgentService:
                 - content: Agent's response
                 - metadata: Information about the response (route, documents, tokens, cost, etc.)
         """
-        if not self.api_key:
+        # Ollama doesn't need API key, check only for cloud providers
+        if not self.api_key and self.provider != 'ollama':
             return {
                 'content': 'Por favor, configura tu API key de LLM en tu perfil de usuario para usar el chat IA.',
                 'metadata': {

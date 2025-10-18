@@ -372,8 +372,9 @@ class GenerateRecommendationsView(LoginRequiredMixin, View):
             messages.warning(request, 'Por favor, crea tu perfil de empresa para generar recomendaciones.')
             return redirect('company:profile')
 
-        # Verificar API key
-        if not request.user.llm_api_key:
+        # Verificar API key (Ollama no la necesita)
+        user_provider = getattr(request.user, 'llm_provider', 'gemini')
+        if not request.user.llm_api_key and user_provider != 'ollama':
             messages.warning(request, 'Por favor, configura tu API key del LLM en tu perfil para usar las recomendaciones IA.')
             return redirect('core:edit_profile')
 
@@ -648,13 +649,14 @@ class VectorizationDashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Verificar API key
-        if not self.request.user.llm_api_key:
+        # Verificar API key (Ollama no la necesita)
+        user_provider = getattr(self.request.user, 'llm_provider', 'gemini')
+        if not self.request.user.llm_api_key and user_provider != 'ollama':
             context['has_api_key'] = False
             context['status'] = {
                 'is_initialized': False,
                 'status': 'no_api_key',
-                'message': 'Por favor, configura tu API key de Google Gemini en tu perfil.'
+                'message': 'Por favor, configura tu API key de LLM en tu perfil.'
             }
             return context
 
@@ -685,8 +687,9 @@ class IndexAllTendersView(LoginRequiredMixin, View):
         from datetime import date, datetime
         from .cancel_flags import check_cancel_flag, clear_cancel_flag
 
-        # Verificar API key
-        if not request.user.llm_api_key:
+        # Verificar API key (Ollama no la necesita)
+        user_provider = getattr(request.user, 'llm_provider', 'gemini')
+        if not request.user.llm_api_key and user_provider != 'ollama':
             return JsonResponse({
                 'error': 'Por favor, configura tu API key de LLM en tu perfil.'
             }, status=400)
