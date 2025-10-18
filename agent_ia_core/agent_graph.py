@@ -292,9 +292,12 @@ class EFormsRAGAgent:
             'mejor licitacion', 'mejor licitación',
             'cual licitacion', 'cuál licitación',
             'mas interesante', 'más interesante',
+            'mas interensate',  # typo común
             # Referencias a ofertas/propuestas
+            'oferta', 'ofertas',  # Palabra clave simple
             'oferta publica', 'oferta pública',
             'ofertas publicas', 'ofertas públicas',
+            'mejor oferta', 'cual oferta', 'cuál oferta',
             'concurso publico', 'concurso público',
             'proceso de contratacion', 'proceso de contratación',
             # IDs o referencias específicas
