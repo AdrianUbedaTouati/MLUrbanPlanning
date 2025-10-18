@@ -73,6 +73,62 @@ class ChatAgentService:
         except Exception as e:
             raise Exception(f"Error creating agent: {e}")
 
+    def _enrich_with_company_context(self, message: str) -> str:
+        """
+        Enrich user message with company profile context for better recommendations
+
+        Args:
+            message: Original user message
+
+        Returns:
+            Enriched message with company context prepended
+        """
+        try:
+            from company.models import CompanyProfile
+
+            # Try to get company profile
+            profile = CompanyProfile.objects.filter(user=self.user).first()
+
+            if not profile:
+                # No profile, return original message
+                return message
+
+            # Build company context
+            context_parts = []
+            context_parts.append("CONTEXTO DE MI EMPRESA:")
+
+            if profile.company_name:
+                context_parts.append(f"- Nombre: {profile.company_name}")
+
+            if profile.sector:
+                context_parts.append(f"- Sector: {profile.sector}")
+
+            if profile.cpv_codes:
+                context_parts.append(f"- Códigos CPV de interés: {', '.join(profile.cpv_codes[:5])}")
+
+            if profile.capabilities:
+                context_parts.append(f"- Capacidades: {profile.capabilities}")
+
+            if profile.certifications:
+                context_parts.append(f"- Certificaciones: {', '.join(profile.certifications[:3])}")
+
+            if profile.geographic_scope:
+                context_parts.append(f"- Ámbito geográfico: {', '.join(profile.geographic_scope[:3])}")
+
+            if profile.min_budget or profile.max_budget:
+                budget_range = f"{profile.min_budget or 0} - {profile.max_budget or 'sin límite'} EUR"
+                context_parts.append(f"- Rango presupuesto: {budget_range}")
+
+            # Append original message
+            context_parts.append("")
+            context_parts.append(f"PREGUNTA: {message}")
+
+            return "\n".join(context_parts)
+
+        except Exception as e:
+            # If anything fails, just return original message
+            return message
+
     def process_message(self, message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """
         Process a user message through the Agent_IA system
@@ -120,8 +176,14 @@ class ChatAgentService:
             env_var = env_var_map.get(self.provider, 'GOOGLE_API_KEY')
             os.environ[env_var] = self.api_key
 
+            # Enrich message with company profile context if asking for recommendations
+            enriched_message = message
+            recommendation_keywords = ['adecua', 'recomend', 'mejor', 'apropiada', 'conveniente', 'ideal', 'mi empresa']
+            if any(keyword in message.lower() for keyword in recommendation_keywords):
+                enriched_message = self._enrich_with_company_context(message)
+
             # Execute query through the agent
-            result = agent.query(message)
+            result = agent.query(enriched_message)
 
             # Extract response content
             response_content = result.get('answer', 'No se pudo generar una respuesta.')
