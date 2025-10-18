@@ -27,6 +27,38 @@ class OllamaHealthChecker:
     ]
 
     @staticmethod
+    def _get_ollama_command():
+        """
+        Get the correct Ollama command path for Windows or Unix
+
+        Returns:
+            str: Path to ollama executable
+        """
+        import platform
+        import os
+
+        system = platform.system()
+
+        if system == "Windows":
+            # Try common Windows installation paths
+            possible_paths = [
+                r"C:\Program Files\Ollama\ollama.exe",
+                r"C:\Program Files (x86)\Ollama\ollama.exe",
+                os.path.expanduser(r"~\AppData\Local\Programs\Ollama\ollama.exe"),
+                "ollama.exe",  # Try from PATH
+                "ollama"  # Try from PATH without extension
+            ]
+
+            for path in possible_paths:
+                if os.path.exists(path):
+                    return path
+
+            # If not found in paths, try from PATH
+            return "ollama"
+        else:
+            return "ollama"
+
+    @staticmethod
     def check_ollama_installed() -> Dict[str, Any]:
         """
         Check if Ollama is installed on the system
@@ -35,11 +67,14 @@ class OllamaHealthChecker:
             Dict with status and version info
         """
         try:
+            ollama_cmd = OllamaHealthChecker._get_ollama_command()
+
             result = subprocess.run(
-                ["ollama", "--version"],
+                [ollama_cmd, "--version"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                shell=False
             )
 
             if result.returncode == 0:
@@ -47,32 +82,37 @@ class OllamaHealthChecker:
                 return {
                     "installed": True,
                     "version": version,
-                    "message": f"Ollama instalado: {version}"
+                    "message": f"Ollama instalado: {version}",
+                    "command": ollama_cmd
                 }
             else:
                 return {
                     "installed": False,
                     "version": None,
-                    "message": "Ollama no está instalado"
+                    "message": "Ollama no está instalado",
+                    "command": None
                 }
 
         except FileNotFoundError:
             return {
                 "installed": False,
                 "version": None,
-                "message": "Ollama no está instalado en el sistema"
+                "message": "Ollama no está instalado en el sistema. Descarga desde https://ollama.com",
+                "command": None
             }
         except subprocess.TimeoutExpired:
             return {
                 "installed": False,
                 "version": None,
-                "message": "Timeout al verificar Ollama"
+                "message": "Timeout al verificar Ollama",
+                "command": None
             }
         except Exception as e:
             return {
                 "installed": False,
                 "version": None,
-                "message": f"Error verificando Ollama: {str(e)}"
+                "message": f"Error verificando Ollama: {str(e)}",
+                "command": None
             }
 
     @staticmethod
@@ -127,11 +167,14 @@ class OllamaHealthChecker:
             Dict with models list
         """
         try:
+            ollama_cmd = OllamaHealthChecker._get_ollama_command()
+
             result = subprocess.run(
-                ["ollama", "list"],
+                [ollama_cmd, "list"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
+                shell=False
             )
 
             if result.returncode == 0:
@@ -161,9 +204,16 @@ class OllamaHealthChecker:
                     "success": False,
                     "models": [],
                     "count": 0,
-                    "message": "Error listando modelos"
+                    "message": "Error listando modelos. Asegúrate de que Ollama esté instalado y en el PATH."
                 }
 
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "models": [],
+                "count": 0,
+                "message": "Ollama no está instalado. Descarga desde https://ollama.com"
+            }
         except Exception as e:
             return {
                 "success": False,
