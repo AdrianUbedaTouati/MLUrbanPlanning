@@ -161,6 +161,8 @@ ROUTING_SYSTEM_PROMPT = """Eres un clasificador de consultas para un sistema de 
 
 Tu trabajo es decidir si el usuario necesita buscar en la base de datos de licitaciones.
 
+**IMPORTANTE: Analiza el CONTEXTO COMPLETO de la conversación, no solo el mensaje aislado.**
+
 Categorías:
 1) "vectorstore" - El usuario pregunta por licitaciones/ofertas/contratos ESPECÍFICOS que están en la base de datos
    Ejemplos:
@@ -170,6 +172,9 @@ Categorías:
    - "qué licitaciones hay en construcción"
    - "propuestas interesantes para mi empresa"
 
+   **CLAVE:** Si la conversación ya está hablando de licitaciones específicas, preguntas como
+   "cuánto dinero podría ganar", "cuál es el presupuesto", "cuándo es el plazo" también necesitan vectorstore.
+
 2) "general" - Conversación general, saludos, o preguntas conceptuales que NO requieren buscar en documentos
    Ejemplos:
    - "hola, qué tal"
@@ -177,24 +182,46 @@ Categorías:
    - "cómo funciona el proceso de licitación" (explicación)
    - "gracias por la ayuda"
 
-REGLA CRÍTICA:
+REGLAS CRÍTICAS:
 - Si el usuario pregunta por licitaciones/ofertas/contratos CONCRETOS que podrían estar en la base de datos → vectorstore
-- Si es pregunta conceptual, saludo, o explicación → general
+- Si la conversación YA ESTÁ hablando de licitaciones específicas y el usuario hace preguntas de seguimiento → vectorstore
+- Si es pregunta conceptual, saludo, o explicación sin contexto de licitaciones específicas → general
 
 Responde SOLO con la categoría: "vectorstore" o "general" (sin explicaciones)."""
 
 
-def create_routing_prompt(question: str) -> str:
+def create_routing_prompt(question: str, conversation_history: List[dict] = None) -> str:
     """
-    Crea el prompt para clasificar la consulta.
+    Crea el prompt para clasificar la consulta CON CONTEXTO conversacional.
 
     Args:
         question: Pregunta del usuario
+        conversation_history: Historial de conversación previo
 
     Returns:
         Prompt de clasificación
     """
-    return f"""Clasifica esta consulta del usuario:
+    # Si hay historial, incluirlo en el prompt para contexto
+    if conversation_history and len(conversation_history) > 0:
+        # Tomar últimos 4 mensajes para contexto (2 turnos)
+        recent_history = conversation_history[-4:]
+        history_text = "Contexto de la conversación:\n"
+        for msg in recent_history:
+            role_label = "Usuario" if msg['role'] == 'user' else "Asistente"
+            history_text += f"{role_label}: {msg['content'][:150]}...\n"
+
+        return f"""{history_text}
+
+---
+
+Mensaje actual del usuario:
+"{question}"
+
+Considerando el CONTEXTO COMPLETO de la conversación, ¿necesita buscar en la base de datos de licitaciones?
+Categoría (vectorstore o general):"""
+    else:
+        # Sin historial, clasificar solo el mensaje
+        return f"""Clasifica esta consulta del usuario:
 
 "{question}"
 

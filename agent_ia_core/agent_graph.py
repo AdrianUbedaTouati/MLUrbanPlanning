@@ -261,33 +261,40 @@ class EFormsRAGAgent:
 
     def _route_node(self, state: AgentState) -> AgentState:
         """
-        Nodo de routing: clasifica SOLO el mensaje actual usando el LLM.
+        Nodo de routing: clasifica el mensaje actual CON CONTEXTO conversacional.
 
-        ESTRATEGIA CRÍTICA:
-        - Clasifica CADA MENSAJE de forma INDEPENDIENTE (no toda la conversación)
-        - Usa SOLO la pregunta actual (state["question"]) sin historial
-        - Esto permite cambiar dinámicamente entre rutas según cada mensaje
-        - El LLM decide automáticamente si necesita buscar en documentos
+        ESTRATEGIA CRÍTICA (ACTUALIZADA):
+        - Clasifica considerando el CONTEXTO COMPLETO de la conversación
+        - Usa la pregunta actual + historial reciente para detectar continuaciones
+        - Esto permite detectar preguntas de seguimiento que necesitan documentos
+        - El LLM decide automáticamente considerando el flujo conversacional
 
         Ejemplo de flujo multi-turno:
         1. Usuario: "hola" → clasificado como "general" (sin docs)
         2. Usuario: "cual es la mejor licitación en software" → "vectorstore" (con docs)
-        3. Usuario: "gracias" → "general" (sin docs)
+        3. Usuario: "cuánto dinero podría ganar?" → "vectorstore" (continuación, necesita docs!)
+        4. Usuario: "gracias" → "general" (sin docs)
 
-        Esto permite máxima flexibilidad y efectividad sin depender de keywords rígidas.
+        Esto permite máxima flexibilidad detectando continuaciones contextuales.
         """
-        question = state["question"]  # SOLO la pregunta actual, sin historial
-        logger.info(f"[ROUTE] Clasificando SOLO mensaje actual (sin historial): {question}")
+        question = state["question"]
+        conversation_history = state.get("conversation_history", [])
+
+        if conversation_history:
+            logger.info(f"[ROUTE] Clasificando mensaje CON contexto: {question}")
+            logger.info(f"[ROUTE] Historial disponible: {len(conversation_history)} mensajes")
+        else:
+            logger.info(f"[ROUTE] Clasificando mensaje SIN contexto: {question}")
 
         try:
-            # Crear prompt de routing para el LLM
-            routing_prompt = create_routing_prompt(question)
+            # Crear prompt de routing CON historial para contexto
+            routing_prompt = create_routing_prompt(question, conversation_history)
             messages = [
                 SystemMessage(content=ROUTING_SYSTEM_PROMPT),
                 HumanMessage(content=routing_prompt)
             ]
 
-            # El LLM decide la ruta basándose en el tema/intención
+            # El LLM decide la ruta basándose en mensaje + contexto
             response = self.llm.invoke(messages)
             route_decision = response.content.strip().lower()
 
