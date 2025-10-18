@@ -4,7 +4,7 @@
 {% block title %}{{ session.title|default:"Chat con IA" }} - TenderAI{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'chat/css/chat.css' %}">
+<link rel="stylesheet" href="{% static 'chat/css/chat.css?v=2.1' %}">
 {% endblock %}
 
 {% block content %}
@@ -204,5 +204,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'chat/js/chat.js' %}"></script>
+<script src="{% static 'chat/js/chat.js?v=2.1' %}"></script>
 {% endblock %}
