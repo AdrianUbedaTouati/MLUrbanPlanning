@@ -53,6 +53,15 @@ class HybridRetriever:
             min_score: Umbral mínimo de similaridad
         """
         self.vectorstore = vectorstore or get_vectorstore()
+
+        # Validar que el vectorstore se cargó correctamente
+        if self.vectorstore is None:
+            raise ValueError(
+                "No se pudo cargar el vectorstore de ChromaDB. "
+                "La base de datos de licitaciones no está inicializada. "
+                "Por favor, indexa licitaciones primero en /licitaciones/vectorizacion/"
+            )
+
         self.k = k or DEFAULT_K
         self.min_score = min_score or MIN_SIMILARITY_SCORE
 

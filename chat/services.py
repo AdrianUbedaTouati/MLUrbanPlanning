@@ -94,8 +94,8 @@ class ChatAgentService:
                     ollama_embedding_model=self.ollama_embedding_model,
                     temperature=0.3,
                     k_retrieve=6,
-                    use_grading=False,
-                    use_verification=False
+                    use_grading=self.user.use_grading if hasattr(self.user, 'use_grading') else False,
+                    use_verification=self.user.use_verification if hasattr(self.user, 'use_verification') else False
                 )
             else:
                 # Cloud providers need API key
@@ -105,8 +105,8 @@ class ChatAgentService:
                     llm_model=model_name,
                     temperature=0.3,
                     k_retrieve=6,
-                    use_grading=False,  # Disabled: grading too strict with NVIDIA
-                    use_verification=False  # Disable verification for faster responses
+                    use_grading=self.user.use_grading if hasattr(self.user, 'use_grading') else False,
+                    use_verification=self.user.use_verification if hasattr(self.user, 'use_verification') else False
                 )
 
             return self._agent
@@ -201,7 +201,18 @@ class ChatAgentService:
             }
 
         try:
+            import sys
+
+            # Log inicio del proceso
+            print(f"\n[SERVICE] Iniciando process_message...", file=sys.stderr)
+            print(f"[SERVICE] Proveedor: {self.provider.upper()}", file=sys.stderr)
+            if self.provider == 'ollama':
+                print(f"[SERVICE] Modelo LLM: {self.ollama_model}", file=sys.stderr)
+                print(f"[SERVICE] Modelo Embeddings: {self.ollama_embedding_model}", file=sys.stderr)
+            print(f"[SERVICE] Mensaje: {message[:60]}...", file=sys.stderr)
+
             # Get the agent
+            print(f"[SERVICE] Creando agente RAG...", file=sys.stderr)
             agent = self._get_agent()
 
             # Verify agent was created successfully
@@ -211,23 +222,29 @@ class ChatAgentService:
             if not hasattr(agent, 'query') or not callable(agent.query):
                 raise AttributeError(f"El agente no tiene un método 'query' válido. Tipo: {type(agent)}")
 
+            print(f"[SERVICE] ✓ Agente creado correctamente", file=sys.stderr)
+
             # Set API key in environment for this request
-            env_var_map = {
-                'gemini': 'GOOGLE_API_KEY',
-                'openai': 'OPENAI_API_KEY',
-                'nvidia': 'NVIDIA_API_KEY'
-            }
-            env_var = env_var_map.get(self.provider, 'GOOGLE_API_KEY')
-            os.environ[env_var] = self.api_key
+            if self.provider != 'ollama':
+                env_var_map = {
+                    'gemini': 'GOOGLE_API_KEY',
+                    'openai': 'OPENAI_API_KEY',
+                    'nvidia': 'NVIDIA_API_KEY'
+                }
+                env_var = env_var_map.get(self.provider, 'GOOGLE_API_KEY')
+                os.environ[env_var] = self.api_key
 
             # Enrich message with company profile context if asking for recommendations
             enriched_message = message
             recommendation_keywords = ['adecua', 'recomend', 'mejor', 'apropiada', 'conveniente', 'ideal', 'mi empresa']
             if any(keyword in message.lower() for keyword in recommendation_keywords):
+                print(f"[SERVICE] Enriqueciendo mensaje con contexto de empresa...", file=sys.stderr)
                 enriched_message = self._enrich_with_company_context(message)
 
             # Execute query through the agent
+            print(f"[SERVICE] Ejecutando query en el agente...", file=sys.stderr)
             result = agent.query(enriched_message)
+            print(f"[SERVICE] ✓ Query ejecutado correctamente", file=sys.stderr)
 
             # Extract response content
             response_content = result.get('answer', 'No se pudo generar una respuesta.')
@@ -271,6 +288,12 @@ class ChatAgentService:
                 'total_tokens': cost_data['total_tokens'],
                 'cost_eur': cost_data['total_cost_eur']
             }
+
+            # Log final del proceso
+            print(f"[SERVICE] ✓ Respuesta procesada: {len(response_content)} caracteres", file=sys.stderr)
+            print(f"[SERVICE] Documentos recuperados: {len(documents_used)}", file=sys.stderr)
+            print(f"[SERVICE] Tokens totales: {cost_data['total_tokens']} (in: {cost_data['input_tokens']}, out: {cost_data['output_tokens']})", file=sys.stderr)
+            print(f"[SERVICE] Costo: €{cost_data['total_cost_eur']:.4f}\n", file=sys.stderr)
 
             return {
                 'content': response_content,

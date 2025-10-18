@@ -58,6 +58,18 @@ class User(AbstractUser):
         help_text='Modelo de embeddings para Ollama (ej: nomic-embed-text, mxbai-embed-large)'
     )
 
+    # Chat agent settings
+    use_grading = models.BooleanField(
+        default=False,
+        verbose_name='Activar Grading',
+        help_text='Activa el filtrado de documentos irrelevantes (más preciso pero más lento)'
+    )
+    use_verification = models.BooleanField(
+        default=False,
+        verbose_name='Activar Verificación XML',
+        help_text='Valida campos críticos con el XML original (más preciso pero más lento)'
+    )
+
     # Shipping address fields
     address_line1 = models.CharField(max_length=255, blank=True, verbose_name='Dirección (Línea 1)')
     address_line2 = models.CharField(max_length=255, blank=True, verbose_name='Dirección (Línea 2)')

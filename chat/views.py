@@ -59,6 +59,8 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
     """Vista para crear un nuevo mensaje en una sesión de chat"""
 
     def post(self, request, session_id):
+        import sys
+
         session = get_object_or_404(ChatSession, id=session_id, user=request.user)
 
         user_message_content = request.POST.get('message', '').strip()
@@ -68,6 +70,13 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
                 return JsonResponse({'success': False, 'error': 'El mensaje no puede estar vacío.'})
             messages.error(request, 'El mensaje no puede estar vacío.')
             return redirect('chat:session_detail', session_id=session_id)
+
+        # Log de inicio de proceso
+        print("\n" + "="*70, file=sys.stderr)
+        print(f"[CHAT REQUEST] Usuario: {request.user.username} ({request.user.llm_provider.upper()})", file=sys.stderr)
+        print(f"[CHAT REQUEST] Sesión ID: {session_id} | Título: {session.title or 'Nueva'}", file=sys.stderr)
+        print(f"[CHAT REQUEST] Mensaje: {user_message_content[:80]}{'...' if len(user_message_content) > 80 else ''}", file=sys.stderr)
+        print("="*70, file=sys.stderr)
 
         # Crear mensaje del usuario
         user_message = ChatMessage.objects.create(
@@ -83,6 +92,7 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
         # Integrar con Agent_IA para generar la respuesta
         try:
             # Initialize chat service
+            print(f"[CHAT] Inicializando servicio de chat...", file=sys.stderr)
             chat_service = ChatAgentService(request.user)
 
             # Get conversation history
@@ -99,12 +109,17 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
             ]
 
             # Process message through Agent_IA
+            print(f"[CHAT] Procesando mensaje a través del agente...", file=sys.stderr)
             response = chat_service.process_message(
                 message=user_message_content,
                 conversation_history=conversation_history
             )
 
             # Create assistant message
+            print(f"[CHAT] ✓ Respuesta generada: {len(response['content'])} caracteres", file=sys.stderr)
+            print(f"[CHAT] Metadata: tokens={response['metadata'].get('total_tokens', 0)}, docs={response['metadata'].get('num_documents', 0)}", file=sys.stderr)
+            print("="*70 + "\n", file=sys.stderr)
+
             assistant_message = ChatMessage.objects.create(
                 session=session,
                 role='assistant',
