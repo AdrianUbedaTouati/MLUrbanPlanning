@@ -255,15 +255,35 @@ class EFormsRAGAgent:
     def _route_node(self, state: AgentState) -> AgentState:
         """
         Nodo de routing: clasifica la consulta.
+        Decide si es: conversación general, búsqueda específica, o consulta vectorstore
         """
         question = state["question"]
         logger.info(f"[ROUTE] Clasificando consulta: {question}")
 
-        # Por ahora, siempre rutear a vectorstore
-        # En el futuro, usar el LLM para clasificar
-        state["route"] = "vectorstore"
-        state["iteration"] = state.get("iteration", 0) + 1
+        # Usar el LLM para clasificar la consulta
+        routing_prompt = create_routing_prompt(question)
 
+        try:
+            response = self.llm.invoke([
+                SystemMessage(content=ROUTING_SYSTEM_PROMPT),
+                HumanMessage(content=routing_prompt)
+            ])
+            route = response.content.strip().lower()
+
+            # Mapear respuesta a ruta válida
+            if "general" in route:
+                state["route"] = "general"
+            elif "specific" in route:
+                state["route"] = "vectorstore"  # También usa vectorstore por ahora
+            else:
+                state["route"] = "vectorstore"
+
+        except Exception as e:
+            logger.error(f"[ROUTE] Error clasificando consulta: {e}")
+            # Por defecto, asumir vectorstore
+            state["route"] = "vectorstore"
+
+        state["iteration"] = state.get("iteration", 0) + 1
         logger.info(f"[ROUTE] Ruta decidida: {state['route']}")
         return state
 
@@ -370,21 +390,52 @@ class EFormsRAGAgent:
     def _answer_node(self, state: AgentState) -> AgentState:
         """
         Nodo de respuesta: genera la respuesta final.
+        Maneja tanto respuestas con documentos como conversación general.
         """
         question = state["question"]
+        route = state.get("route", "vectorstore")
         relevant_docs = state.get("relevant_documents", state.get("documents", []))
 
         logger.info(f"[ANSWER] Generando respuesta")
 
+        # Si la ruta es "general", responder sin documentos
+        if route == "general":
+            logger.info("[ANSWER] Conversación general (sin documentos)")
+            try:
+                messages = [
+                    SystemMessage(content=SYSTEM_PROMPT),
+                    HumanMessage(content=f"""Pregunta del usuario: {question}
+
+Responde de forma amigable y natural. Esta es una conversación general, NO tienes documentos específicos disponibles.
+
+Si la pregunta es sobre:
+- Saludos/despedidas: responde cordialmente
+- Preguntas conceptuales: explica de forma general
+- Preguntas sobre licitaciones específicas: menciona que el usuario debe indexar licitaciones primero para consultas específicas
+
+Respuesta:""")
+                ]
+
+                response = self.llm.invoke(messages)
+                state["answer"] = response.content
+                logger.info(f"[ANSWER] Respuesta general generada ({len(response.content)} caracteres)")
+
+            except Exception as e:
+                logger.error(f"[ANSWER] Error generando respuesta general: {e}")
+                state["answer"] = "Lo siento, hubo un error al generar la respuesta. Por favor, intenta de nuevo."
+
+            return state
+
+        # Si no hay documentos relevantes y se esperaban (ruta vectorstore)
         if not relevant_docs:
             state["answer"] = NO_CONTEXT_MESSAGE
             logger.warning("[ANSWER] Sin documentos relevantes")
             return state
 
-        # Crear prompt de respuesta
+        # Respuesta con documentos
+        logger.info(f"[ANSWER] Respuesta con {len(relevant_docs)} documentos")
         answer_prompt = create_answer_prompt(question, relevant_docs)
 
-        # Generar respuesta
         try:
             messages = [
                 SystemMessage(content=SYSTEM_PROMPT),
