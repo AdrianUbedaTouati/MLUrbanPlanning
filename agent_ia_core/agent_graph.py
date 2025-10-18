@@ -451,16 +451,7 @@ class EFormsRAGAgent:
 
                 messages = [
                     SystemMessage(content=SYSTEM_PROMPT),
-                    HumanMessage(content=f"""{context_question}
-
-Responde de forma amigable y natural. Esta es una conversación general, NO tienes documentos específicos disponibles.
-
-Si la pregunta es sobre:
-- Saludos/despedidas: responde cordialmente
-- Preguntas conceptuales: explica de forma general
-- Preguntas sobre licitaciones específicas: menciona que el usuario debe indexar licitaciones primero para consultas específicas
-
-Respuesta:""")
+                    HumanMessage(content=context_question)
                 ]
 
                 response = self.llm.invoke(messages)
