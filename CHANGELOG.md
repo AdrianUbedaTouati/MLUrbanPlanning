@@ -5,6 +5,132 @@ Todas las cambios notables en TenderAI Platform serán documentados en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.4.0] - 2025-10-18
+
+### Añadido
+- **Integración completa de Ollama para modelos LLM locales**
+  - Soporte para ejecutar modelos de IA 100% locales sin API keys
+  - Modelo recomendado: Qwen2.5 72B (calidad comparable a GPT-4)
+  - Privacidad total: datos nunca salen de la máquina
+  - Costo cero: sin límites ni cuotas de uso
+  - Funcionamiento offline: no requiere internet
+
+- **Nuevos campos en modelo User** (`authentication/models.py`)
+  - `ollama_model`: Modelo de chat (ej: qwen2.5:72b, llama3.3:70b)
+  - `ollama_embedding_model`: Modelo de embeddings (ej: nomic-embed-text)
+  - Provider choice añadido: `('ollama', 'Ollama (Local)')`
+
+- **Sistema de verificación Ollama** (`core/ollama_checker.py`)
+  - `OllamaHealthChecker`: Clase completa de health check
+  - Verificación de instalación y versión Ollama
+  - Verificación de servidor en puerto 11434
+  - Listado de modelos instalados con tamaños
+  - Test de modelo en tiempo real
+  - Detección automática en Windows (búsqueda en rutas comunes)
+
+- **Página de verificación Ollama**
+  - URL: `/ollama/check/` con UI visual
+  - Estados con colores (verde/amarillo/rojo)
+  - Lista de modelos instalados
+  - Configuración actual del usuario
+  - Recomendaciones contextuales
+  - Instrucciones de solución de problemas
+
+- **Script de instalación automática Windows** (`instalar_ollama.bat`)
+  - Instalación con un click de Ollama
+  - Descarga automática de Qwen2.5 72B (~41GB)
+  - Descarga automática de nomic-embed-text (~274MB)
+  - Verificación completa de instalación
+  - Inicio automático del servidor
+
+- **Configuración dinámica de modelos en perfil**
+  - Endpoint API `/ollama/models/` para listar modelos instalados
+  - Selects dinámicos en edit_profile.html
+  - Carga automática vía AJAX
+  - Separación entre modelos de chat y embeddings
+  - Mensaje de recomendación para qwen2.5:72b
+
+- **Documentación completa**
+  - `GUIA_INSTALACION_OLLAMA.md`: Guía paso a paso
+  - `ESTRUCTURA_PROYECTO.md`: Documento maestro del proyecto
+  - Sección Ollama en `ARCHITECTURE.md`
+  - Actualización de `INSTALACION.md` con opción Ollama
+
+### Mejorado
+- **Soporte multi-provider mejorado**
+  - `agent_ia_core/agent_graph.py`: ChatOllama y OllamaEmbeddings
+  - `agent_ia_core/llm_factory.py`: Factory methods para Ollama
+  - `chat/services.py`: Detección automática de provider Ollama
+  - `tenders/vectorization_service.py`: Indexación con embeddings Ollama
+  - API key opcional para Ollama (no requerida)
+
+- **Sistema de costos actualizado** (`core/token_pricing.py`)
+  - Pricing para Ollama: €0.00 en todo
+  - Nota especial: "Completamente GRATIS - Modelo local sin límites"
+  - Tracking correcto para provider 'ollama'
+
+- **Interfaz de usuario**
+  - Campo API key se oculta cuando provider = 'ollama'
+  - Ayuda contextual sobre modelos Ollama
+  - Recomendación destacada de qwen2.5:72b
+  - Links a página de verificación
+
+### Corregido
+- **Error de indexación ChromaDB**
+  - Eliminado sistema de colección temporal
+  - Indexación directa en colección final
+  - Conversión explícita de chunk_index a string
+  - Reset completo de ChromaDB ante corrupción
+  - Solución a error KeyError '_type'
+
+- **Detección de modelos Ollama**
+  - Matching flexible de tags (qwen2.5:72b vs qwen2.5:latest)
+  - Búsqueda en múltiples rutas Windows
+  - Manejo correcto de modelo no encontrado
+
+- **Template paths**
+  - Corrección de 'base.html' → 'core/base.html'
+  - Templates Ollama en directorio correcto
+
+### Técnico
+- **Dependencias actualizadas** (`requirements.txt`)
+  - `langchain-ollama>=0.2.0,<1.0.0` (compatible con core 0.3.x)
+  - Versiones compatibles sin conflictos
+  - Rangos de versión en lugar de versiones exactas
+
+- **Migraciones de base de datos**
+  - Nueva migración para campos ollama_model y ollama_embedding_model
+  - Valores por defecto: qwen2.5:72b y nomic-embed-text
+
+- **Arquitectura de servicio**
+  - Validación de API key: `if provider != 'ollama'`
+  - Inicialización condicional de embeddings
+  - Base URL configurable para Ollama (http://localhost:11434)
+
+- **Sistema de health check**
+  - Método `_get_ollama_command()` para detección Windows
+  - Método `check_model_installed()` con matching flexible
+  - Método `get_installed_models()` con parsing de `ollama list`
+  - Método `full_health_check()` para verificación completa
+
+### Modelos Soportados
+**Chat Models:**
+- qwen2.5:72b ⭐ (41GB) - Recomendado
+- llama3.3:70b (40GB) - Alta calidad
+- deepseek-r1:14b (9GB) - Especializado en razonamiento
+- mistral:7b (4.1GB) - Rápido
+
+**Embedding Models:**
+- nomic-embed-text ⭐ (274MB) - Recomendado
+- mxbai-embed-large (669MB) - Mejor en español
+
+### Requisitos Hardware
+**Para Qwen2.5 72B:**
+- RAM: 32GB+
+- GPU: NVIDIA RTX 5080 (16GB VRAM) o superior
+- Disco: 50GB libres
+- Rendimiento esperado (RTX 5080): 15-25 tokens/segundo
+
 ## [1.3.0] - 2025-10-17
 
 ### Añadido
