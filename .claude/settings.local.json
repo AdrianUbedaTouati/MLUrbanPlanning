@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add -A)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nDocs: Limpieza y consolidación de documentación\n\n**Archivos eliminados (redundantes):**\n- GUIA_INSTALACION_OLLAMA.md → Información integrada en README.md\n- DEVELOPMENT.md → Información integrada en README.md\n- ARCHITECTURE.md → Información integrada en README.md\n- INSTALACION.md → Información integrada en README.md\n- ESTRUCTURA_PROYECTO.md → Información integrada en README.md\n- instalar_ollama.bat → Instrucciones en README.md\n- Archivos temporales (NUL, backups)\n\n**Archivos esenciales mantenidos:**\n✅ README.md - Documento principal completo y actualizado\n✅ CHANGELOG.md - Historial de versiones\n✅ CONFIGURACION_AGENTE.md - Configuración del agente RAG\n✅ FLUJO_EJECUCION_CHAT.md - Documentación técnica del chat\n\n**Resultado:**\n- Documentación limpia y organizada\n- Toda la información esencial consolidada\n- 4 documentos .md esenciales en lugar de 9\n- Fácil mantenimiento y navegación\n\nEl README.md ahora contiene:\n- Instalación completa (Django + Ollama)\n- Estructura del proyecto\n- Sistema de chat RAG explicado\n- Configuración multi-proveedor\n- Guía de uso paso a paso\n- Solución de problemas\n- Stack tecnológico\n- Roadmap\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
