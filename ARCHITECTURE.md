@@ -2,15 +2,17 @@
 
 ## Índice
 1. [Visión General](#visión-general)
-2. [Stack Tecnológico](#stack-tecnológico)
-3. [Arquitectura de API Keys](#arquitectura-de-api-keys)
-4. [Aplicaciones Django](#aplicaciones-django)
-5. [Módulo Agent_IA Core](#módulo-agent_ia-core)
-6. [Flujo de Datos Principal](#flujo-de-datos-principal)
-7. [Sistema de Chat RAG](#sistema-de-chat-rag)
-8. [Vectorización y ChromaDB](#vectorización-y-chromadb)
-9. [Modelos de Datos](#modelos-de-datos)
-10. [Integraciones Externas](#integraciones-externas)
+2. [Estructura del Proyecto](#estructura-del-proyecto)
+3. [Stack Tecnológico](#stack-tecnológico)
+4. [Arquitectura de API Keys](#arquitectura-de-api-keys)
+5. [Aplicaciones Django](#aplicaciones-django)
+6. [Sistema de Tracking de Tokens y Costes](#sistema-de-tracking-de-tokens-y-costes)
+7. [Módulo Agent_IA Core](#módulo-agent_ia-core)
+8. [Flujo de Datos Principal](#flujo-de-datos-principal)
+9. [Sistema de Chat RAG](#sistema-de-chat-rag)
+10. [Vectorización y ChromaDB](#vectorización-y-chromadb)
+11. [Modelos de Datos](#modelos-de-datos)
+12. [Integraciones Externas](#integraciones-externas)
 
 ---
 
@@ -25,10 +27,127 @@
 - Descarga automática desde TED API
 - Vectorización y búsqueda semántica
 - Soporte multi-proveedor LLM (Google Gemini, OpenAI, NVIDIA NIM)
+- Sistema de tracking de tokens y costes en tiempo real
 
 ### Principio Fundamental: API Keys por Usuario
 
 **IMPORTANTE**: El sistema utiliza **exclusivamente API keys configuradas por cada usuario** en su perfil. No existen API keys globales en archivos `.env`. Cada usuario debe configurar su propia API key del proveedor LLM que desee usar (Google, OpenAI o NVIDIA).
+
+---
+
+## Estructura del Proyecto
+
+```
+TenderAI_Platform/
+├── manage.py                 # Django management script
+├── requirements.txt          # Dependencias Python
+├── .env                      # Variables de entorno (NO API keys)
+├── .gitignore               # Archivos ignorados por Git
+├── db.sqlite3               # Base de datos SQLite
+│
+├── ARCHITECTURE.md          # Este archivo - Arquitectura completa
+├── README.md                # Documentación principal
+├── CHANGELOG.md             # Historial de cambios
+├── DEVELOPMENT.md           # Guía de desarrollo
+│
+├── TenderAI/                # Configuración Django
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+│
+├── authentication/          # App de autenticación
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   └── templates/
+│
+├── core/                    # App núcleo
+│   ├── models.py           # Extensión User con API keys
+│   ├── views.py            # Dashboard y perfil
+│   ├── token_pricing.py    # Sistema de precios y tokens (NUEVO)
+│   └── templates/
+│
+├── company/                 # App de perfiles empresariales
+│   ├── models.py           # CompanyProfile (20+ campos)
+│   ├── views.py
+│   ├── forms.py
+│   └── templates/
+│
+├── tenders/                 # App de licitaciones
+│   ├── models.py           # Tender, SavedTender, TenderRecommendation
+│   ├── views.py            # CRUD, búsqueda, recomendaciones
+│   ├── vectorization_service.py  # Indexación con tracking
+│   ├── cancel_flags.py     # Sistema de cancelación (NUEVO)
+│   ├── ted_downloader.py   # Descarga desde TED API
+│   └── templates/
+│       └── tenders/
+│           └── vectorization_dashboard.html  # UI con tracking
+│
+├── chat/                    # App de chat RAG
+│   ├── models.py           # ChatSession, ChatMessage (con costes)
+│   ├── views.py            # API endpoints
+│   ├── services.py         # ChatAgentService con tracking
+│   ├── templatetags/       # Template tags custom (NUEVO)
+│   │   └── chat_extras.py  # Cálculo de totales
+│   └── templates/
+│       └── chat/
+│           └── session_detail.html  # UI con display de costes
+│
+├── agent_ia_core/          # Módulo LangGraph (independiente)
+│   ├── agent_graph.py      # EFormsRAGAgent con LangGraph
+│   ├── config.py           # Configuración (sin API keys)
+│   ├── index_build.py      # Constructor de índice ChromaDB
+│   ├── retriever.py        # Retriever semántico
+│   ├── llm_factory.py      # Factory multi-proveedor
+│   ├── prompts.py          # Prompts del sistema
+│   └── utils/
+│
+├── tests/                   # Scripts de testing (NUEVO)
+│   ├── README.md           # Documentación de tests
+│   ├── test_complete_system.py     # Test integral
+│   ├── test_integration.py         # Tests de integración
+│   ├── test_full_flow.py           # Test flujo completo
+│   ├── test_chat_nvidia.py         # Test chat NVIDIA
+│   ├── test_nvidia_simple.py       # Test simple NVIDIA
+│   ├── test_nvidia_complete.py     # Test completo NVIDIA
+│   ├── test_retriever_direct.py    # Test retriever
+│   ├── test_ted_connection.py      # Test TED API
+│   ├── debug_chroma.py             # Debug ChromaDB
+│   ├── check_tenders.py            # Verificar licitaciones
+│   └── download_with_xml.py        # Utilidad descarga
+│
+├── static/                  # Archivos estáticos
+│   ├── core/
+│   ├── chat/
+│   └── tenders/
+│
+├── data/                    # Datos y XMLs
+│   ├── records/            # XMLs de licitaciones
+│   └── index/
+│       └── chroma/         # Índice ChromaDB
+│
+├── chroma_db/              # Base de datos vectorial
+│   └── [colecciones ChromaDB]
+│
+└── logs/                    # Logs de aplicación
+```
+
+### Archivos Clave por Funcionalidad
+
+**Sistema de Tokens y Costes**:
+- `core/token_pricing.py` - Pricing centralizado
+- `tenders/cancel_flags.py` - Flags de cancelación thread-safe
+- `tenders/vectorization_service.py` - Indexación con tracking
+- `chat/services.py` - Chat con tracking de costes
+- `chat/templatetags/chat_extras.py` - Template tags para totales
+
+**Vectorización Segura**:
+- `tenders/vectorization_service.py` - Colección temporal + swap atómico
+- `tenders/templates/tenders/vectorization_dashboard.html` - UI con panel de costes
+
+**Chat con Costes**:
+- `chat/models.py` - Properties para tokens y costes
+- `chat/templates/chat/session_detail.html` - Display por mensaje y totales
 
 ---
 
@@ -218,9 +337,394 @@ Sistema de chat conversacional con RAG.
 - Streaming de respuestas (futuro)
 
 **Archivos clave**:
-- `models.py`: ChatSession, ChatMessage
+- `models.py`: ChatSession, ChatMessage (con metadata de tokens/costes)
 - `views.py`: API endpoints de chat
-- `services.py`: ChatAgentService (integración con Agent_IA)
+- `services.py`: ChatAgentService (integración con Agent_IA + tracking)
+- `templatetags/chat_extras.py`: Template tags para cálculos de totales
+
+---
+
+## Sistema de Tracking de Tokens y Costes
+
+### Visión General
+
+El sistema implementa tracking en tiempo real de tokens y costes tanto para **vectorización** como para **chat**. Incluye:
+
+- Cálculo centralizado de tokens y precios por proveedor
+- Tracking en tiempo real durante indexación
+- Display de costes por mensaje en chat
+- Totales acumulados por conversación
+- Tasa de cambio USD→EUR fija (aproximada)
+- Sistema de cancelación thread-safe
+- Indexación segura con colección temporal
+
+### Módulo `core/token_pricing.py`
+
+Módulo centralizado para gestión de precios y estimación de tokens.
+
+**Funciones principales**:
+
+```python
+# Tasa de cambio fija (aproximada)
+USD_TO_EUR = 0.92
+
+# Precios en EUR por 1M tokens
+PRICING_EUR = {
+    'google': {
+        'input': 0.000069,      # ~€0.069 por 1M tokens
+        'output': 0.000276,
+        'embeddings': 0.0000092
+    },
+    'openai': {
+        'input': 0.000138,
+        'output': 0.000552,
+        'embeddings': 0.0001196
+    },
+    'nvidia': {
+        'input': 0.0,           # GRATIS hasta 10K requests
+        'output': 0.0,
+        'embeddings': 0.0,
+        'free_tier': {
+            'requests': 10000,
+            'rate_limit_per_min': 40
+        }
+    }
+}
+
+def estimate_tokens(text: str, provider: str = 'google') -> int:
+    """Estima tokens usando tiktoken para OpenAI, character-based para otros"""
+    if provider == 'openai':
+        encoding = tiktoken.encoding_for_model("gpt-4")
+        return len(encoding.encode(text))
+    return int(len(text) / 3.5)  # ~3.5 chars por token
+
+def calculate_chat_cost(input_text: str, output_text: str, provider: str) -> Dict:
+    """Calcula costes de chat. Returns: input_tokens, output_tokens, total_tokens, costs"""
+
+def calculate_embedding_cost(text: str, provider: str) -> Tuple[int, float]:
+    """Calcula costes de embeddings. Returns: (tokens, cost_eur)"""
+
+def format_cost(cost_eur: float) -> str:
+    """Formatea coste en EUR con precisión apropiada"""
+    if cost_eur == 0:
+        return "€0.00 (Gratis)"
+    elif cost_eur < 0.01:
+        return f"€{cost_eur:.4f}"  # Muy pequeños: 4 decimales
+    elif cost_eur < 1:
+        return f"€{cost_eur:.3f}"  # Pequeños: 3 decimales
+    else:
+        return f"€{cost_eur:.2f}"  # Normales: 2 decimales
+
+def get_nvidia_limits_info() -> str:
+    """Información sobre tier gratuito de NVIDIA"""
+```
+
+**Límites de NVIDIA**:
+- 10,000 requests gratuitos (embeddings + chat)
+- 40 requests/minuto (rate limit)
+- Después: $4,500/GPU/año o self-hosted
+
+### Sistema de Cancelación (`tenders/cancel_flags.py`)
+
+Sistema thread-safe para cancelación de operaciones largas.
+
+```python
+from threading import Lock
+
+_cancel_flags: Dict[int, Dict[str, bool]] = {}
+_lock = Lock()
+
+def set_cancel_flag(user_id: int, operation: str = 'indexing'):
+    """Establece flag de cancelación para usuario"""
+    with _lock:
+        if user_id not in _cancel_flags:
+            _cancel_flags[user_id] = {}
+        _cancel_flags[user_id][operation] = True
+
+def check_cancel_flag(user_id: int, operation: str = 'indexing') -> bool:
+    """Verifica si operación debe cancelarse"""
+    with _lock:
+        return _cancel_flags.get(user_id, {}).get(operation, False)
+
+def clear_cancel_flag(user_id: int, operation: str = 'indexing'):
+    """Limpia flag de cancelación"""
+```
+
+**Uso**:
+- Flags por usuario y operación
+- Lock global para thread-safety
+- Espera a que chunk actual termine antes de cancelar
+
+### Tracking en Vectorización
+
+**Archivo**: `tenders/vectorization_service.py`
+
+**Estrategia de Indexación Segura**:
+1. Crea colección **temporal** con timestamp
+2. Indexa en temp mientras antigua permanece activa
+3. En **cancelación**: Elimina SOLO temp, mantiene antigua
+4. En **éxito**: Swap atómico temp→final, luego elimina antigua
+5. En **error**: Elimina temp, mantiene antigua
+
+**Código clave**:
+```python
+def index_all_tenders(self, progress_callback=None, cancel_flag_checker=None):
+    # 1. Detectar colección antigua (NO ELIMINAR)
+    old_collection_exists = False
+    try:
+        old_collection = client.get_collection(name=collection_name)
+        old_collection_exists = True
+    except:
+        pass
+
+    # 2. Crear colección TEMPORAL
+    temp_collection_name = f"{collection_name}_temp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_collection = client.create_collection(name=temp_collection_name)
+
+    # 3. Indexar en temporal con tracking de costes
+    for tender in tenders:
+        # Check cancelación ANTES de cada tender
+        if cancel_flag_checker and cancel_flag_checker():
+            client.delete_collection(name=temp_collection_name)
+            return {'cancelled': True, ...}
+
+        for chunk in chunks:
+            # Calcular tokens y coste por chunk
+            chunk_tokens, chunk_cost = calculate_embedding_cost(chunk_text, self.provider)
+            total_tokens += chunk_tokens
+            total_cost_eur += chunk_cost
+
+            # Callback SSE con progreso
+            if progress_callback:
+                progress_callback({
+                    'type': 'indexed',
+                    'tender_id': tender.tender_id,
+                    'total_tokens': total_tokens,
+                    'total_cost_eur': total_cost_eur,
+                    'chunks_indexed': chunks_count
+                })
+
+            # Añadir a colección TEMPORAL
+            temp_collection.add(ids=[...], embeddings=[...], ...)
+
+    # 4. SWAP: Solo si completó con éxito
+    if old_collection_exists:
+        client.delete_collection(name=collection_name)
+
+    final_collection = client.create_collection(name=collection_name)
+    temp_data = temp_collection.get(include=['embeddings', 'documents', 'metadatas'])
+    final_collection.add(...)
+
+    # 5. Eliminar temporal
+    client.delete_collection(name=temp_collection_name)
+```
+
+**Endpoints**:
+- `GET /licitaciones/indexar-todos/`: Inicia indexación con SSE
+- `POST /licitaciones/cancelar-indexacion/`: Cancela indexación activa
+
+### Tracking en Chat
+
+**Archivo**: `chat/services.py`
+
+**Integración con Agent**:
+```python
+def process_message(self, message: str, conversation_history: List[Dict] = None):
+    # Ejecutar agente
+    result = agent.query(message)
+    response_content = result.get('answer', '')
+
+    # Calcular tokens y coste
+    from core.token_pricing import calculate_chat_cost
+
+    # Input completo incluye contexto RAG
+    full_input = message
+    if documents_used:
+        docs_text = '\n'.join([doc.get('content_preview', '') for doc in documents_used])
+        full_input = f"{message}\n\nContext:\n{docs_text}"
+
+    cost_data = calculate_chat_cost(
+        input_text=full_input,
+        output_text=response_content,
+        provider=self.provider
+    )
+
+    # Guardar metadata con tokens y costes
+    metadata = {
+        'route': result.get('route', 'unknown'),
+        'documents_used': documents_used,
+        'input_tokens': cost_data['input_tokens'],
+        'output_tokens': cost_data['output_tokens'],
+        'total_tokens': cost_data['total_tokens'],
+        'cost_eur': cost_data['total_cost_eur']
+    }
+
+    return {
+        'content': response_content,
+        'metadata': metadata
+    }
+```
+
+**Modelo ChatMessage** (`chat/models.py`):
+```python
+@property
+def tokens_used(self):
+    return self.metadata.get('total_tokens', 0)
+
+@property
+def input_tokens(self):
+    return self.metadata.get('input_tokens', 0)
+
+@property
+def output_tokens(self):
+    return self.metadata.get('output_tokens', 0)
+
+@property
+def cost_eur(self):
+    return self.metadata.get('cost_eur', 0.0)
+```
+
+### UI de Vectorización
+
+**Archivo**: `tenders/templates/tenders/vectorization_dashboard.html`
+
+**Características**:
+1. Botón renombrado: "Indexar" (antes "Indexar Todo")
+2. Panel explicativo sobre indexación segura
+3. Panel de costes en tiempo real con glassmorphism:
+   - Total tokens (formateado con comas)
+   - Coste total en EUR (aproximado)
+   - Total chunks indexados
+4. Botón "Cancelar Indexación"
+5. Actualizaciones SSE en vivo
+
+**JavaScript clave**:
+```javascript
+function formatCost(cost) {
+    if (cost === 0) return '€0.00 (Gratis)';
+    if (cost < 0.01) return '€' + cost.toFixed(4);
+    if (cost < 1) return '€' + cost.toFixed(3);
+    return '€' + cost.toFixed(2);
+}
+
+function formatNumber(num) {
+    return num.toLocaleString('es-ES');
+}
+
+function updateCostPanel(tokens, cost, chunks) {
+    document.getElementById('totalTokens').textContent = formatNumber(tokens);
+    document.getElementById('totalCost').textContent = formatCost(cost);
+    document.getElementById('totalChunks').textContent = formatNumber(chunks);
+}
+
+// Manejar eventos SSE
+eventSource.addEventListener('indexed', function(event) {
+    const data = JSON.parse(event.data);
+    updateCostPanel(data.total_tokens, data.total_cost_eur, data.chunks_indexed);
+});
+
+eventSource.addEventListener('cancelled', function(event) {
+    progressEmoji.textContent = '⚠️';
+    progressTitle.textContent = 'Indexación Cancelada';
+});
+```
+
+### UI de Chat
+
+**Archivo**: `chat/templates/chat/session_detail.html`
+
+**Características**:
+1. Display de coste por mensaje del asistente
+2. Formato condicional según monto:
+   - €0.00 (Gratis)
+   - €0.0023 (< €0.01)
+   - €1.45 (> €1)
+3. Panel de totales al final de conversación
+
+**Template tag** (`chat/templatetags/chat_extras.py`):
+```python
+@register.simple_tag
+def calculate_session_totals(messages):
+    total_tokens = 0
+    total_cost = 0.0
+    message_count = 0
+
+    for msg in messages:
+        if msg.role == 'assistant' and hasattr(msg, 'metadata') and msg.metadata:
+            total_tokens += msg.metadata.get('total_tokens', 0)
+            total_cost += msg.metadata.get('cost_eur', 0.0)
+            message_count += 1
+
+    return {
+        'total_tokens': total_tokens,
+        'total_cost': round(total_cost, 4),
+        'message_count': message_count
+    }
+```
+
+**HTML**:
+```html
+{% if msg.metadata.total_tokens %}
+<div class="message-cost-info">
+    <div><strong>Tokens:</strong> {{ msg.metadata.input_tokens }} entrada +
+         {{ msg.metadata.output_tokens }} salida = {{ msg.metadata.total_tokens }}</div>
+    <div><strong>Coste:</strong>
+        {% if msg.metadata.cost_eur == 0 %}€0.00 (Gratis)
+        {% elif msg.metadata.cost_eur < 0.01 %}€{{ msg.metadata.cost_eur|stringformat:".4f" }}
+        {% else %}€{{ msg.metadata.cost_eur|stringformat:".2f" }}
+        {% endif %}
+        <small>(aprox.)</small>
+    </div>
+</div>
+{% endif %}
+
+<!-- Totales de conversación -->
+{% load chat_extras %}
+{% calculate_session_totals messages as totals %}
+<div class="conversation-totals">
+    <h4>💰 Total de la conversación</h4>
+    <div>TOTAL TOKENS: {{ totals.total_tokens }}</div>
+    <div>MENSAJES: {{ totals.message_count }}</div>
+    <div>COSTE TOTAL: €{{ totals.total_cost }}</div>
+</div>
+```
+
+### Flujo Completo de Tracking
+
+**Vectorización**:
+```
+Usuario → Click "Indexar" → VectorizationService.index_all_tenders()
+                                      ↓
+                            Por cada chunk:
+                              - calculate_embedding_cost(chunk, provider)
+                              - total_tokens += chunk_tokens
+                              - total_cost_eur += chunk_cost
+                              - SSE event → Frontend actualiza panel
+                                      ↓
+                            Usuario ve actualización en tiempo real:
+                              - "Total Tokens: 12,345"
+                              - "Coste Total: €0.0012 (aprox.)"
+                              - "Chunks Indexados: 45"
+```
+
+**Chat**:
+```
+Usuario → Envía pregunta → ChatAgentService.process_message()
+                                      ↓
+                            Agent RAG ejecuta:
+                              - Recupera documentos (contexto)
+                              - Genera respuesta
+                                      ↓
+                            calculate_chat_cost(input+contexto, output, provider)
+                                      ↓
+                            Guarda metadata en ChatMessage:
+                              - input_tokens, output_tokens, total_tokens
+                              - cost_eur
+                                      ↓
+                            Template renderiza panel de coste:
+                              - "Tokens: 10 entrada + 50 salida = 60"
+                              - "Coste: €0.00 (Gratis)"
+```
 
 ---
 

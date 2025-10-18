@@ -82,3 +82,8 @@ __pycache__/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Test outputs and logs
+tests/*.log
+tests/*.txt
+tests/__pycache__/

@@ -180,20 +180,20 @@ def get_nvidia_limits_info() -> str:
     free_tier = nvidia_info['free_tier']
 
     return f"""
-    🎯 NVIDIA NIM - Límites del Tier Gratuito:
+    NVIDIA NIM - Limites del Tier Gratuito:
 
-    ✅ {free_tier['requests']:,} requests gratuitos (embeddings + chat)
-    ⏱️  {free_tier['rate_limit_per_min']} requests por minuto (rate limit)
-    🔓 Gratis para desarrollo y prototipado
+    [OK] {free_tier['requests']:,} requests gratuitos (embeddings + chat)
+    [OK] {free_tier['rate_limit_per_min']} requests por minuto (rate limit)
+    [OK] Gratis para desarrollo y prototipado
 
-    Después de agotar los {free_tier['requests']:,} requests:
-    💰 Producción: ${nvidia_info['production']['license_cost_usd_per_gpu_year']}/GPU/año
-    🏠 O despliega NIM en tu propia infraestructura (sin límites)
+    Despues de agotar los {free_tier['requests']:,} requests:
+    [COST] Produccion: ${nvidia_info['production']['license_cost_usd_per_gpu_year']}/GPU/anio
+    [SELF] O despliega NIM en tu propia infraestructura (sin limites)
 
-    📊 Estimación de uso:
+    Estimacion de uso:
     - ~100 licitaciones indexadas (50 chunks c/u) = ~5,000 requests
     - ~5,000 mensajes de chat = ~5,000 requests
-    - Total: ~10,000 requests (límite del tier gratuito)
+    - Total: ~10,000 requests (limite del tier gratuito)
     """.strip()
 
 
