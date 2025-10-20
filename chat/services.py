@@ -161,7 +161,12 @@ class ChatAgentService:
     def _get_tenders_summary(self) -> str:
         """
         Obtiene un resumen de todas las licitaciones disponibles (parsed_summary).
-        Incluye TODOS los campos REQUIRED y OPTIONAL completos, sin META.
+        Incluye solo campos esenciales para resumen inicial.
+
+        Campos incluidos:
+        - ojs_notice_id, title, buyer_name, cpv_main (REQUIRED)
+        - description, cpv_additional, budget_eur, tender_deadline_date,
+          publication_date, contract_type, nuts_regions, procedure_type (OPTIONAL)
 
         Returns:
             String con resumen formateado de licitaciones, o vacío si no hay
@@ -184,17 +189,29 @@ class ChatAgentService:
 
             for idx, tender in enumerate(tenders, 1):
                 parsed = tender.parsed_summary
+                required = parsed.get('REQUIRED', {})
+                optional = parsed.get('OPTIONAL', {})
 
-                # Extraer solo REQUIRED y OPTIONAL (sin META)
+                # Extraer solo campos esenciales
                 tender_data = {
-                    'REQUIRED': parsed.get('REQUIRED', {}),
-                    'OPTIONAL': parsed.get('OPTIONAL', {})
+                    'ojs_notice_id': required.get('ojs_notice_id'),
+                    'title': required.get('title'),
+                    'buyer_name': required.get('buyer_name'),
+                    'cpv_main': required.get('cpv_main'),
+                    'description': optional.get('description'),  # Completa
+                    'cpv_additional': optional.get('cpv_additional'),
+                    'budget_eur': optional.get('budget_eur'),
+                    'tender_deadline_date': optional.get('tender_deadline_date'),
+                    'publication_date': required.get('publication_date'),
+                    'contract_type': optional.get('contract_type'),
+                    'nuts_regions': optional.get('nuts_regions'),
+                    'procedure_type': optional.get('procedure_type')
                 }
 
                 # Convertir a JSON formateado para legibilidad
                 tender_json = json.dumps(tender_data, ensure_ascii=False, indent=2)
 
-                summary_parts.append(f"[{idx}] Licitación {parsed.get('REQUIRED', {}).get('ojs_notice_id', 'N/A')}")
+                summary_parts.append(f"[{idx}] Licitación {required.get('ojs_notice_id', 'N/A')}")
                 summary_parts.append(tender_json)
                 summary_parts.append('')  # Línea en blanco entre licitaciones
 
