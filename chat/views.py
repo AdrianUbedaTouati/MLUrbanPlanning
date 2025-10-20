@@ -56,7 +56,7 @@ class ChatSessionCreateView(LoginRequiredMixin, View):
                     'message': 'No hay licitaciones indexadas. Ve a la página de vectorización primero.',
                     'redirect_url': reverse('tenders:vectorization_index')
                 })
-            return redirect('tenders:vectorization_index')
+            return redirect('tenders:vectorization_dashboard')
 
         session = ChatSession.objects.create(user=request.user)
 
@@ -92,7 +92,7 @@ class ChatSessionDetailView(LoginRequiredMixin, DetailView):
                 '⚠️ No puedes usar el chat porque no hay licitaciones indexadas. '
                 'Primero debes indexar las licitaciones en la página de vectorización.'
             )
-            return redirect('tenders:vectorization_index')
+            return redirect('tenders:vectorization_dashboard')
 
         return super().dispatch(request, *args, **kwargs)
 
