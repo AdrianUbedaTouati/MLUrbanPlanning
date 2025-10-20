@@ -118,8 +118,9 @@ class VectorizationService:
                     import gc
                     import time
                     gc.collect()
-                    # Pausa breve para que Windows libere el archivo
-                    time.sleep(0.3)
+                    # Pausa más larga para que Windows libere el archivo
+                    # IMPORTANTE: Aumentado de 0.3s a 1.0s para evitar WinError 32
+                    time.sleep(1.0)
 
             return result
 
@@ -497,64 +498,45 @@ class VectorizationService:
 
     def clear_vectorstore(self, force: bool = False) -> Dict[str, Any]:
         """
-        Clear the entire vectorstore (delete collection or entire database)
+        Clear the entire vectorstore by deleting the ChromaDB directory.
 
-        Args:
-            force: If True, deletes the entire ChromaDB directory (for corruption recovery)
+        This method ALWAYS deletes the entire directory to avoid corruption issues.
+        The 'force' parameter is kept for backwards compatibility but is no longer used.
 
         Returns:
             Dict with operation results
         """
         try:
             from agent_ia_core import config
-            import chromadb
             import shutil
+            import gc
+            import time
 
             persist_dir = getattr(config, 'CHROMA_PERSIST_DIRECTORY', str(config.INDEX_DIR / 'chroma'))
-            collection_name = getattr(config, 'CHROMA_COLLECTION_NAME', 'eforms_chunks')
+            chroma_path = Path(persist_dir)
 
-            if force:
-                # Force delete entire ChromaDB directory (for corruption recovery)
-                try:
-                    chroma_path = Path(persist_dir)
-                    if chroma_path.exists():
-                        shutil.rmtree(chroma_path)
-                        return {
-                            'success': True,
-                            'message': f'ChromaDB completamente eliminado (forzado). Directorio: {persist_dir}'
-                        }
-                    else:
-                        return {
-                            'success': True,
-                            'message': 'ChromaDB ya no existe'
-                        }
-                except Exception as e:
-                    return {
-                        'success': False,
-                        'error': f'Error en limpieza forzada: {str(e)}'
-                    }
-            else:
-                # Normal delete (just the collection)
-                client = chromadb.PersistentClient(path=persist_dir)
+            # Cerrar cualquier cliente ChromaDB que pueda estar abierto
+            # Esto es necesario en Windows para evitar WinError 32
+            gc.collect()
+            time.sleep(0.5)
 
+            if chroma_path.exists():
                 try:
-                    client.delete_collection(name=collection_name)
+                    shutil.rmtree(chroma_path)
                     return {
                         'success': True,
-                        'message': f'Colección "{collection_name}" eliminada exitosamente'
-                    }
-                except KeyError:
-                    # Corruption detected - suggest force delete
-                    return {
-                        'success': False,
-                        'error': 'ChromaDB corrupto detectado. Usa force=True para limpieza completa.',
-                        'suggestion': 'Ejecuta: service.clear_vectorstore(force=True)'
+                        'message': f'Vectorstore eliminado completamente. Directorio: {persist_dir}'
                     }
                 except Exception as e:
                     return {
                         'success': False,
-                        'error': f'Error eliminando colección: {str(e)}'
+                        'error': f'Error al eliminar vectorstore: {str(e)}. Asegúrate de que no haya procesos usando los archivos.'
                     }
+            else:
+                return {
+                    'success': True,
+                    'message': 'El vectorstore no existe (ya estaba limpio)'
+                }
 
         except Exception as e:
             return {
