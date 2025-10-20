@@ -29,6 +29,9 @@ class ChatAgentService:
         self.ollama_embedding_model = user.ollama_embedding_model if hasattr(user, 'ollama_embedding_model') else 'nomic-embed-text'
         self._agent = None
 
+        # Obtener contexto de empresa si existe
+        self.company_context = self._get_company_context()
+
     def _get_agent(self):
         """
         Initialize and return FunctionCallingAgent
@@ -77,7 +80,7 @@ class ChatAgentService:
             else:
                 model = self.ollama_model  # Fallback
 
-            # Crear agente
+            # Crear agente con contexto de empresa
             self._agent = FunctionCallingAgent(
                 llm_provider=self.provider,
                 llm_model=model,
@@ -85,10 +88,13 @@ class ChatAgentService:
                 retriever=retriever,
                 db_session=None,  # Usa conexión Django default
                 max_iterations=5,
-                temperature=0.3
+                temperature=0.3,
+                company_context=self.company_context  # Pasar contexto de empresa
             )
 
             print(f"[SERVICE] ✓ FunctionCallingAgent creado con {len(self._agent.tool_registry.tools)} tools", file=sys.stderr)
+            if self.company_context:
+                print(f"[SERVICE] ✓ Contexto de empresa incluido en system prompt", file=sys.stderr)
             return self._agent
 
         except Exception as e:
@@ -121,6 +127,30 @@ class ChatAgentService:
             )
         except requests.exceptions.Timeout:
             raise ValueError("Timeout al conectar con Ollama. Verifica que esté funcionando correctamente.")
+
+    def _get_company_context(self) -> str:
+        """
+        Obtiene el contexto de la empresa del usuario.
+
+        Returns:
+            String con el contexto formateado de la empresa, o vacío si no existe perfil
+        """
+        try:
+            from company.models import CompanyProfile
+
+            # Buscar perfil de empresa
+            profile = CompanyProfile.objects.filter(user=self.user).first()
+
+            if not profile:
+                return ""
+
+            # Usar el método get_chat_context() del modelo
+            return profile.get_chat_context()
+
+        except Exception as e:
+            # Si hay error, retornar vacío para no bloquear el chat
+            print(f"[SERVICE] Error obteniendo contexto de empresa: {e}", file=sys.stderr)
+            return ""
 
 
     def _enrich_with_company_context(self, message: str) -> str:
