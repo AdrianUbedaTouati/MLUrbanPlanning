@@ -173,4 +173,12 @@ SESSION_COOKIE_AGE = 1209600  # 2 semanas
 SESSION_SAVE_EVERY_REQUEST = True  # Guardar sesión en cada request
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False  # IMPORTANTE: False en desarrollo (HTTP sin SSL)
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_DOMAIN = None  # Usar dominio actual
+SESSION_COOKIE_PATH = '/'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Usar DB para sesiones
+
+# CSRF Configuration (para compatibilidad con cookies de sesión)
+CSRF_COOKIE_SECURE = False  # False en desarrollo
+CSRF_COOKIE_SAMESITE = 'Lax'
