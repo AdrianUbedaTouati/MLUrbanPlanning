@@ -85,10 +85,6 @@ def login_view(request):
             else:
                 request.session.set_expiry(1209600)  # 2 weeks
 
-            # Forzar guardado de sesión
-            request.session.modified = True
-            request.session.save()
-
             messages.success(request, f'Bienvenido, {user.username}!')
             next_url = request.GET.get('next', 'core:home')
             return redirect(next_url)
@@ -366,3 +362,5 @@ def resend_verification_view(request):
         return redirect('authentication:login')
 
     return render(request, 'authentication/resend_verification.html')
+
+

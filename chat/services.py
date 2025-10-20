@@ -15,12 +15,14 @@ if agent_ia_path not in sys.path:
 class ChatAgentService:
     """Service to interact with the Agent_IA RAG system"""
 
-    def __init__(self, user):
+    def __init__(self, user, use_function_calling=None):
         """
         Initialize the chat agent service
 
         Args:
             user: Django User instance with llm_api_key, llm_provider, ollama_model, ollama_embedding_model
+            use_function_calling: If True, use FunctionCallingAgent. If False, use EFormsRAGAgent.
+                                  If None, check user.use_function_calling attribute or env var USE_FUNCTION_CALLING
         """
         self.user = user
         self.api_key = user.llm_api_key if hasattr(user, 'llm_api_key') else None
@@ -29,9 +31,19 @@ class ChatAgentService:
         self.ollama_embedding_model = user.ollama_embedding_model if hasattr(user, 'ollama_embedding_model') else 'nomic-embed-text'
         self._agent = None
 
+        # Determine if we should use Function Calling
+        if use_function_calling is None:
+            # Check user attribute first, then env var, default to False for backward compatibility
+            if hasattr(user, 'use_function_calling'):
+                self.use_function_calling = user.use_function_calling
+            else:
+                self.use_function_calling = os.getenv('USE_FUNCTION_CALLING', 'false').lower() == 'true'
+        else:
+            self.use_function_calling = use_function_calling
+
     def _get_agent(self):
         """
-        Initialize and return the EFormsRAGAgent
+        Initialize and return the appropriate agent (FunctionCallingAgent or EFormsRAGAgent)
         Cached per service instance
         """
         if self._agent is not None:
@@ -41,10 +53,100 @@ class ChatAgentService:
         if not self.api_key and self.provider != 'ollama':
             raise ValueError("No API key configured for user")
 
+        # Route to appropriate agent type
+        if self.use_function_calling:
+            return self._create_function_calling_agent()
+        else:
+            return self._create_legacy_agent()
+
+    def _create_function_calling_agent(self):
+        """
+        Create and return a FunctionCallingAgent instance
+        """
+        try:
+            from agent_ia_core.agent_function_calling import FunctionCallingAgent
+            from agent_ia_core.retriever import create_retriever
+
+            print(f"[SERVICE] Creando FunctionCallingAgent...", file=sys.stderr)
+            print(f"[SERVICE] Proveedor: {self.provider}", file=sys.stderr)
+
+            # Verificar Ollama si es necesario
+            if self.provider == 'ollama':
+                self._verify_ollama_availability()
+
+            # Crear retriever
+            retriever = create_retriever(
+                k=6,
+                provider='ollama' if self.provider == 'ollama' else self.provider,
+                api_key=None if self.provider == 'ollama' else self.api_key,
+                embedding_model=self.ollama_embedding_model if self.provider == 'ollama' else None
+            )
+
+            # Determinar el modelo según el proveedor
+            if self.provider == 'ollama':
+                model = self.ollama_model
+            elif self.provider == 'openai':
+                model = 'gpt-4o-mini'  # Modelo por defecto de OpenAI
+            elif self.provider == 'google':
+                model = 'gemini-2.0-flash-exp'  # Modelo por defecto de Gemini
+            else:
+                model = self.ollama_model  # Fallback
+
+            # Crear agente
+            self._agent = FunctionCallingAgent(
+                llm_provider=self.provider,
+                llm_model=model,
+                llm_api_key=None if self.provider == 'ollama' else self.api_key,
+                retriever=retriever,
+                db_session=None,  # Usa conexión Django default
+                max_iterations=5,
+                temperature=0.3
+            )
+
+            print(f"[SERVICE] ✓ FunctionCallingAgent creado con {len(self._agent.tool_registry.tools)} tools", file=sys.stderr)
+            return self._agent
+
+        except Exception as e:
+            raise Exception(f"Error creating FunctionCallingAgent: {e}")
+
+    def _verify_ollama_availability(self):
+        """
+        Verify Ollama is running and model is available
+        """
+        import requests
+        try:
+            response = requests.get('http://localhost:11434/api/tags', timeout=2)
+            if response.status_code != 200:
+                raise ValueError("Ollama no está respondiendo correctamente en http://localhost:11434")
+
+            # Verificar que el modelo está descargado
+            models = response.json().get('models', [])
+            model_names = [m['name'] for m in models]
+            if self.ollama_model not in model_names:
+                available = ', '.join(model_names[:5]) if model_names else 'ninguno'
+                raise ValueError(
+                    f"El modelo '{self.ollama_model}' no está descargado en Ollama. "
+                    f"Modelos disponibles: {available}. "
+                    f"Descárgalo con: ollama pull {self.ollama_model}"
+                )
+        except requests.exceptions.ConnectionError:
+            raise ValueError(
+                "No se puede conectar con Ollama. "
+                "Verifica que Ollama esté ejecutándose: ollama serve"
+            )
+        except requests.exceptions.Timeout:
+            raise ValueError("Timeout al conectar con Ollama. Verifica que esté funcionando correctamente.")
+
+    def _create_legacy_agent(self):
+        """
+        Create and return the legacy EFormsRAGAgent (original implementation)
+        """
         try:
             # Import agent_graph module
             from agent_ia_core import agent_graph
             from agent_ia_core import config
+
+            print(f"[SERVICE] Creando EFormsRAGAgent (legacy)...", file=sys.stderr)
 
             # Map provider names to agent_graph format
             provider_map = {

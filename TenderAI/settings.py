@@ -167,3 +167,10 @@ OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 DEFAULT_K_RETRIEVE = config('DEFAULT_K_RETRIEVE', cast=int, default=6)
 USE_GRADING = config('USE_GRADING', cast=bool, default=True)
 USE_XML_VERIFICATION = config('USE_XML_VERIFICATION', cast=bool, default=True)
+
+# Session Configuration
+SESSION_COOKIE_AGE = 1209600  # 2 semanas
+SESSION_SAVE_EVERY_REQUEST = True  # Guardar sesión en cada request
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Usar DB para sesiones
