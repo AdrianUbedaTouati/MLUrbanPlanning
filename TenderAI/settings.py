@@ -43,9 +43,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.ForceSessionMiddleware',  # NUEVO: Middleware personalizado para forzar sesión
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  # DESHABILITADO TEMPORALMENTE PARA DEBUG
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -171,16 +170,13 @@ USE_XML_VERIFICATION = config('USE_XML_VERIFICATION', cast=bool, default=True)
 
 # Session Configuration
 SESSION_COOKIE_AGE = 1209600  # 2 semanas
-SESSION_SAVE_EVERY_REQUEST = True  # Guardar sesión en cada request
-SESSION_COOKIE_HTTPONLY = False  # CAMBIO: False para debugging (permite JavaScript)
-SESSION_COOKIE_SAMESITE = None  # CAMBIO: None para permitir cross-site (más permisivo)
+SESSION_SAVE_EVERY_REQUEST = False  # No es necesario guardar en cada request
+SESSION_COOKIE_HTTPONLY = True  # Seguridad: cookies no accesibles desde JavaScript
+SESSION_COOKIE_SAMESITE = 'Lax'  # Balance entre seguridad y funcionalidad
 SESSION_COOKIE_SECURE = False  # False en desarrollo (HTTP sin SSL)
 SESSION_COOKIE_NAME = 'sessionid'
-SESSION_COOKIE_DOMAIN = None  # Usar dominio actual
-SESSION_COOKIE_PATH = '/'
-SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'  # CAMBIO: Usar cookies firmadas (no DB)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Base de datos (estándar y confiable)
 
-# CSRF Configuration (para compatibilidad con cookies de sesión)
-CSRF_COOKIE_SECURE = False  # False en desarrollo
-CSRF_COOKIE_SAMESITE = None  # CAMBIO: None para permitir cross-site
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8001', 'http://localhost:8001']  # NUEVO
+# CSRF Configuration
+CSRF_COOKIE_SECURE = False  # False en desarrollo (HTTP sin SSL)
+CSRF_COOKIE_SAMESITE = 'Lax'  # Balance entre seguridad y funcionalidad

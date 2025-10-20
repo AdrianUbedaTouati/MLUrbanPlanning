@@ -71,73 +71,35 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        print(f"[LOGIN DEBUG] Usuario ya autenticado: {request.user.username}")
         return redirect('core:home')
 
     if request.method == 'POST':
-        print(f"[LOGIN DEBUG] POST recibido. Username: {request.POST.get('username')}")
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            print(f"[LOGIN DEBUG] Formulario válido. Usuario: {user.username} (ID: {user.id})")
 
-            # Imprimir sesión ANTES de login
-            print(f"[LOGIN DEBUG] Session key ANTES de login: {request.session.session_key}")
-
-            # CRÍTICO: Crear sesión ANTES de login() si no existe
-            if not request.session.session_key:
-                request.session.create()
-                print(f"[LOGIN DEBUG] Sesión creada manualmente: {request.session.session_key}")
-
+            # Login the user
             login(request, user)
-
-            # Imprimir sesión DESPUÉS de login
-            print(f"[LOGIN DEBUG] Session key DESPUÉS de login: {request.session.session_key}")
-            print(f"[LOGIN DEBUG] User ID en sesión: {request.session.get('_auth_user_id')}")
-            print(f"[LOGIN DEBUG] User autenticado: {request.user.is_authenticated}")
 
             # Handle remember me
             if not form.cleaned_data.get('remember_me'):
-                request.session.set_expiry(0)
-                print(f"[LOGIN DEBUG] Remember me: NO (sesión expira al cerrar navegador)")
+                request.session.set_expiry(0)  # Session expires when browser closes
             else:
                 request.session.set_expiry(1209600)  # 2 weeks
-                print(f"[LOGIN DEBUG] Remember me: SÍ (sesión dura 2 semanas)")
 
-            # Forzar guardado de sesión
-            request.session.modified = True
-            request.session.save()
-            print(f"[LOGIN DEBUG] Sesión guardada forzadamente")
-            print(f"[LOGIN DEBUG] Session key FINAL: {request.session.session_key}")
-
-            # SOLUCIÓN: Renderizar template con redirect JavaScript
-            # Esto da tiempo al navegador para guardar la cookie
             messages.success(request, f'Bienvenido, {user.username}!')
+
+            # Redirect to next URL or home
             next_url = request.GET.get('next', '/')
-
-            print(f"[LOGIN DEBUG] Renderizando template de éxito con redirect a: {next_url}")
-
-            # Renderizar página intermedia que redirige con JavaScript
-            context = {
-                'next_url': next_url if next_url.startswith('/') else reverse('core:home'),
-                'user': user
-            }
-
-            return render(request, 'authentication/login_success.html', context)
+            return redirect(next_url if next_url.startswith('/') else reverse('core:home'))
         else:
-            print(f"[LOGIN DEBUG] Formulario NO válido. Errores: {form.errors}")
-            # Verificar si hay un error de verificación de email
+            # Handle email verification errors
             if form.non_field_errors():
                 for error in form.non_field_errors():
                     error_text = str(error)
-                    # Detectar si es un error de verificación
                     if 'no ha sido confirmada' in error_text.lower() or 'sin confirmar' in error_text.lower():
-                        # Convertir a mensaje para que la modal lo detecte
                         messages.error(request, error_text)
-                        # Limpiar los errores del formulario para que no se muestren duplicados
                         form._errors.pop('__all__', None)
-
-                        # Intentar obtener el email/username para la modal
                         username = request.POST.get('username', '')
                         if username:
                             request.session['unverified_user'] = username
