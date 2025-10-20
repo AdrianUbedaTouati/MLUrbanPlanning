@@ -177,7 +177,7 @@ SESSION_COOKIE_SECURE = False  # False en desarrollo (HTTP sin SSL)
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_DOMAIN = None  # Usar dominio actual
 SESSION_COOKIE_PATH = '/'
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Usar DB para sesiones
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'  # CAMBIO: Usar cookies firmadas (no DB)
 
 # CSRF Configuration (para compatibilidad con cookies de sesión)
 CSRF_COOKIE_SECURE = False  # False en desarrollo
