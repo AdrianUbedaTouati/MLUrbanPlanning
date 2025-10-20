@@ -3,8 +3,10 @@ from django.views.generic import ListView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.contrib import messages
+from django.urls import reverse
 from .models import ChatSession, ChatMessage
 from .services import ChatAgentService
+from tenders.vectorization_service import VectorizationService
 
 
 class ChatSessionListView(LoginRequiredMixin, ListView):
@@ -20,11 +22,42 @@ class ChatSessionListView(LoginRequiredMixin, ListView):
             is_archived=False
         ).order_by('-updated_at')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Verificar estado de ChromaDB para mostrar mensaje informativo
+        vectorization_service = VectorizationService(user=self.request.user)
+        status = vectorization_service.get_vectorstore_status()
+
+        context['vectorstore_status'] = status
+        context['can_use_chat'] = status['is_initialized'] and status['num_documents'] > 0
+
+        return context
+
 
 class ChatSessionCreateView(LoginRequiredMixin, View):
     """Vista para crear una nueva sesión de chat"""
 
     def post(self, request):
+        # Verificar que ChromaDB esté inicializado
+        vectorization_service = VectorizationService(user=request.user)
+        status = vectorization_service.get_vectorstore_status()
+
+        if not status['is_initialized'] or status['num_documents'] == 0:
+            messages.error(
+                request,
+                '⚠️ No puedes usar el chat porque no hay licitaciones indexadas. '
+                'Primero debes indexar las licitaciones.'
+            )
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'ChromaDB no inicializado',
+                    'message': 'No hay licitaciones indexadas. Ve a la página de vectorización primero.',
+                    'redirect_url': reverse('tenders:vectorization_index')
+                })
+            return redirect('tenders:vectorization_index')
+
         session = ChatSession.objects.create(user=request.user)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -47,6 +80,21 @@ class ChatSessionDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         # Solo permitir acceso a sesiones del usuario actual
         return ChatSession.objects.filter(user=self.request.user)
+
+    def dispatch(self, request, *args, **kwargs):
+        # Verificar que ChromaDB esté inicializado antes de permitir acceso al chat
+        vectorization_service = VectorizationService(user=request.user)
+        status = vectorization_service.get_vectorstore_status()
+
+        if not status['is_initialized'] or status['num_documents'] == 0:
+            messages.error(
+                request,
+                '⚠️ No puedes usar el chat porque no hay licitaciones indexadas. '
+                'Primero debes indexar las licitaciones en la página de vectorización.'
+            )
+            return redirect('tenders:vectorization_index')
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
