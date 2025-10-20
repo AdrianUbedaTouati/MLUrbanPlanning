@@ -296,6 +296,10 @@ class VectorizationService:
                         "META": parser_instance._extract_meta_fields()
                     }
 
+                    # Guardar resumen parseado en la base de datos
+                    tender.parsed_summary = parsed_data
+                    tender.save(update_fields=['parsed_summary'])
+
                     # Chunk the tender (returns list of Chunk dataclass objects)
                     chunks = chunk_eforms_record(parsed_data)
 

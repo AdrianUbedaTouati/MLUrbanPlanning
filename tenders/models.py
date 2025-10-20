@@ -74,6 +74,14 @@ class Tender(models.Model):
     source_path = models.CharField(max_length=500, blank=True, verbose_name='Ruta del archivo XML')
     xpaths_used = models.JSONField(default=dict, verbose_name='XPaths utilizados')
 
+    # Resumen estructurado del XML parseado
+    parsed_summary = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Resumen estructurado del XML',
+        help_text='Campos parseados del XML: REQUIRED, OPTIONAL, META'
+    )
+
     # Metadatos
     indexed_at = models.DateTimeField(null=True, blank=True, verbose_name='Indexado en')
     views_count = models.IntegerField(default=0, verbose_name='Vistas')
