@@ -107,9 +107,16 @@ def ollama_check_view(request):
     Página de verificación de Ollama
     Muestra el estado de instalación, servidor y modelos
     """
-    # Get user's configured models
-    user_chat_model = request.user.ollama_model or "qwen2.5:72b"
-    user_embedding_model = request.user.ollama_embedding_model or "nomic-embed-text"
+    # Get user's configured models (use empty string check instead of 'or')
+    user_chat_model = request.user.ollama_model if request.user.ollama_model else "qwen2.5:72b"
+    user_embedding_model = request.user.ollama_embedding_model if request.user.ollama_embedding_model else "nomic-embed-text"
+
+    # Debug info
+    print(f"[OLLAMA CHECK] Usuario: {request.user.username}")
+    print(f"[OLLAMA CHECK] Chat model DB: [{request.user.ollama_model}]")
+    print(f"[OLLAMA CHECK] Chat model usado: [{user_chat_model}]")
+    print(f"[OLLAMA CHECK] Embed model DB: [{request.user.ollama_embedding_model}]")
+    print(f"[OLLAMA CHECK] Embed model usado: [{user_embedding_model}]")
 
     # Perform full health check
     health_status = OllamaHealthChecker.full_health_check(
@@ -126,6 +133,11 @@ def ollama_check_view(request):
         'user_chat_model': user_chat_model,
         'user_embedding_model': user_embedding_model,
         'user': request.user,
+        'debug_info': {
+            'username': request.user.username,
+            'db_chat_model': request.user.ollama_model,
+            'db_embed_model': request.user.ollama_embedding_model,
+        }
     }
 
     return render(request, 'core/ollama_check.html', context)

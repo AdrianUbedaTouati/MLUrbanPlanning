@@ -7,6 +7,14 @@
 <div class="container mt-5">
     <h1 class="mb-4">Verificación de Ollama</h1>
 
+    <!-- Debug Info (temporal) -->
+    <div class="alert alert-info">
+        <h6><i class="bi bi-info-circle"></i> Información de sesión:</h6>
+        <p class="mb-0"><strong>Usuario logueado:</strong> {{ user.username }} (ID: {{ user.id }})</p>
+        <p class="mb-0"><strong>Modelo en BD (chat):</strong> <code>{{ debug_info.db_chat_model }}</code></p>
+        <p class="mb-0"><strong>Modelo en BD (embed):</strong> <code>{{ debug_info.db_embed_model }}</code></p>
+    </div>
+
     <div class="row">
         <div class="col-md-12">
             {% if health_status.overall_status == 'healthy' %}
