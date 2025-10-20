@@ -1,9 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(where ollama)",
-      "Bash(ollama list)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Mejorar mensajes de error cuando Ollama no está corriendo\n\nCambios realizados:\n- Añadir manejo de TimeoutExpired en get_installed_models()\n- Detectar cuando el servidor Ollama no está corriendo (returncode != 0)\n- Mostrar mensaje claro: \"Servidor Ollama no está corriendo. Inicia Ollama...\"\n- Mejorar feedback visual en el template con emojis ⚠️\n- Actualizar mensajes informativos en tiempo real cuando hay error\n- Resaltar instrucciones con text-warning y fw-bold\n\nEl problema era que Ollama está instalado pero el servidor no estaba\nactivo (puerto 11434 no responde). Ahora el usuario recibe instrucciones\nclaras sobre cómo iniciar Ollama.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nEnhance: Mejorar visualización de modelos Ollama en página de verificación\n\nCambios realizados:\n- Mostrar modelos del usuario en formato destacado con <code>\n- Añadir badges para identificar modelos de chat y embeddings\n- Resaltar en tabla con background azul los modelos configurados\n- Añadir columna \"Estado\" con iconos (estrella para activos)\n- Mostrar contador de modelos instalados en el título\n- Indicar claramente si el modelo está instalado o no\n- Mejorar mensajes cuando no hay modelos instalados\n- Añadir iconos y mejor organización visual\n\nAhora es mucho más fácil identificar qué modelos tiene configurados\nel usuario y cuáles están instalados en el sistema.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

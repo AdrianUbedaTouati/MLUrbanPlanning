@@ -37,14 +37,42 @@
 
     <div class="row mt-4">
         <div class="col-md-6">
-            <div class="card">
+            <div class="card border-primary">
                 <div class="card-header bg-primary text-white">
-                    <h5>Tu Configuración</h5>
+                    <h5><i class="bi bi-person-gear"></i> Tu Configuración</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>Modelo de Chat:</strong> {{ user_chat_model }}</p>
-                    <p><strong>Modelo de Embeddings:</strong> {{ user_embedding_model }}</p>
-                    <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-outline-primary">Cambiar Configuración</a>
+                    <div class="mb-3">
+                        <label class="fw-bold text-primary"><i class="bi bi-cpu"></i> Modelo de Chat:</label>
+                        <p class="mb-0 fs-5">
+                            <code class="bg-light text-dark p-2 rounded">{{ user_chat_model }}</code>
+                        </p>
+                        {% if health_status.checks.user_chat_model %}
+                            {% if health_status.checks.user_chat_model.installed %}
+                                <small class="text-success"><i class="bi bi-check-circle-fill"></i> Instalado</small>
+                            {% else %}
+                                <small class="text-danger"><i class="bi bi-x-circle-fill"></i> No instalado</small>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-primary"><i class="bi bi-diagram-3"></i> Modelo de Embeddings:</label>
+                        <p class="mb-0 fs-5">
+                            <code class="bg-light text-dark p-2 rounded">{{ user_embedding_model }}</code>
+                        </p>
+                        {% if health_status.checks.user_embedding_model %}
+                            {% if health_status.checks.user_embedding_model.installed %}
+                                <small class="text-success"><i class="bi bi-check-circle-fill"></i> Instalado</small>
+                            {% else %}
+                                <small class="text-danger"><i class="bi bi-x-circle-fill"></i> No instalado</small>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Cambiar Configuración
+                    </a>
                 </div>
             </div>
         </div>
@@ -73,34 +101,58 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-secondary text-white">
-                    <h5>Modelos Instalados</h5>
+                    <h5><i class="bi bi-list-ul"></i> Modelos Instalados ({{ health_status.checks.models.count }})</h5>
                 </div>
                 <div class="card-body">
                     {% if health_status.checks.models.models %}
-                        <table class="table table-sm">
+                        <table class="table table-sm table-hover">
                             <thead>
                                 <tr>
                                     <th>Modelo</th>
                                     <th>ID</th>
                                     <th>Tamaño</th>
                                     <th>Modificado</th>
+                                    <th>Estado</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for model in health_status.checks.models.models %}
-                                <tr>
-                                    <td>{{ model.name }}</td>
-                                    <td><small>{{ model.id }}</small></td>
-                                    <td>{{ model.size }}</td>
-                                    <td>{{ model.modified }}</td>
+                                <tr {% if model.name == user_chat_model or model.name == user_embedding_model %}class="table-primary"{% endif %}>
+                                    <td>
+                                        <strong>{{ model.name }}</strong>
+                                        {% if model.name == user_chat_model %}
+                                            <span class="badge bg-success">Tu modelo de chat</span>
+                                        {% endif %}
+                                        {% if model.name == user_embedding_model %}
+                                            <span class="badge bg-info">Tu modelo de embeddings</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ model.id }}</small></td>
+                                    <td><span class="badge bg-secondary">{{ model.size }}</span></td>
+                                    <td><small>{{ model.modified }}</small></td>
+                                    <td>
+                                        {% if model.name == user_chat_model or model.name == user_embedding_model %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Los modelos resaltados en azul son los que tienes configurados actualmente.
+                        </small>
                     {% else %}
-                        <p class="text-muted">No hay modelos instalados</p>
-                        <p><strong>Descarga el modelo recomendado:</strong></p>
-                        <code>ollama pull qwen2.5:72b</code>
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><i class="bi bi-exclamation-triangle"></i> <strong>No hay modelos instalados</strong></p>
+                            <p class="mb-2">Descarga el modelo recomendado:</p>
+                            <code>ollama pull qwen2.5:72b</code>
+                            <hr>
+                            <small>También puedes descargar el modelo de embeddings:</small><br>
+                            <code>ollama pull nomic-embed-text</code>
+                        </div>
                     {% endif %}
                 </div>
             </div>
