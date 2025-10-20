@@ -214,12 +214,28 @@ class OllamaHealthChecker:
                 "count": 0,
                 "message": "Ollama no está instalado. Descarga desde https://ollama.com"
             }
-        except Exception as e:
+        except subprocess.TimeoutExpired:
             return {
                 "success": False,
                 "models": [],
                 "count": 0,
-                "message": f"Error obteniendo modelos: {str(e)}"
+                "message": "Timeout al obtener modelos. Verifica que Ollama esté corriendo."
+            }
+        except Exception as e:
+            error_msg = str(e)
+            # Check if error is related to connection refused
+            if "returncode" in error_msg or result.returncode != 0:
+                return {
+                    "success": False,
+                    "models": [],
+                    "count": 0,
+                    "message": "Servidor Ollama no está corriendo. Inicia Ollama desde el menú de Windows o ejecuta 'ollama serve' en una terminal."
+                }
+            return {
+                "success": False,
+                "models": [],
+                "count": 0,
+                "message": f"Error obteniendo modelos: {error_msg}"
             }
 
     @staticmethod

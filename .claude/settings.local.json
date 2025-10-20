@@ -1,8 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python manage.py migrate)",
-      "Bash(git add -A)"
+      "Bash(where ollama)",
+      "Bash(ollama list)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Mejorar mensajes de error cuando Ollama no está corriendo\n\nCambios realizados:\n- Añadir manejo de TimeoutExpired en get_installed_models()\n- Detectar cuando el servidor Ollama no está corriendo (returncode != 0)\n- Mostrar mensaje claro: \"Servidor Ollama no está corriendo. Inicia Ollama...\"\n- Mejorar feedback visual en el template con emojis ⚠️\n- Actualizar mensajes informativos en tiempo real cuando hay error\n- Resaltar instrucciones con text-warning y fw-bold\n\nEl problema era que Ollama está instalado pero el servidor no estaba\nactivo (puerto 11434 no responde). Ahora el usuario recibe instrucciones\nclaras sobre cómo iniciar Ollama.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

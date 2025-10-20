@@ -318,14 +318,29 @@
                                                 embedSelect.appendChild(option);
                                             }
                                         } else {
-                                            // Error cargando modelos
-                                            chatSelect.innerHTML = '<option value="">Error: ' + data.message + '</option>';
-                                            embedSelect.innerHTML = '<option value="">Error: ' + data.message + '</option>';
+                                            // Error cargando modelos - mostrar mensaje amigable
+                                            const errorMsg = data.message || 'Error desconocido';
+                                            chatSelect.innerHTML = '<option value="">⚠️ ' + errorMsg + '</option>';
+                                            embedSelect.innerHTML = '<option value="">⚠️ ' + errorMsg + '</option>';
+
+                                            // Actualizar el info text con instrucciones
+                                            const chatModelInfo = document.getElementById('chat_model_info');
+                                            const embedModelInfo = document.getElementById('embed_model_info');
+
+                                            if (errorMsg.includes('no está corriendo') || errorMsg.includes('not running')) {
+                                                chatModelInfo.innerHTML = '⚠️ <strong>Ollama no está corriendo.</strong> Inícialo desde el menú de Windows o ejecuta "ollama serve" en terminal.';
+                                                chatModelInfo.className = 'form-text text-warning d-block mt-1 fw-bold';
+                                                embedModelInfo.style.display = 'none';
+                                            }
                                         }
                                     } catch (error) {
                                         console.error('Error loading Ollama models:', error);
-                                        chatSelect.innerHTML = '<option value="">Error conectando con Ollama</option>';
-                                        embedSelect.innerHTML = '<option value="">Error conectando con Ollama</option>';
+                                        chatSelect.innerHTML = '<option value="">⚠️ Error conectando con Ollama</option>';
+                                        embedSelect.innerHTML = '<option value="">⚠️ Error conectando con Ollama</option>';
+
+                                        const chatModelInfo = document.getElementById('chat_model_info');
+                                        chatModelInfo.innerHTML = '⚠️ <strong>No se pudo conectar con Ollama.</strong> Asegúrate de que esté instalado y corriendo.';
+                                        chatModelInfo.className = 'form-text text-warning d-block mt-1 fw-bold';
                                     }
                                 }
 
