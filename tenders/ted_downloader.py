@@ -15,6 +15,14 @@ from .models import Tender
 import xml.etree.ElementTree as ET
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import os
+import sys
+
+# Import logging system
+agent_ia_path = os.path.join(settings.BASE_DIR, 'agent_ia_core')
+if agent_ia_path not in sys.path:
+    sys.path.insert(0, agent_ia_path)
+from core.logging_config import ObtenerLogger
 
 # URLs y configuración
 SEARCH_URL = "https://api.ted.europa.eu/v3/notices/search"
@@ -28,6 +36,13 @@ DEFAULT_WINDOW_DAYS = 7
 DEFAULT_MAX_DOWNLOAD = 50
 TIMEOUT = 60
 DOWNLOAD_DELAY = 1.2  # segundos entre requests
+
+# Directorio para guardar XMLs (importar desde agent_ia_core.config)
+try:
+    from agent_ia_core.config import XML_DIR
+except ImportError:
+    # Fallback si no se puede importar
+    XML_DIR = Path(__file__).parent.parent / "data" / "xml"
 MAX_RETRIES = 3  # Número máximo de reintentos
 BACKOFF_FACTOR = 2  # Factor de backoff exponencial
 
@@ -180,6 +195,39 @@ def extract_publication_numbers(obj: Any) -> List[str]:
     return uniq
 
 
+def save_xml_to_file(xml_content: bytes, pub_number: str) -> Optional[Path]:
+    """
+    Guarda el contenido XML en un archivo en data/xml/
+
+    Args:
+        xml_content: Contenido XML en bytes
+        pub_number: Número de publicación (ej: '123456-2024')
+
+    Returns:
+        Path del archivo guardado o None si hubo error
+    """
+    try:
+        # Crear directorio si no existe
+        XML_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Nombre del archivo: pub_number.xml
+        filename = f"{pub_number}.xml"
+        filepath = XML_DIR / filename
+
+        # Guardar XML
+        with open(filepath, 'wb') as f:
+            if isinstance(xml_content, bytes):
+                f.write(xml_content)
+            else:
+                f.write(xml_content.encode('utf-8'))
+
+        return filepath
+
+    except Exception as e:
+        print(f"Error guardando XML a archivo {pub_number}: {e}")
+        return None
+
+
 def download_xml_content(pub_number: str, session: Optional[requests.Session] = None) -> bytes:
     """
     Descarga el XML de un aviso por número de publicación.
@@ -278,7 +326,8 @@ def search_tenders_by_date_windows(
     window_days: int = DEFAULT_WINDOW_DAYS,
     max_results: int = DEFAULT_MAX_DOWNLOAD,
     progress_callback=None,
-    session: Optional[requests.Session] = None
+    session: Optional[requests.Session] = None,
+    logger: Optional[ObtenerLogger] = None
 ) -> Dict[str, Any]:
     """
     Busca licitaciones en ventanas de fechas.
@@ -318,6 +367,11 @@ def search_tenders_by_date_windows(
             })
 
         payload = {"query": q, "fields": ["ND"]}
+
+        # Log API request
+        if logger:
+            logger.log_api_request(SEARCH_URL, payload)
+
         resp = http_post(SEARCH_URL, session=session, json=payload, timeout=TIMEOUT)
 
         if resp.status_code >= 400:
@@ -329,6 +383,10 @@ def search_tenders_by_date_windows(
 
         data = resp.json()
         nd_page = extract_publication_numbers(data)
+
+        # Log API response
+        if logger:
+            logger.log_api_response(resp.status_code, len(nd_page))
 
         # Deduplicar
         added = 0
@@ -392,6 +450,9 @@ def download_and_save_tenders(
     Returns:
         Dict con estadísticas: total_found, downloaded, saved, errors
     """
+    # Inicializar logger
+    logger = ObtenerLogger()
+
     # Limpiar flag de cancelación al inicio
     if user_id is not None:
         clear_cancel_flag(user_id)
@@ -415,6 +476,12 @@ def download_and_save_tenders(
     place_expr = f"place-of-performance={place}" if place else DEFAULT_PLACE
     notice_type_expr = f"notice-type={notice_type}" if notice_type else DEFAULT_NOTICE_TYPE
 
+    # Construir query para el log
+    search_query = f"{cpv_expr} and {place_expr} and {notice_type_expr} (last {days_back} days)"
+
+    # Log inicio de descarga
+    logger.log_start(search_query)
+
     # Debug: mostrar filtros aplicados
     import sys
     print(f"\n[FILTROS APLICADOS]", file=sys.stderr)
@@ -435,7 +502,8 @@ def download_and_save_tenders(
             notice_type=notice_type_expr,
             max_results=max_download,
             progress_callback=progress_callback,
-            session=session
+            session=session,
+            logger=logger
         )
     except ConnectionError as e:
         # Error de conexión detectado
@@ -521,6 +589,8 @@ def download_and_save_tenders(
             tender_data = parse_xml_to_tender(xml_content, pub_num)
             if not tender_data:
                 errors.append(f"{pub_num}: Error parseando XML")
+                # Log download failure
+                logger.log_download(pub_num, success=False)
                 if progress_callback:
                     progress_callback({
                         'type': 'error',
@@ -529,10 +599,21 @@ def download_and_save_tenders(
                     })
                 continue
 
+            # Guardar XML en archivo (data/xml/)
+            xml_filepath = save_xml_to_file(xml_content, pub_num)
+
             # Guardar en BD con el XML completo
             tender_data['xml_content'] = xml_content.decode('utf-8') if isinstance(xml_content, bytes) else xml_content
+
+            # Guardar ruta del archivo si se guardó exitosamente
+            if xml_filepath:
+                tender_data['source_path'] = str(xml_filepath)
+
             tender = Tender.objects.create(**tender_data)
             saved += 1
+
+            # Log download success
+            logger.log_download(pub_num, success=True, file_path=str(xml_filepath) if xml_filepath else None)
 
             if progress_callback:
                 progress_callback({
@@ -547,6 +628,8 @@ def download_and_save_tenders(
         except ConnectionError as e:
             error_msg = f"{pub_num}: {str(e)}"
             errors.append(error_msg)
+            # Log download failure
+            logger.log_download(pub_num, success=False)
             if progress_callback:
                 progress_callback({
                     'type': 'error',
@@ -556,6 +639,8 @@ def download_and_save_tenders(
         except Exception as e:
             error_msg = f"{pub_num}: {str(e)}"
             errors.append(error_msg)
+            # Log download failure
+            logger.log_download(pub_num, success=False)
             if progress_callback:
                 progress_callback({
                     'type': 'error',
@@ -570,6 +655,13 @@ def download_and_save_tenders(
             'downloaded': downloaded,
             'errors': len(errors)
         })
+
+    # Log summary
+    logger.log_summary(
+        total=total_found,
+        downloaded=downloaded,
+        failed=len(errors)
+    )
 
     return {
         "total_found": total_found,

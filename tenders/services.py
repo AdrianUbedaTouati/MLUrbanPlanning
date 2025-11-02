@@ -11,6 +11,9 @@ agent_ia_path = os.path.join(settings.BASE_DIR, 'agent_ia_core')
 if agent_ia_path not in sys.path:
     sys.path.insert(0, agent_ia_path)
 
+# Import logging system
+from core.logging_config import IndexacionLogger
+
 
 class TenderRecommendationService:
     """Service to generate tender recommendations using Agent_IA"""
@@ -171,12 +174,37 @@ class TenderIndexingService:
         Returns:
             bool: True if successful
         """
+        # Inicializar logger
+        logger = IndexacionLogger()
+
+        # Log inicio
+        xml_file = os.path.basename(tender.source_path) if tender.source_path else f"{tender.ojs_notice_id}.xml"
+        logger.log_start(xml_file)
+
         if not self.api_key:
-            raise ValueError("Usuario debe tener API key configurada")
+            error = ValueError("Usuario debe tener API key configurada")
+            logger.log_error(xml_file, error)
+            raise error
 
         try:
             from chunking import chunk_tender_document
             from config import get_chroma_client
+
+            # Log campos extraídos (de la DB)
+            fields_extracted = {
+                'ojs_notice_id': tender.ojs_notice_id,
+                'title': tender.title,
+                'description': tender.description[:200] + '...' if tender.description else None,
+                'cpv_codes': tender.cpv_codes,
+                'nuts_regions': tender.nuts_regions,
+                'budget_amount': float(tender.budget_amount) if tender.budget_amount else None,
+                'buyer_name': tender.buyer_name,
+                'deadline': tender.deadline.isoformat() if tender.deadline else None,
+                'contact_email': tender.contact_email,
+                'contact_phone': tender.contact_phone,
+                'contact_url': tender.contact_url,
+            }
+            logger.log_parsing(fields_extracted)
 
             # Set API key
             original_key = os.environ.get('GOOGLE_API_KEY')
@@ -213,10 +241,19 @@ class TenderIndexingService:
                         ids=[f"{tender.ojs_notice_id}_chunk_{i}"]
                     )
 
+                # Log vectorization
+                logger.log_vectorization(tender.ojs_notice_id, chunks_count=len(chunks))
+
                 # Update indexed_at timestamp
                 from django.utils import timezone
                 tender.indexed_at = timezone.now()
                 tender.save(update_fields=['indexed_at'])
+
+                # Log DB save
+                logger.log_db_save(tender.ojs_notice_id, created=False)
+
+                # Log success
+                logger.log_success(tender.ojs_notice_id)
 
                 return True
 
@@ -229,6 +266,7 @@ class TenderIndexingService:
 
         except Exception as e:
             print(f"Error indexing tender {tender.ojs_notice_id}: {e}")
+            logger.log_error(xml_file, e)
             return False
 
     def bulk_index_tenders(self, tenders_queryset) -> Dict[str, int]:
