@@ -11,16 +11,20 @@ agent_ia_path = os.path.join(settings.BASE_DIR, 'agent_ia_core')
 if agent_ia_path not in sys.path:
     sys.path.insert(0, agent_ia_path)
 
+# Import logging system
+from core.logging_config import ChatLogger
+
 
 class ChatAgentService:
     """Service to interact with the Agent_IA RAG system"""
 
-    def __init__(self, user):
+    def __init__(self, user, session_id=None):
         """
         Initialize the chat agent service
 
         Args:
             user: Django User instance with llm_api_key, llm_provider, openai_model, ollama_model, ollama_embedding_model
+            session_id: Optional session ID for logging purposes
         """
         self.user = user
         self.api_key = user.llm_api_key if hasattr(user, 'llm_api_key') else None
@@ -30,6 +34,11 @@ class ChatAgentService:
         self.ollama_model = user.ollama_model if hasattr(user, 'ollama_model') else 'qwen2.5:72b'
         self.ollama_embedding_model = user.ollama_embedding_model if hasattr(user, 'ollama_embedding_model') else 'nomic-embed-text'
         self._agent = None
+
+        # Inicializar logger si tenemos session_id
+        self.chat_logger = None
+        if session_id:
+            self.chat_logger = ChatLogger(session_id=session_id, user_id=user.id)
 
         # Obtener contexto de empresa si existe
         self.company_context = self._get_company_context()
@@ -338,6 +347,10 @@ class ChatAgentService:
                 print(f"[SERVICE] Modelo Embeddings: {self.ollama_embedding_model}", file=sys.stderr)
             print(f"[SERVICE] Mensaje: {message[:60]}...", file=sys.stderr)
 
+            # LOG: Mensaje del usuario
+            if self.chat_logger:
+                self.chat_logger.log_user_message(message)
+
             # Get the agent
             print(f"[SERVICE] Creando agente RAG...", file=sys.stderr)
             agent = self._get_agent()
@@ -393,8 +406,25 @@ class ChatAgentService:
             print(f"[SERVICE] Ejecutando query en el agente...", file=sys.stderr)
             print(f"[SERVICE] Mensaje puro (para routing): {enriched_message[:60]}...", file=sys.stderr)
             print(f"[SERVICE] Historial: {len(formatted_history)} mensajes", file=sys.stderr)
+
+            # LOG: Request al LLM (antes de ejecutar)
+            if self.chat_logger:
+                model = self.ollama_model if self.provider == 'ollama' else self.openai_model
+                # Construir mensajes que se enviarán (aproximación)
+                messages = formatted_history + [{'role': 'user', 'content': enriched_message}]
+                self.chat_logger.log_llm_request(
+                    provider=self.provider,
+                    model=model,
+                    messages=messages,
+                    tools=None  # Las tools se registran dentro del agente
+                )
+
             result = agent.query(enriched_message, conversation_history=formatted_history)
             print(f"[SERVICE] ✓ Query ejecutado correctamente", file=sys.stderr)
+
+            # LOG: Respuesta del LLM
+            if self.chat_logger:
+                self.chat_logger.log_llm_response(result)
 
             # Extract response content
             response_content = result.get('answer', 'No se pudo generar una respuesta.')
@@ -449,6 +479,10 @@ class ChatAgentService:
                 print(f"[SERVICE] Herramientas usadas ({len(tools_used)}): {' → '.join(tools_used)}", file=sys.stderr)
             print(f"[SERVICE] Tokens totales: {cost_data['total_tokens']} (in: {cost_data['input_tokens']}, out: {cost_data['output_tokens']})", file=sys.stderr)
             print(f"[SERVICE] Costo: €{cost_data['total_cost_eur']:.4f}\n", file=sys.stderr)
+
+            # LOG: Mensaje final del asistente con metadata
+            if self.chat_logger:
+                self.chat_logger.log_assistant_message(response_content, metadata=metadata)
 
             return {
                 'content': response_content,

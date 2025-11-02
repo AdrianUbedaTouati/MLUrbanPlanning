@@ -135,3 +135,6 @@ $RECYCLE.BIN/
 *.cab
 *.msi
 *.msix
+# Logs directory - archivos de logs locales
+logs/
+*.log

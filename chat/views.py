@@ -164,9 +164,9 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
 
         # Integrar con Agent_IA para generar la respuesta
         try:
-            # Initialize chat service
+            # Initialize chat service with session_id for logging
             print(f"[CHAT] Inicializando servicio de chat...", file=sys.stderr)
-            chat_service = ChatAgentService(request.user)
+            chat_service = ChatAgentService(request.user, session_id=session.id)
 
             # Get conversation history
             previous_messages = session.messages.filter(
