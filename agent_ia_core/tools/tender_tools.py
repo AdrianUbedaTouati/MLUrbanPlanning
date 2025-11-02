@@ -135,6 +135,8 @@ class GetTenderDetailsTool(BaseTool):
                 contact_info['phone'] = tender.contact_phone
             if tender.contact_url:
                 contact_info['url'] = tender.contact_url
+            if tender.contact_fax:
+                contact_info['fax'] = tender.contact_fax
             if contact_info:
                 details['contact'] = contact_info
 
@@ -180,7 +182,14 @@ class GetTenderXMLTool(BaseTool):
     """
 
     name = "get_tender_xml"
-    description = "Obtiene el archivo XML completo de una licitación específica. Usa esta función cuando el usuario necesite ver el XML original, analizar estructura técnica detallada, o extraer información muy específica que no está en los campos básicos."
+    description = """Obtiene el archivo XML COMPLETO de una licitación específica.
+
+USA ESTA HERRAMIENTA cuando:
+- get_tender_details NO tiene la información de contacto que necesitas (email, teléfono, website, fax)
+- Necesitas información técnica muy específica del XML original
+- El usuario pregunta por datos que no aparecen en los campos básicos
+
+IMPORTANTE: Esta herramienta devuelve el XML completo (3000-5000 tokens). Úsala solo cuando get_tender_details no tenga la información."""
 
     def __init__(self, db_session=None):
         """
@@ -271,11 +280,11 @@ class GetTenderXMLTool(BaseTool):
 
             return {
                 'success': True,
-                'tender_id': tender_id,
-                'xml_content': xml_content[:5000],  # Limitar a 5000 chars para no sobrecargar
+                'tender_id': tender.ojs_notice_id,
+                'xml_content': xml_content,  # XML completo sin límite
                 'xml_length': len(xml_content),
                 'source_path': tender.source_path,
-                'message': f'XML recuperado ({len(xml_content)} caracteres). Mostrando primeros 5000 caracteres.'
+                'message': f'XML completo recuperado ({len(xml_content)} caracteres).'
             }
 
         except Exception as e:

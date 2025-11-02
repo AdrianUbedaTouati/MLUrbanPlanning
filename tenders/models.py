@@ -68,6 +68,7 @@ class Tender(models.Model):
     contact_email = models.EmailField(blank=True, verbose_name='Email de contacto')
     contact_phone = models.CharField(max_length=50, blank=True, verbose_name='Teléfono de contacto')
     contact_url = models.URLField(blank=True, verbose_name='URL de contacto')
+    contact_fax = models.CharField(max_length=50, blank=True, verbose_name='Fax de contacto')
 
     # Datos originales
     xml_content = models.TextField(blank=True, verbose_name='Contenido XML original')

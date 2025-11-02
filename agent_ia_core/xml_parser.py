@@ -239,26 +239,49 @@ class EFormsXMLParser:
             fields["attachments"] = attachments
             xpaths_used["attachments"] = "multiple_xpaths"
 
-        # 15. contact_email
-        xpath = ".//cac:ContractingParty/cac:Party/cac:Contact/cbc:ElectronicMail/text()"
+        # 15. contact_email (PRIMARY: Company, FALLBACK: TouchPoint)
+        xpath = ".//efac:Organization/efac:Company/cac:Contact/cbc:ElectronicMail/text()"
         value = self._xpath_text(root, xpath)
+        if not value:
+            # Fallback: TouchPoint
+            xpath = ".//efac:Organization/efac:TouchPoint/cac:Contact/cbc:ElectronicMail/text()"
+            value = self._xpath_text(root, xpath)
         if value:
             fields["contact_email"] = value
             xpaths_used["contact_email"] = xpath
 
-        # 16. contact_phone
-        xpath = ".//cac:ContractingParty/cac:Party/cac:Contact/cbc:Telephone/text()"
+        # 16. contact_phone (PRIMARY: Company, FALLBACK: TouchPoint)
+        xpath = ".//efac:Organization/efac:Company/cac:Contact/cbc:Telephone/text()"
         value = self._xpath_text(root, xpath)
+        if not value:
+            # Fallback: TouchPoint
+            xpath = ".//efac:Organization/efac:TouchPoint/cac:Contact/cbc:Telephone/text()"
+            value = self._xpath_text(root, xpath)
         if value:
             fields["contact_phone"] = value
             xpaths_used["contact_phone"] = xpath
 
-        # 17. contact_url
-        xpath = ".//cac:ContractingParty/cac:Party/cac:Contact/cbc:URI/text()"
+        # 17. contact_url (PRIMARY: Company WebsiteURI, FALLBACK: TouchPoint WebsiteURI)
+        xpath = ".//efac:Organization/efac:Company/cbc:WebsiteURI/text()"
         value = self._xpath_text(root, xpath)
+        if not value:
+            # Fallback: TouchPoint
+            xpath = ".//efac:Organization/efac:TouchPoint/cbc:WebsiteURI/text()"
+            value = self._xpath_text(root, xpath)
         if value:
             fields["contact_url"] = value
             xpaths_used["contact_url"] = xpath
+
+        # 18. contact_fax (NUEVO - PRIMARY: Company, FALLBACK: TouchPoint)
+        xpath = ".//efac:Organization/efac:Company/cac:Contact/cbc:Telefax/text()"
+        value = self._xpath_text(root, xpath)
+        if not value:
+            # Fallback: TouchPoint
+            xpath = ".//efac:Organization/efac:TouchPoint/cac:Contact/cbc:Telefax/text()"
+            value = self._xpath_text(root, xpath)
+        if value:
+            fields["contact_fax"] = value
+            xpaths_used["contact_fax"] = xpath
 
         # Agregar XPaths al registro
         self._xpaths_registry.update(xpaths_used)
