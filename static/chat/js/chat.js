@@ -185,12 +185,19 @@
         // Disable input
         setInputState(false);
 
+        // Mostrar mensaje del usuario INMEDIATAMENTE (sin esperar servidor)
+        const tempUserMessage = {
+            content: message,
+            created_at: new Date().toISOString()
+        };
+        createMessageElement(tempUserMessage, 'user');
+
         // Clear input
         elements.messageInput.value = '';
         autoResizeTextarea();
 
-        // Show typing indicator
-        setTimeout(() => showTypingIndicator(), CONFIG.typingIndicatorDelay);
+        // Show typing indicator INMEDIATAMENTE (sin setTimeout)
+        showTypingIndicator();
 
         try {
             // Send message via AJAX
@@ -212,10 +219,8 @@
             hideTypingIndicator();
 
             if (data.success) {
-                // Display user message with rendered HTML from server
-                if (data.user_message) {
-                    createMessageElement(data.user_message, 'user');
-                }
+                // El mensaje del usuario ya se mostró arriba, solo actualizarlo si hay rendered_html
+                // (por ahora lo dejamos como está, el temp es suficiente)
 
                 // Display assistant message with rendered HTML from server
                 if (data.assistant_message) {

@@ -16,7 +16,7 @@ class GetTenderDetailsTool(BaseTool):
     """
 
     name = "get_tender_details"
-    description = "Obtiene toda la información de una licitación específica cuando sabes su ID. Usa esta función cuando el usuario pregunte por una licitación concreta o cuando necesites más detalles de una licitación que encontraste con search_tenders."
+    description = "Obtiene información completa de una licitación específica (contacto, procedimiento, fechas, presupuesto, etc.) cuando conoces su ID exacto (formato: XXXXXXXX-YYYY). Usa esta herramienta cuando el usuario pregunte por detalles de una licitación concreta, información de contacto, cómo inscribirse, o fechas límite."
 
     def __init__(self, db_session=None):
         """
@@ -52,12 +52,23 @@ class GetTenderDetailsTool(BaseTool):
             from tenders.models import Tender
 
             # Buscar la licitación
+            logger.info(f"[GET_TENDER_DETAILS] Buscando licitación con ID: {tender_id}")
             try:
                 tender = Tender.objects.get(ojs_notice_id=tender_id)
+                logger.info(f"[GET_TENDER_DETAILS] Licitación encontrada: {tender.title}")
             except Tender.DoesNotExist:
+                logger.warning(f"[GET_TENDER_DETAILS] Licitación {tender_id} NO encontrada")
+                # Intentar buscar licitaciones similares
+                similar = Tender.objects.filter(ojs_notice_id__icontains=tender_id[:8])[:3]
+                if similar.exists():
+                    similar_ids = [t.ojs_notice_id for t in similar]
+                    return {
+                        'success': False,
+                        'error': f'Licitación {tender_id} no encontrada. Licitaciones similares encontradas: {", ".join(similar_ids)}. Verifica el ID exacto.'
+                    }
                 return {
                     'success': False,
-                    'error': f'Licitación {tender_id} no encontrada en la base de datos'
+                    'error': f'Licitación {tender_id} no encontrada en la base de datos. Verifica que el ID esté correcto (formato: XXXXXXXX-YYYY).'
                 }
 
             # Construir respuesta con TODOS los detalles
