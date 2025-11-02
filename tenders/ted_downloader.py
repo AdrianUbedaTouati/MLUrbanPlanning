@@ -24,6 +24,14 @@ if agent_ia_path not in sys.path:
     sys.path.insert(0, agent_ia_path)
 from core.logging_config import ObtenerLogger
 
+# Import EFormsXMLParser for robust XML parsing
+try:
+    from xml_parser import EFormsXMLParser
+    EFORMS_PARSER_AVAILABLE = True
+except ImportError:
+    EFORMS_PARSER_AVAILABLE = False
+    print("WARNING: EFormsXMLParser not available, using legacy parser")
+
 # URLs y configuración
 SEARCH_URL = "https://api.ted.europa.eu/v3/notices/search"
 
@@ -48,6 +56,24 @@ BACKOFF_FACTOR = 2  # Factor de backoff exponencial
 
 # Regex para números de publicación
 PUBNUM_RE = re.compile(r"\b\d{6,8}-\d{4}\b")
+
+# Mapeo de códigos eForms a valores del modelo Tender
+PROCEDURE_TYPE_MAP = {
+    'open': 'open',
+    'restricted': 'restricted',
+    'neg-w-call': 'negotiated',
+    'neg-wo-call': 'negotiated',
+    'comp-dial': 'competitive_dialogue',
+    'innovation': 'competitive_dialogue',
+    'oth-single': 'open',  # Fallback
+    'oth-mult': 'open',  # Fallback
+}
+
+CONTRACT_TYPE_MAP = {
+    'services': 'services',
+    'supplies': 'supplies',
+    'works': 'works',
+}
 
 # Diccionario global para flags de cancelación por usuario
 _cancel_flags = {}
@@ -248,8 +274,123 @@ def download_xml_content(pub_number: str, session: Optional[requests.Session] = 
 
 def parse_xml_to_tender(xml_content: bytes, pub_number: str) -> Optional[Dict[str, Any]]:
     """
-    Parsea el XML y extrae los datos necesarios para crear un Tender.
-    Esta es una implementación básica - ajusta según la estructura real del XML.
+    Parsea el XML usando EFormsXMLParser y mapea a estructura Tender.
+    Extrae información completa incluyendo contactos.
+
+    Args:
+        xml_content: Contenido XML en bytes
+        pub_number: Número de publicación (ej: '715887-2025')
+
+    Returns:
+        Dict con campos para Tender.objects.create() o None si falla
+    """
+    if not EFORMS_PARSER_AVAILABLE:
+        # Fallback al parseo antiguo si EFormsXMLParser no está disponible
+        return _parse_xml_to_tender_legacy(xml_content, pub_number)
+
+    try:
+        # Guardar temporalmente el XML para que EFormsXMLParser pueda leerlo
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.xml', delete=False) as tmp_file:
+            tmp_file.write(xml_content)
+            tmp_path = Path(tmp_file.name)
+
+        try:
+            # Parsear con EFormsXMLParser
+            parser = EFormsXMLParser()
+            parsed = parser.parse_file(tmp_path)
+
+            required = parsed.get('REQUIRED', {})
+            optional = parsed.get('OPTIONAL', {})
+            meta = parsed.get('META', {})
+
+            # Construir tender_data mapeando campos
+            tender_data = {}
+
+            # === REQUIRED FIELDS ===
+            tender_data['ojs_notice_id'] = required.get('ojs_notice_id', pub_number)
+            tender_data['title'] = required.get('title', f'Licitación {pub_number}')
+            tender_data['buyer_name'] = required.get('buyer_name', 'Organismo público (por determinar)')
+            tender_data['publication_date'] = required.get('publication_date', date.today())
+
+            # === OPTIONAL FIELDS ===
+            # Description
+            description = optional.get('description', '')
+            tender_data['description'] = description if description else tender_data['title']
+            tender_data['short_description'] = (description if description else tender_data['title'])[:500]
+
+            # Budget
+            tender_data['budget_amount'] = optional.get('budget_eur', None)
+            tender_data['currency'] = optional.get('currency', 'EUR')
+
+            # CPV codes (combinar main + additional, extraer primeros 4 dígitos)
+            cpv_codes = []
+            cpv_main = required.get('cpv_main', '')
+            if cpv_main:
+                cpv_codes.append(cpv_main[:4])
+
+            cpv_additional = optional.get('cpv_additional', [])
+            for cpv in cpv_additional:
+                cpv_short = cpv[:4]
+                if cpv_short not in cpv_codes:
+                    cpv_codes.append(cpv_short)
+
+            tender_data['cpv_codes'] = cpv_codes
+
+            # NUTS regions
+            tender_data['nuts_regions'] = optional.get('nuts_regions', [])
+
+            # Contract type (mapear código eForms)
+            contract_type_code = optional.get('contract_type', 'services')
+            tender_data['contract_type'] = CONTRACT_TYPE_MAP.get(contract_type_code, 'services')
+
+            # Procedure type (mapear código eForms)
+            procedure_type_code = optional.get('procedure_type', 'open')
+            tender_data['procedure_type'] = PROCEDURE_TYPE_MAP.get(procedure_type_code, 'open')
+
+            # Buyer type (no extraído por EFormsXMLParser)
+            tender_data['buyer_type'] = ''
+
+            # Deadline dates
+            tender_data['tender_deadline_date'] = optional.get('tender_deadline_date', None)
+            tender_data['tender_deadline_time'] = optional.get('tender_deadline_time', None)
+
+            # Award criteria
+            tender_data['award_criteria'] = optional.get('award_criteria', [])
+
+            # === CONTACT FIELDS (PRINCIPAL OBJETIVO) ===
+            tender_data['contact_email'] = optional.get('contact_email', '')
+            tender_data['contact_phone'] = optional.get('contact_phone', '')
+            tender_data['contact_url'] = optional.get('contact_url', '')
+            tender_data['contact_fax'] = optional.get('contact_fax', '')
+
+            # === METADATA ===
+            tender_data['xpaths_used'] = meta.get('xpaths', {})
+            tender_data['parsed_summary'] = {
+                'REQUIRED': required,
+                'OPTIONAL': optional,
+                'META': meta
+            }
+
+            return tender_data
+
+        finally:
+            # Limpiar archivo temporal
+            try:
+                tmp_path.unlink()
+            except:
+                pass
+
+    except Exception as e:
+        print(f"Error parseando XML {pub_number} con EFormsXMLParser: {e}")
+        # Fallback al parseo antiguo
+        return _parse_xml_to_tender_legacy(xml_content, pub_number)
+
+
+def _parse_xml_to_tender_legacy(xml_content: bytes, pub_number: str) -> Optional[Dict[str, Any]]:
+    """
+    Parseo antiguo (fallback) cuando EFormsXMLParser falla o no está disponible.
+    Parseo básico con extracción limitada de campos.
     """
     try:
         root = ET.fromstring(xml_content)
