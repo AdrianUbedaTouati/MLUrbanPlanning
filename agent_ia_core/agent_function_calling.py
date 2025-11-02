@@ -58,6 +58,7 @@ class FunctionCallingAgent:
         llm_api_key: Optional[str],
         retriever,
         db_session=None,
+        user=None,
         max_iterations: int = 5,
         temperature: float = 0.3,
         company_context: str = "",
@@ -72,18 +73,21 @@ class FunctionCallingAgent:
             llm_api_key: API key (no necesaria para Ollama)
             retriever: Retriever de ChromaDB
             db_session: Sesión de base de datos Django
+            user: Usuario de Django para tools de contexto
             max_iterations: Máximo de iteraciones del loop
             temperature: Temperatura del LLM
-            company_context: Contexto de la empresa del usuario (opcional)
-            tenders_summary: Resumen de licitaciones disponibles (opcional)
+            company_context: (DEPRECATED) Ahora se usa get_company_info tool
+            tenders_summary: (DEPRECATED) Ahora se usa get_tenders_summary tool
         """
         self.llm_provider = llm_provider.lower()
         self.llm_model = llm_model
         self.llm_api_key = llm_api_key
         self.max_iterations = max_iterations
         self.temperature = temperature
-        self.company_context = company_context  # Guardar contexto de empresa
-        self.tenders_summary = tenders_summary  # Guardar resumen de licitaciones
+        self.user = user
+        # Mantener por compatibilidad pero ya no se usan
+        self.company_context = company_context
+        self.tenders_summary = tenders_summary
 
         # Validaciones
         if self.llm_provider not in ['ollama', 'openai', 'google']:
@@ -96,9 +100,9 @@ class FunctionCallingAgent:
         logger.info(f"[AGENT] Inicializando {llm_provider} - {llm_model}")
         self.llm = self._create_llm()
 
-        # Inicializar tool registry
+        # Inicializar tool registry con usuario
         logger.info(f"[AGENT] Inicializando tool registry...")
-        self.tool_registry = ToolRegistry(retriever, db_session)
+        self.tool_registry = ToolRegistry(retriever, db_session, user=user)
 
         logger.info(f"[AGENT] Agente inicializado con {len(self.tool_registry.tools)} tools")
 
@@ -163,6 +167,9 @@ class FunctionCallingAgent:
             logger.info(f"[QUERY] Historial: {len(conversation_history)} mensajes")
         logger.info(f"{'='*80}\n")
 
+        # Determinar si es el primer mensaje
+        is_first_message = not conversation_history or len(conversation_history) == 0
+
         # Preparar mensajes
         messages = self._prepare_messages(question, conversation_history)
 
@@ -170,6 +177,33 @@ class FunctionCallingAgent:
         iteration = 0
         tools_used = []
         tool_results_history = []
+
+        # En el primer mensaje, llamar automáticamente a get_tenders_summary
+        if is_first_message and self.user and 'get_tenders_summary' in self.tool_registry.tools:
+            logger.info("[QUERY] Primer mensaje - Llamando automáticamente a get_tenders_summary...")
+            summary_result = self.tool_registry.execute_tool('get_tenders_summary', limit=20)
+
+            if summary_result.get('success'):
+                tools_used.append('get_tenders_summary')
+                tool_results_history.append({
+                    'tool': 'get_tenders_summary',
+                    'arguments': {'limit': 20},
+                    'result': summary_result
+                })
+
+                # Añadir el resultado al contexto de mensajes
+                summary_data = summary_result.get('data', {})
+                formatted_summary = summary_data.get('formatted_summary', '')
+
+                if formatted_summary:
+                    logger.info(f"[QUERY] ✓ Resumen de licitaciones cargado ({summary_data.get('total_count', 0)} licitaciones)")
+                    # Añadir como mensaje del sistema
+                    messages.append({
+                        'role': 'system',
+                        'content': f"CONTEXTO AUTOMÁTICO (resumen de licitaciones disponibles):\n\n{formatted_summary}"
+                    })
+            else:
+                logger.warning(f"[QUERY] ⚠️ Error al cargar resumen automático: {summary_result.get('error')}")
 
         while iteration < self.max_iterations:
             iteration += 1
@@ -261,29 +295,16 @@ class FunctionCallingAgent:
             ""
         ]
 
-        # SOLO en el primer mensaje: Añadir contextos completos
-        if is_first_message:
-            # Añadir resumen de licitaciones disponibles si existe
-            if self.tenders_summary:
-                system_prompt_parts.append("=" * 60)
-                system_prompt_parts.append(self.tenders_summary)
-                system_prompt_parts.append("=" * 60)
-                system_prompt_parts.append("")
-                system_prompt_parts.append("Usa este listado para tener una idea general de las licitaciones disponibles.")
-                system_prompt_parts.append("Para consultas específicas, SIEMPRE usa las herramientas de búsqueda.")
-                system_prompt_parts.append("")
-
-            # Añadir contexto de empresa si existe
-            if self.company_context:
-                system_prompt_parts.append("=" * 60)
-                system_prompt_parts.append("INFORMACIÓN DE LA EMPRESA DEL USUARIO:")
-                system_prompt_parts.append("=" * 60)
-                system_prompt_parts.append(self.company_context)
-                system_prompt_parts.append("=" * 60)
-                system_prompt_parts.append("")
-                system_prompt_parts.append("Cuando el usuario pregunte sobre su empresa o pida información personalizada,")
-                system_prompt_parts.append("usa esta información de contexto para responder de forma específica.")
-                system_prompt_parts.append("")
+        # Instrucción para usar tools de contexto
+        if self.user:
+            system_prompt_parts.extend([
+                "INFORMACIÓN IMPORTANTE:",
+                "- Tienes acceso a la herramienta 'get_company_info' para obtener información sobre la empresa del usuario.",
+                "- Tienes acceso a la herramienta 'get_tenders_summary' para obtener un resumen de las licitaciones disponibles.",
+                "- Usa 'get_company_info' cuando el usuario pregunte sobre su empresa o necesites información para recomendaciones personalizadas.",
+                "- Usa 'get_tenders_summary' al inicio de la conversación o cuando el usuario pregunte qué licitaciones hay disponibles.",
+                ""
+            ])
 
         # Instrucciones (siempre presentes)
         system_prompt_parts.extend([
@@ -303,7 +324,45 @@ class FunctionCallingAgent:
             "Cuando el usuario pregunte por licitaciones, DEBES usar las herramientas apropiadas. Por ejemplo:",
             "- \"¿Cuál es la licitación más cara?\" → USA get_statistics",
             "- \"Licitaciones de software\" → USA search_tenders",
-            "- \"Licitaciones entre 50k y 100k\" → USA find_by_budget"
+            "- \"Licitaciones entre 50k y 100k\" → USA find_by_budget",
+            "",
+            "FORMATO DE RESPUESTAS:",
+            "- SIEMPRE formatea tus respuestas usando markdown correcto",
+            "- Usa ### para títulos principales, #### para subtítulos",
+            "- Usa **texto** para negrita importantes (presupuestos, fechas, nombres)",
+            "- Usa listas numeradas (1. 2. 3.) para enumerar razones o pasos",
+            "- Usa listas con guiones (- item) para listados simples",
+            "- CRÍTICO: Deja UNA LÍNEA EN BLANCO antes y después de:",
+            "  • Títulos (### o ####)",
+            "  • Listas (numeradas o con guiones)",
+            "  • Párrafos nuevos",
+            "",
+            "Ejemplo de respuesta CORRECTA:",
+            "```",
+            "Aquí está la licitación más adecuada para tu empresa:",
+            "",
+            "### Licitación: Desarrollo de Plataforma Web",
+            "",
+            "**ID:** 00123456-2025",
+            "**Organismo:** Ayuntamiento de Valencia",
+            "**CPV:** 72200000 (Servicios de desarrollo de software)",
+            "**Presupuesto:** €1,500,000",
+            "**Plazo:** 2025-11-30",
+            "",
+            "#### Razones para participar:",
+            "",
+            "1. **Alto presupuesto** - Con €1.5M, justifica el esfuerzo de preparar una oferta completa",
+            "2. **CPV alineado** - El código CPV coincide perfectamente con tu especialización en desarrollo web",
+            "3. **Ubicación favorable** - Valencia (ES51) está dentro de tus regiones preferidas",
+            "4. **Plazo razonable** - Tienes tiempo suficiente para preparar una propuesta competitiva",
+            "",
+            "¿Te gustaría que profundice en algún aspecto específico de esta licitación?",
+            "```",
+            "",
+            "Ejemplo de respuesta INCORRECTA (NO hagas esto):",
+            "```",
+            "La mejor licitación es: ### Desarrollo Web - **ID:** 123 - **Presupuesto:** €1M #### Razones: 1. **Presupuesto alto** buena oportunidad 2. **CPV coincide** con tu perfil",
+            "```"
         ])
 
         system_prompt = "\n".join(system_prompt_parts)
@@ -390,17 +449,20 @@ class FunctionCallingAgent:
                         for tc in tool_calls:
                             import json
                             func = tc.get('function', {})
+                            # Usar el ID que ya viene en el tool_call, no generar uno nuevo
+                            tc_id = tc.get('id', f"call_{func.get('name')}_{id(tc)}")
                             formatted_tool_calls.append({
                                 "name": func.get('name'),
                                 "args": func.get('arguments', {}),
-                                "id": f"call_{func.get('name')}_{id(tc)}"
+                                "id": tc_id
                             })
                         lc_messages.append(AIMessage(content=content, tool_calls=formatted_tool_calls))
                     else:
                         lc_messages.append(AIMessage(content=content))
                 elif role == 'tool':
                     # Resultado de tool
-                    lc_messages.append(ToolMessage(content=content, tool_call_id="default"))
+                    tool_call_id = msg.get('tool_call_id', 'default')
+                    lc_messages.append(ToolMessage(content=content, tool_call_id=tool_call_id))
 
             # Obtener tools en formato OpenAI
             tools = self.tool_registry.get_openai_tools()
@@ -416,6 +478,7 @@ class FunctionCallingAgent:
             if hasattr(response, 'tool_calls') and response.tool_calls:
                 for tc in response.tool_calls:
                     tool_calls.append({
+                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),  # Guardar ID del tool call
                         'function': {
                             'name': tc.get('name'),
                             'arguments': tc.get('args', {})
@@ -455,17 +518,20 @@ class FunctionCallingAgent:
                         formatted_tool_calls = []
                         for tc in tool_calls:
                             func = tc.get('function', {})
+                            # Usar el ID que ya viene en el tool_call, no generar uno nuevo
+                            tc_id = tc.get('id', f"call_{func.get('name')}_{id(tc)}")
                             formatted_tool_calls.append({
                                 "name": func.get('name'),
                                 "args": func.get('arguments', {}),
-                                "id": f"call_{func.get('name')}_{id(tc)}"
+                                "id": tc_id
                             })
                         lc_messages.append(AIMessage(content=content, tool_calls=formatted_tool_calls))
                     else:
                         lc_messages.append(AIMessage(content=content))
                 elif role == 'tool':
                     # Resultado de tool
-                    lc_messages.append(ToolMessage(content=content, tool_call_id="default"))
+                    tool_call_id = msg.get('tool_call_id', 'default')
+                    lc_messages.append(ToolMessage(content=content, tool_call_id=tool_call_id))
 
             # Obtener tools en formato Gemini
             tools = self.tool_registry.get_gemini_tools()
@@ -481,6 +547,7 @@ class FunctionCallingAgent:
             if hasattr(response, 'tool_calls') and response.tool_calls:
                 for tc in response.tool_calls:
                     tool_calls.append({
+                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),  # Guardar ID del tool call
                         'function': {
                             'name': tc.get('name'),
                             'arguments': tc.get('args', {})
@@ -515,11 +582,17 @@ class FunctionCallingAgent:
             'tool_calls': tool_calls
         })
 
-        # Añadir resultados de tools
-        for result in tool_results:
+        # Añadir resultados de tools con tool_call_id
+        for idx, result in enumerate(tool_results):
+            # Obtener tool_call_id del tool_call correspondiente
+            tool_call_id = "default"
+            if idx < len(tool_calls):
+                tool_call_id = tool_calls[idx].get('id', f"call_{result.get('tool', 'unknown')}_{idx}")
+
             messages.append({
                 'role': 'tool',
-                'content': json.dumps(result, ensure_ascii=False)
+                'content': json.dumps(result, ensure_ascii=False),
+                'tool_call_id': tool_call_id  # Añadir ID real del tool call
             })
 
         return messages

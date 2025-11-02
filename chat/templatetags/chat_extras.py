@@ -65,10 +65,27 @@ def markdown_to_html(text):
 
     text = re.sub(citation_pattern, replace_citation, text)
 
+    # PRE-PROCESSING: Arreglar problemas comunes de formato markdown
+    # 1. Asegurar líneas en blanco ANTES de títulos (###)
+    text = re.sub(r'([^\n])\n(#{1,6} )', r'\1\n\n\2', text)
+
+    # 2. Asegurar líneas en blanco DESPUÉS de títulos
+    text = re.sub(r'(#{1,6} [^\n]+)\n([^\n#])', r'\1\n\n\2', text)
+
+    # 3. Asegurar líneas en blanco ANTES de listas
+    text = re.sub(r'([^\n])\n([-*+] |\d+\. )', r'\1\n\n\2', text)
+
+    # 4. Asegurar líneas en blanco DESPUÉS de listas (final de lista)
+    # Detecta cuando una lista termina y viene texto normal
+    text = re.sub(r'((?:[-*+] |\d+\. )[^\n]+)\n([^\n\-*+\d])', r'\1\n\n\2', text)
+
+    # 5. Eliminar múltiples líneas en blanco consecutivas (más de 2)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
     # Convert markdown to HTML
     html = markdown.markdown(
         text,
-        extensions=['extra', 'codehilite', 'nl2br'],
+        extensions=['extra', 'codehilite', 'nl2br', 'md_in_html'],
         extension_configs={
             'codehilite': {
                 'css_class': 'highlight',
