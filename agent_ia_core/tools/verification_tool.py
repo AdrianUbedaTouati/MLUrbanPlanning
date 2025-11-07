@@ -83,7 +83,7 @@ class VerifyFieldsTool(BaseTool):
             }
         }
 
-    def execute(self, tender_id: str, fields: List[str]) -> Dict[str, Any]:
+    def run(self, tender_id: str, fields: List[str]) -> Dict[str, Any]:
         """
         Verifica campos críticos del XML original.
 

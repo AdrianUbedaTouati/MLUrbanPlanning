@@ -76,7 +76,7 @@ class GradeDocumentsTool(BaseTool):
             }
         }
 
-    def execute(self, question: str, document_ids: List[str]) -> Dict[str, Any]:
+    def run(self, question: str, document_ids: List[str]) -> Dict[str, Any]:
         """
         Evalúa relevancia de documentos.
 
