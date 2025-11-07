@@ -139,14 +139,12 @@
                                 <i class="bi bi-plus-circle"></i> Campos Opcionales
                             </button>
                         </li>
-                        {% if tender.xml_content %}
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="raw-xml-tab" data-bs-toggle="tab"
-                                    data-bs-target="#raw-xml" type="button" role="tab">
-                                <i class="bi bi-code-square"></i> XML Original
+                            <button class="nav-link" id="document-tab" data-bs-toggle="tab"
+                                    data-bs-target="#document-view" type="button" role="tab">
+                                <i class="bi bi-file-earmark-text"></i> 📄 Documento Completo
                             </button>
                         </li>
-                        {% endif %}
                     </ul>
 
                     <!-- Tab content -->
@@ -195,18 +193,228 @@
                             {% endif %}
                         </div>
 
-                        <!-- Tab 3: XML Original -->
-                        {% if tender.xml_content %}
-                        <div class="tab-pane fade" id="raw-xml" role="tabpanel">
-                            <div class="position-relative">
-                                <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 mt-2 me-2"
-                                        onclick="copyXMLToClipboard()" title="Copiar XML">
-                                    <i class="bi bi-clipboard"></i> Copiar
-                                </button>
-                                <pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code class="language-xml">{{ tender.xml_content }}</code></pre>
+                        <!-- Tab 3: Documento Completo -->
+                        <div class="tab-pane fade" id="document-view" role="tabpanel">
+                            <div class="document-container">
+                                <!-- ENCABEZADO -->
+                                <div class="document-header text-center mb-4">
+                                    <div class="document-icon mb-3">
+                                        <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #007AFF;"></i>
+                                    </div>
+                                    <h2 class="document-title">DOCUMENTO COMPLETO DE LICITACIÓN</h2>
+                                    <div class="document-id">{{ tender.ojs_notice_id }}</div>
+                                    <div class="document-status">
+                                        {% if tender.is_active %}
+                                        <span class="badge bg-success">✓ Activa</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Cerrada</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-info-circle"></i> INFORMACIÓN GENERAL
+                                    </h3>
+                                    <div class="section-content">
+                                        <div class="info-row">
+                                            <span class="label">Título:</span>
+                                            <span class="value">{{ tender.title }}</span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="label">ID de Aviso:</span>
+                                            <span class="value">{{ tender.ojs_notice_id }}</span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="label">Fecha de Publicación:</span>
+                                            <span class="value">{{ tender.publication_date|date:"d/m/Y" }}</span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="label">Organismo Contratante:</span>
+                                            <span class="value">{{ tender.buyer_name }}{% if tender.buyer_type %} ({{ tender.buyer_type }}){% endif %}</span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="label">Tipo de Contrato:</span>
+                                            <span class="value">{{ tender.get_contract_type_display }}</span>
+                                        </div>
+                                        <div class="info-row">
+                                            <span class="label">Procedimiento:</span>
+                                            <span class="value">{{ tender.get_procedure_type_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SECCIÓN 2: INFORMACIÓN ECONÓMICA -->
+                                {% if tender.budget_amount %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-cash-coin"></i> INFORMACIÓN ECONÓMICA
+                                    </h3>
+                                    <div class="section-content">
+                                        <div class="info-row highlight-budget">
+                                            <span class="label">Presupuesto:</span>
+                                            <span class="value budget-value">{{ tender.budget_amount|floatformat:2 }} {{ tender.currency }}</span>
+                                        </div>
+                                        {% if tender.parsed_summary.OPTIONAL.estimated_value %}
+                                        <div class="info-row">
+                                            <span class="label">Valor Estimado:</span>
+                                            <span class="value">{{ tender.parsed_summary.OPTIONAL.estimated_value }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- SECCIÓN 3: PLAZOS IMPORTANTES -->
+                                {% if tender.deadline or tender.parsed_summary.OPTIONAL.contract_duration %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-alarm"></i> PLAZOS IMPORTANTES
+                                    </h3>
+                                    <div class="section-content">
+                                        {% if tender.deadline %}
+                                        <div class="deadline-alert">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            <strong>Fecha Límite de Presentación:</strong>
+                                            <span class="deadline-value">{{ tender.deadline|date:"d/m/Y H:i" }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if tender.parsed_summary.OPTIONAL.contract_duration %}
+                                        <div class="info-row">
+                                            <span class="label">Duración del Contrato:</span>
+                                            <span class="value">{{ tender.parsed_summary.OPTIONAL.contract_duration }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- SECCIÓN 4: DESCRIPCIÓN COMPLETA -->
+                                {% if tender.description %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-file-text"></i> DESCRIPCIÓN DEL CONTRATO
+                                    </h3>
+                                    <div class="section-content">
+                                        <div class="description-text">{{ tender.description }}</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- SECCIÓN 5: CLASIFICACIÓN -->
+                                {% if tender.cpv_codes or tender.nuts_regions %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-tags"></i> CLASIFICACIÓN
+                                    </h3>
+                                    <div class="section-content">
+                                        {% if tender.cpv_codes %}
+                                        <div class="info-row">
+                                            <span class="label">Códigos CPV:</span>
+                                            <div class="value">
+                                                {% for cpv in tender.cpv_codes %}
+                                                <span class="badge bg-light text-dark border me-1 mb-1">{{ cpv }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% if tender.nuts_regions %}
+                                        <div class="info-row">
+                                            <span class="label">Regiones NUTS:</span>
+                                            <div class="value">
+                                                {% for nuts in tender.nuts_regions %}
+                                                <span class="badge bg-light text-dark border me-1 mb-1">{{ nuts }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- SECCIÓN 6: CRITERIOS DE ADJUDICACIÓN -->
+                                {% if tender.parsed_summary.OPTIONAL.award_criteria %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-trophy"></i> CRITERIOS DE ADJUDICACIÓN
+                                    </h3>
+                                    <div class="section-content">
+                                        <ol class="criteria-list">
+                                            {% for criterion in tender.parsed_summary.OPTIONAL.award_criteria %}
+                                            <li>{{ criterion }}</li>
+                                            {% endfor %}
+                                        </ol>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- SECCIÓN 7: INFORMACIÓN DE CONTACTO -->
+                                {% if tender.contact_email or tender.contact_phone or tender.contact_url %}
+                                <div class="document-section">
+                                    <h3 class="section-title">
+                                        <i class="bi bi-envelope"></i> INFORMACIÓN DE CONTACTO
+                                    </h3>
+                                    <div class="section-content">
+                                        {% if tender.contact_email %}
+                                        <div class="info-row">
+                                            <span class="label">Email:</span>
+                                            <span class="value"><a href="mailto:{{ tender.contact_email }}">{{ tender.contact_email }}</a></span>
+                                        </div>
+                                        {% endif %}
+                                        {% if tender.contact_phone %}
+                                        <div class="info-row">
+                                            <span class="label">Teléfono:</span>
+                                            <span class="value">{{ tender.contact_phone }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if tender.contact_url %}
+                                        <div class="info-row">
+                                            <span class="label">Sitio Web:</span>
+                                            <span class="value"><a href="{{ tender.contact_url }}" target="_blank">{{ tender.contact_url }}</a></span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- PIE DE DOCUMENTO -->
+                                <div class="document-footer mt-5 pt-3 border-top">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar"></i> Generado: {{ tender.created_at|date:"d/m/Y H:i" }}<br>
+                                                <i class="bi bi-globe"></i> Fuente: TED eForms
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6 text-end">
+                                            {% if tender.xml_content %}
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleXMLView()">
+                                                <i class="bi bi-code-square"></i> Ver XML Técnico
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- XML TÉCNICO (COLAPSABLE) -->
+                                {% if tender.xml_content %}
+                                <div id="xml-technical-view" class="collapse mt-4">
+                                    <div class="alert alert-info">
+                                        <strong><i class="bi bi-info-circle"></i> Vista Técnica:</strong>
+                                        Este es el XML original sin procesar. Útil para desarrolladores e integradores.
+                                    </div>
+                                    <div class="position-relative">
+                                        <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 mt-2 me-2"
+                                                onclick="copyXMLToClipboard()" title="Copiar XML">
+                                            <i class="bi bi-clipboard"></i> Copiar
+                                        </button>
+                                        <pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code class="language-xml">{{ tender.xml_content }}</code></pre>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -355,9 +563,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
 
 <script>
+// Función para toggle de vista XML técnico
+function toggleXMLView() {
+    const xmlView = document.getElementById('xml-technical-view');
+    const btn = event.target.closest('button');
+
+    if (xmlView.classList.contains('show')) {
+        xmlView.classList.remove('show');
+        btn.innerHTML = '<i class="bi bi-code-square"></i> Ver XML Técnico';
+    } else {
+        xmlView.classList.add('show');
+        btn.innerHTML = '<i class="bi bi-eye-slash"></i> Ocultar XML Técnico';
+
+        // Aplicar syntax highlighting si no se ha hecho
+        setTimeout(() => {
+            if (typeof Prism !== 'undefined') {
+                Prism.highlightAll();
+            }
+        }, 100);
+    }
+}
+
 // Función para copiar XML al portapapeles
 function copyXMLToClipboard() {
-    const xmlContent = document.querySelector('#raw-xml code').textContent;
+    const xmlContent = document.querySelector('#xml-technical-view code').textContent;
     navigator.clipboard.writeText(xmlContent).then(() => {
         // Cambiar botón temporalmente para dar feedback
         const btn = event.target.closest('button');
@@ -475,6 +704,229 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .nav-tabs .nav-link:hover {
     color: #0056b3;
+}
+
+/* ========================================
+   ESTILOS PARA VISTA DOCUMENTO COMPLETO
+   ======================================== */
+
+/* Contenedor principal del documento */
+.document-container {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Encabezado del documento */
+.document-header {
+    border-bottom: 3px solid #007AFF;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.document-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #007AFF;
+    margin: 10px 0;
+    letter-spacing: 0.5px;
+}
+
+.document-id {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #555;
+    margin: 10px 0;
+}
+
+.document-status {
+    margin-top: 10px;
+}
+
+/* Secciones del documento */
+.document-section {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+}
+
+.section-title {
+    color: #007AFF;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-content {
+    padding-left: 10px;
+}
+
+/* Filas de información */
+.info-row {
+    display: flex;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: flex-start;
+}
+
+.info-row .label {
+    font-weight: 600;
+    color: #666;
+    min-width: 200px;
+    flex-shrink: 0;
+}
+
+.info-row .value {
+    color: #333;
+    flex: 1;
+}
+
+/* Destacar presupuesto */
+.highlight-budget {
+    background: linear-gradient(90deg, #e3f2fd 0%, #f5f5f5 100%);
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007AFF;
+}
+
+.budget-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #007AFF;
+}
+
+/* Alerta de deadline */
+.deadline-alert {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.deadline-value {
+    font-weight: 700;
+    color: #d32f2f;
+    font-size: 1.1rem;
+}
+
+/* Descripción del contrato */
+.description-text {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 3px solid #007AFF;
+}
+
+/* Criterios numerados */
+.criteria-list {
+    counter-reset: criteria;
+    list-style: none;
+    padding: 0;
+}
+
+.criteria-list li {
+    counter-increment: criteria;
+    padding: 12px;
+    margin: 8px 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #28a745;
+}
+
+.criteria-list li:before {
+    content: counter(criteria) ". ";
+    font-weight: bold;
+    color: #28a745;
+    font-size: 1.1rem;
+    margin-right: 8px;
+}
+
+/* Footer del documento */
+.document-footer {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    margin-top: 40px;
+}
+
+/* XML Técnico Colapsable */
+#xml-technical-view.collapse:not(.show) {
+    display: none;
+}
+
+#xml-technical-view.collapse.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .document-container {
+        padding: 20px;
+    }
+
+    .info-row {
+        flex-direction: column;
+    }
+
+    .info-row .label {
+        min-width: auto;
+        margin-bottom: 5px;
+    }
+
+    .document-title {
+        font-size: 1.2rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .document-container {
+        box-shadow: none;
+        max-width: 100%;
+    }
+
+    .document-footer button {
+        display: none;
+    }
+
+    #xml-technical-view {
+        display: none !important;
+    }
+
+    .nav-tabs {
+        display: none;
+    }
+
+    .tab-content {
+        display: block !important;
+    }
 }
 </style>
 {% endblock %}
