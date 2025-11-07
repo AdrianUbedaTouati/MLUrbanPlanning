@@ -23,7 +23,19 @@
                 <div class="document-details d-none" style="margin-top: 8px; padding-left: 20px; font-size: 11px; opacity: 0.9;" onclick="event.stopPropagation();">
                     {% for doc in msg.metadata.documents_used %}
                     <div style="margin-bottom: 6px; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border-left: 2px solid rgba(255,255,255,0.2);">
-                        <div><strong>Documento {{ forloop.counter }}:</strong></div>
+                        <div>
+                            <strong>
+                                <a href="{% url 'tenders:detail' doc.id %}?highlight={{ doc.section }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   style="color: #007AFF; text-decoration: none; transition: all 0.2s;"
+                                   onmouseover="this.style.textDecoration='underline'"
+                                   onmouseout="this.style.textDecoration='none'">
+                                    <i class="bi bi-box-arrow-up-right" style="font-size: 10px; margin-right: 4px;"></i>
+                                    {{ doc.title|truncatewords:15|default:"Licitación"|default:doc.id }}
+                                </a>
+                            </strong>
+                        </div>
                         <div style="margin-top: 4px; font-size: 10px; opacity: 0.8;">
                             {{ doc.content_preview|default:"[Sin contenido]" }}
                         </div>

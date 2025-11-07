@@ -19,7 +19,7 @@
             </div>
 
             <!-- Info Básica -->
-            <div class="card mb-4">
+            <div class="card mb-4" id="basic-info">
                 <div class="card-body">
                     <p class="text-muted mb-2">
                         <strong>ID:</strong> {{ tender.ojs_notice_id }}
@@ -33,7 +33,7 @@
                         <span class="badge bg-secondary">{{ tender.get_procedure_type_display }}</span>
                     </p>
                     {% if tender.deadline %}
-                    <p class="mb-2">
+                    <p class="mb-2" id="deadline-info">
                         <strong class="text-danger"><i class="bi bi-alarm"></i> Fecha Límite:</strong>
                         {{ tender.deadline|date:"d/m/Y H:i" }}
                     </p>
@@ -44,7 +44,7 @@
                     </p>
                     {% endif %}
                     {% if tender.budget_amount %}
-                    <p class="mb-0">
+                    <p class="mb-0" id="budget-info">
                         <strong>Presupuesto:</strong>
                         <span class="text-primary fs-5 fw-bold">{{ tender.budget_amount|floatformat:2 }} {{ tender.currency }}</span>
                     </p>
@@ -53,7 +53,7 @@
             </div>
 
             <!-- Descripción -->
-            <div class="card mb-4">
+            <div class="card mb-4" id="description-section">
                 <div class="card-header">
                     <h5 class="mb-0">Descripción</h5>
                 </div>
@@ -64,7 +64,7 @@
 
             <!-- Códigos CPV -->
             {% if tender.cpv_codes %}
-            <div class="card mb-4">
+            <div class="card mb-4" id="cpv-section">
                 <div class="card-header">
                     <h5 class="mb-0">Códigos CPV</h5>
                 </div>
@@ -78,7 +78,7 @@
 
             <!-- Regiones NUTS -->
             {% if tender.nuts_regions %}
-            <div class="card mb-4">
+            <div class="card mb-4" id="nuts-section">
                 <div class="card-header">
                     <h5 class="mb-0">Regiones NUTS</h5>
                 </div>
@@ -92,7 +92,7 @@
 
             <!-- Información de Contacto -->
             {% if tender.contact_email or tender.contact_phone or tender.contact_url %}
-            <div class="card mb-4">
+            <div class="card mb-4" id="contact-section">
                 <div class="card-header">
                     <h5 class="mb-0">Información de Contacto</h5>
                 </div>
@@ -112,6 +112,102 @@
                         <i class="bi bi-link-45deg"></i> <a href="{{ tender.contact_url }}" target="_blank">{{ tender.contact_url }}</a>
                     </p>
                     {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Información Detallada (XML Procesado) -->
+            {% if tender.parsed_summary %}
+            <div class="card mb-4" id="xml-section">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-code"></i> Información Detallada (XML Procesado)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs" id="xmlTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="required-tab" data-bs-toggle="tab"
+                                    data-bs-target="#required" type="button" role="tab">
+                                <i class="bi bi-check-circle"></i> Campos Requeridos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="optional-tab" data-bs-toggle="tab"
+                                    data-bs-target="#optional" type="button" role="tab">
+                                <i class="bi bi-plus-circle"></i> Campos Opcionales
+                            </button>
+                        </li>
+                        {% if tender.xml_content %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="raw-xml-tab" data-bs-toggle="tab"
+                                    data-bs-target="#raw-xml" type="button" role="tab">
+                                <i class="bi bi-code-square"></i> XML Original
+                            </button>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <!-- Tab content -->
+                    <div class="tab-content mt-3" id="xmlTabsContent">
+                        <!-- Tab 1: REQUIRED -->
+                        <div class="tab-pane fade show active" id="required" role="tabpanel">
+                            {% if tender.parsed_summary.REQUIRED %}
+                            <dl class="row mb-0">
+                                {% for key, value in tender.parsed_summary.REQUIRED.items %}
+                                <dt class="col-sm-4 text-muted">{{ key|title|replace:"_":" " }}</dt>
+                                <dd class="col-sm-8">{{ value|default:"N/A" }}</dd>
+                                {% endfor %}
+                            </dl>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay campos requeridos disponibles.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tab 2: OPTIONAL -->
+                        <div class="tab-pane fade" id="optional" role="tabpanel">
+                            {% if tender.parsed_summary.OPTIONAL %}
+                            <dl class="row mb-0">
+                                {% for key, value in tender.parsed_summary.OPTIONAL.items %}
+                                <dt class="col-sm-4 text-muted">{{ key|title|replace:"_":" " }}</dt>
+                                <dd class="col-sm-8">
+                                    {% if value is list %}
+                                        {% if value %}
+                                        <ul class="mb-0">
+                                        {% for item in value %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        <span class="text-muted">Lista vacía</span>
+                                        {% endif %}
+                                    {% elif value is dict %}
+                                        <pre class="bg-light p-2 rounded mb-0" style="font-size: 0.85rem;">{{ value|safe }}</pre>
+                                    {% else %}
+                                        {{ value|default:"N/A" }}
+                                    {% endif %}
+                                </dd>
+                                {% endfor %}
+                            </dl>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay campos opcionales disponibles.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tab 3: XML Original -->
+                        {% if tender.xml_content %}
+                        <div class="tab-pane fade" id="raw-xml" role="tabpanel">
+                            <div class="position-relative">
+                                <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 mt-2 me-2"
+                                        onclick="copyXMLToClipboard()" title="Copiar XML">
+                                    <i class="bi bi-clipboard"></i> Copiar
+                                </button>
+                                <pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code class="language-xml">{{ tender.xml_content }}</code></pre>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -250,4 +346,135 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Prism.js para syntax highlighting de XML -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<script>
+// Función para copiar XML al portapapeles
+function copyXMLToClipboard() {
+    const xmlContent = document.querySelector('#raw-xml code').textContent;
+    navigator.clipboard.writeText(xmlContent).then(() => {
+        // Cambiar botón temporalmente para dar feedback
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Copiado';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(err => {
+        console.error('Error al copiar:', err);
+        alert('Error al copiar el XML al portapapeles');
+    });
+}
+
+// Highlighting y scroll automático cuando se viene desde el chat
+document.addEventListener('DOMContentLoaded', function() {
+    // Aplicar syntax highlighting de Prism
+    Prism.highlightAll();
+
+    // Obtener parámetro highlight de URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightSection = urlParams.get('highlight');
+
+    if (highlightSection) {
+        // Mapeo de secciones a IDs de elementos
+        const sectionMap = {
+            // Secciones principales
+            'description': 'description-section',
+            'budget': 'budget-info',
+            'budget_search': 'budget-info',
+            'deadline': 'deadline-info',
+            'deadline_search': 'deadline-info',
+            'cpv': 'cpv-section',
+            'cpv_search': 'cpv-section',
+            'nuts': 'nuts-section',
+            'location_search': 'nuts-section',
+            'contact': 'contact-section',
+            'xml': 'xml-section',
+            'details': 'xml-section',
+            'general': 'description-section',
+            'comparison': 'basic-info'
+        };
+
+        const targetId = sectionMap[highlightSection];
+        if (targetId) {
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                // Esperar a que la página cargue completamente
+                setTimeout(() => {
+                    // Scroll suave al elemento
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+
+                    // Añadir clase de highlight
+                    targetElement.classList.add('highlight-section');
+
+                    // Remover highlight después de 3 segundos
+                    setTimeout(() => {
+                        targetElement.classList.remove('highlight-section');
+                    }, 3000);
+                }, 300);
+            }
+        }
+    }
+});
+</script>
+
+<style>
+/* Animación de highlighting para secciones */
+.highlight-section {
+    animation: highlight-pulse 2s ease-in-out;
+    background: linear-gradient(90deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%) !important;
+    border-left: 4px solid #007AFF !important;
+    padding-left: 12px !important;
+    transition: all 0.3s ease;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.85;
+        transform: scale(1.01);
+    }
+}
+
+/* Mejorar apariencia del XML */
+#raw-xml pre {
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+#raw-xml code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Mejorar tabs */
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active {
+    color: #007AFF;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0056b3;
+}
+</style>
 {% endblock %}

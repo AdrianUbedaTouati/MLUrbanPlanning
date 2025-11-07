@@ -430,14 +430,24 @@ class ChatAgentService:
             response_content = result.get('answer', 'No se pudo generar una respuesta.')
 
             # Format document metadata for frontend
-            documents_used = [
-                {
-                    'id': doc.get('ojs_notice_id', 'unknown'),
+            from tenders.models import Tender
+            documents_used = []
+            for doc in result.get('documents', []):
+                tender_id = doc.get('ojs_notice_id', 'unknown')
+
+                # Obtener título desde la BD para mostrarlo como enlace clickeable
+                try:
+                    tender = Tender.objects.get(ojs_notice_id=tender_id)
+                    title = tender.title
+                except Tender.DoesNotExist:
+                    title = f'Licitación {tender_id}'
+
+                documents_used.append({
+                    'id': tender_id,
+                    'title': title,  # Título para enlace clickeable en chat
                     'section': doc.get('section', 'unknown'),
                     'content_preview': doc.get('content', '')[:150] + '...'
-                }
-                for doc in result.get('documents', [])
-            ]
+                })
 
             # Calculate token usage and cost
             from core.token_pricing import calculate_chat_cost
