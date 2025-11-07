@@ -156,7 +156,7 @@
                             {% if tender.parsed_summary.REQUIRED %}
                             <dl class="row mb-0">
                                 {% for key, value in tender.parsed_summary.REQUIRED.items %}
-                                <dt class="col-sm-4 text-muted">{{ key|title|replace:"_":" " }}</dt>
+                                <dt class="col-sm-4 text-muted">{{ key|title }}</dt>
                                 <dd class="col-sm-8">{{ value|default:"N/A" }}</dd>
                                 {% endfor %}
                             </dl>
@@ -170,7 +170,7 @@
                             {% if tender.parsed_summary.OPTIONAL %}
                             <dl class="row mb-0">
                                 {% for key, value in tender.parsed_summary.OPTIONAL.items %}
-                                <dt class="col-sm-4 text-muted">{{ key|title|replace:"_":" " }}</dt>
+                                <dt class="col-sm-4 text-muted">{{ key|title }}</dt>
                                 <dd class="col-sm-8">
                                     {% if value is list %}
                                         {% if value %}
