@@ -104,6 +104,10 @@ class FunctionCallingAgent:
         logger.info(f"[AGENT] Inicializando tool registry...")
         self.tool_registry = ToolRegistry(retriever, db_session, user=user)
 
+        # Inicializar grading tool con el LLM (si el usuario la activó)
+        if user and getattr(user, 'use_grading', False):
+            self.tool_registry.initialize_grading_tool(self.llm)
+
         logger.info(f"[AGENT] Agente inicializado con {len(self.tool_registry.tools)} tools")
 
     def _create_llm(self):

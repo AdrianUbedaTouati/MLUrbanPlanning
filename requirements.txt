@@ -1,7 +1,7 @@
 # ================================================
 # TENDERAI PLATFORM - DEPENDENCIAS
-# Actualizado: Octubre 2024
-# Version: 1.1.0 (Ollama Integration)
+# Actualizado: Enero 2025
+# Version: 3.1.0 (Function Calling + Ollama Integration)
 # ================================================
 
 # ------------------------------------------------
@@ -27,14 +27,13 @@ django-allauth==0.63.3   # Enhanced authentication
 argon2-cffi==23.1.0      # Strong password hashing
 
 # ------------------------------------------------
-# Agent_IA Core - LangChain & LangGraph
+# Agent_IA Core - LangChain
 # IMPORTANTE: Versiones compatibles con Ollama
 # ------------------------------------------------
 # LangChain Core - Version compatible con todos los providers
 langchain-core>=0.3.72,<1.0.0      # Compatible con langchain 0.3.x
 langchain>=0.3.27,<0.4.0
 langchain-community>=0.3.0,<0.4.0
-langgraph>=0.2.63
 langchain-text-splitters>=0.3.0
 
 # LangChain Providers
@@ -43,8 +42,8 @@ langchain-google-genai>=2.0.10     # Google Gemini
 langchain-nvidia-ai-endpoints>=0.3.18  # NVIDIA NIM
 langchain-ollama>=0.2.0,<1.0.0     # Ollama (Local) - Version compatible
 
-# Vector Store
-langchain-chroma>=0.2.0
+# Vector Store (IMPORTANTE: Version <0.2.0 compatible con ChromaDB 0.5.23)
+langchain-chroma>=0.1.0,<0.2.0
 
 # ------------------------------------------------
 # LLM APIs
@@ -98,6 +97,7 @@ python-dotenv==1.0.1
 tqdm==4.67.1
 PyYAML==6.0.2
 markdown>=3.4.1         # Markdown to HTML conversion for chat
+Pygments>=2.19.0        # Syntax highlighting for markdown code blocks
 
 # ------------------------------------------------
 # Monitoring & Logging
@@ -166,5 +166,12 @@ zstandard==0.25.0
 #   Python: 3.10, 3.11, 3.12
 #   Sistema Operativo: Windows, Linux, macOS
 #   Base de Datos: SQLite (dev), PostgreSQL (prod)
+#
+# IMPORTANTE - CHROMADB:
+#   NO actualizar ChromaDB a 1.x.x - requiere hnswlib >= 0.9.0
+#   Mantener chromadb==0.5.23 y hnswlib==0.8.0 (compatibles)
+#   Si instalaste ChromaDB 1.x por error, ejecuta:
+#     pip uninstall chromadb hnswlib -y
+#     pip install chromadb==0.5.23 hnswlib==0.8.0
 #
 # ================================================

@@ -21,16 +21,18 @@ class ToolRegistry:
     - Ejecutar tools por nombre
     """
 
-    def __init__(self, retriever, db_session=None):
+    def __init__(self, retriever, db_session=None, user=None):
         """
         Inicializa el registro con todas las tools.
 
         Args:
             retriever: Retriever de ChromaDB para búsqueda vectorial
             db_session: Sesión de base de datos Django (opcional)
+            user: Usuario de Django para tools de contexto (opcional)
         """
         self.retriever = retriever
         self.db_session = db_session
+        self.user = user
         self.tools: Dict[str, BaseTool] = {}
         self._register_all_tools()
 
@@ -45,6 +47,13 @@ class ToolRegistry:
             GetStatisticsTool
         )
         from .tender_tools import GetTenderXMLTool, CompareTendersTool
+        from .context_tools import GetCompanyInfoTool, GetTendersSummaryTool
+
+        # Tools de contexto (solo si hay usuario)
+        if self.user:
+            self.tools['get_company_info'] = GetCompanyInfoTool(self.user)
+            self.tools['get_tenders_summary'] = GetTendersSummaryTool(self.user)
+            logger.info("[REGISTRY] Tools de contexto registradas (get_company_info, get_tenders_summary)")
 
         # Tools de búsqueda
         self.tools['search_tenders'] = SearchTendersTool(self.retriever)
@@ -61,7 +70,38 @@ class ToolRegistry:
         self.tools['get_statistics'] = GetStatisticsTool(self.db_session)
         self.tools['compare_tenders'] = CompareTendersTool(self.db_session)
 
+        # Tools de grading y verification (solo si el usuario las activa)
+        if self.user:
+            # Grading: Filtra documentos irrelevantes
+            if getattr(self.user, 'use_grading', False):
+                from .grading_tool import GradeDocumentsTool
+                # Necesitamos el LLM para grading, lo obtenemos del agente
+                # Por ahora registramos la clase, el LLM se inyectará después
+                self.tools['grade_documents'] = None  # Será inicializado por el agente
+                logger.info("[REGISTRY] ✓ Grading tool habilitada (use_grading=True)")
+
+            # Verification: Valida campos críticos con XML
+            if getattr(self.user, 'use_verification', False):
+                from .verification_tool import VerifyFieldsTool
+                self.tools['verify_fields'] = VerifyFieldsTool()
+                logger.info("[REGISTRY] ✓ Verification tool habilitada (use_verification=True)")
+
         logger.info(f"[REGISTRY] {len(self.tools)} tools registradas: {list(self.tools.keys())}")
+
+    def initialize_grading_tool(self, llm):
+        """
+        Inicializa la grading tool con el LLM del agente.
+
+        Este método debe ser llamado por el agente después de crear el registry,
+        para inyectar el LLM necesario para la evaluación de relevancia.
+
+        Args:
+            llm: Instancia del LLM (ChatOllama, ChatOpenAI, etc.)
+        """
+        if 'grade_documents' in self.tools and self.tools['grade_documents'] is None:
+            from .grading_tool import GradeDocumentsTool
+            self.tools['grade_documents'] = GradeDocumentsTool(llm)
+            logger.info("[REGISTRY] GradeDocumentsTool inicializada con LLM")
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """
