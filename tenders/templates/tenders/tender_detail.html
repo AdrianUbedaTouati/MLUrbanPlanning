@@ -241,7 +241,7 @@
                                             {% endif %}
                                             <tr>
                                                 <td class="word-label">Fecha de Publicación:</td>
-                                                <td class="word-value">{{ tender.publication_date|date:"d de F de Y" }}</td>
+                                                <td class="word-value">{{ tender.publication_date|date:"d/m/Y" }}</td>
                                             </tr>
                                             <tr>
                                                 <td class="word-label">Tipo de Contrato:</td>
@@ -292,7 +292,7 @@
                                             <div class="highlight-label">
                                                 <i class="bi bi-exclamation-triangle-fill"></i> FECHA LÍMITE DE PRESENTACIÓN
                                             </div>
-                                            <div class="highlight-value">{{ tender.deadline|date:"d de F de Y, H:i" }} horas</div>
+                                            <div class="highlight-value">{{ tender.deadline|date:"d/m/Y" }} a las {{ tender.deadline|date:"H:i" }} horas</div>
                                         </div>
                                     </div>
                                     {% endif %}
