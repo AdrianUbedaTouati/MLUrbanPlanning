@@ -1,6 +1,6 @@
-# 🏗️ Arquitectura del Sistema TenderAI v3.0
+# 🏗️ Arquitectura del Sistema TenderAI v3.7
 
-**Sistema de Function Calling Multi-Proveedor para Análisis de Licitaciones**
+**Sistema de Function Calling Multi-Proveedor con Review Loop Automático**
 
 ---
 
@@ -9,25 +9,28 @@
 1. [Visión General](#visión-general)
 2. [Arquitectura de Alto Nivel](#arquitectura-de-alto-nivel)
 3. [Componentes Principales](#componentes-principales)
-4. [Flujo de Datos](#flujo-de-datos)
-5. [Proveedores LLM](#proveedores-llm)
-6. [Sistema de Tools](#sistema-de-tools)
-7. [Base de Datos](#base-de-datos)
+4. [Sistema de Tools](#sistema-de-tools)
+5. [Sistema de Review y Mejora](#sistema-de-review-y-mejora)
+6. [Flujo de Datos Completo](#flujo-de-datos-completo)
+7. [Proveedores LLM](#proveedores-llm)
+8. [Base de Datos](#base-de-datos)
 
 ---
 
 ## 🎯 Visión General
 
-TenderAI es una plataforma Django que utiliza **Function Calling** para permitir que los LLMs interactúen dinámicamente con datos de licitaciones públicas mediante **9 tools especializadas**.
+TenderAI es una plataforma Django que utiliza **Function Calling** para permitir que los LLMs interactúen dinámicamente con datos de licitaciones públicas mediante **16 tools especializadas** y un **sistema de auto-mejora** con doble LLM.
 
-### Características Clave
+### Características Clave v3.7
 
 - ✅ **3 proveedores LLM**: Ollama (local), OpenAI, Google Gemini
-- ✅ **9 tools especializadas**: Búsqueda, filtrado, análisis, comparación
-- ✅ **Decisión automática**: LLM decide qué tools usar y cuándo
-- ✅ **Iteración inteligente**: Hasta 5 pasos para consultas complejas
+- ✅ **16 tools especializadas**: Búsqueda, análisis, web, navegación interactiva
+- ✅ **Review Loop automático**: Segunda iteración SIEMPRE ejecutada
+- ✅ **Navegador interactivo**: Playwright para sitios JavaScript
+- ✅ **Web Search**: Google Custom Search API
+- ✅ **Grading y Verification**: Filtrado inteligente de documentos
 - ✅ **ChromaDB**: Búsqueda vectorial semántica
-- ✅ **Django ORM**: Consultas SQL eficientes
+- ✅ **Iteración inteligente**: Hasta 15 pasos para consultas complejas
 
 ---
 
@@ -53,8 +56,19 @@ TenderAI es una plataforma Django que utiliza **Function Calling** para permitir
 │  │                                                            │  │
 │  │  - Detecta proveedor del usuario                          │  │
 │  │  - Crea FunctionCallingAgent                              │  │
-│  │  - Maneja historial de conversación                       │  │
+│  │  - Ejecuta Review Loop (SIEMPRE)                          │  │
+│  │  - Maneja historial conversacional                        │  │
 │  └─────────────────────────┬─────────────────────────────────┘  │
+│                            │
+│  ┌─────────────────────────▼─────────────────────────────────┐  │
+│  │               chat/response_reviewer.py                    │  │
+│  │                 (ResponseReviewer)                         │  │
+│  │                                                            │  │
+│  │  - Revisa formato (30%)                                   │  │
+│  │  - Revisa contenido (40%)                                 │  │
+│  │  - Revisa análisis (30%)                                  │  │
+│  │  - Proporciona feedback específico                        │  │
+│  └────────────────────────────────────────────────────────────┘  │
 └───────────────────────────┬│─────────────────────────────────────┘
                             ││
             ┌───────────────┘└───────────────┐
@@ -63,14 +77,16 @@ TenderAI es una plataforma Django que utiliza **Function Calling** para permitir
 │   AGENT_IA_CORE         │     │   DJANGO ORM            │
 │                         │     │                         │
 │  FunctionCallingAgent   │────→│  Tender Model           │
-│  ToolRegistry           │     │  CompanyProfile         │
-│  9 Tools                │     │  ChatMessage            │
-│  SchemaConverter        │     │  User                   │
+│  ToolRegistry (16)      │     │  CompanyProfile         │
+│  SchemaConverter        │     │  ChatMessage            │
+│  ResponseReviewer LLM   │     │  User                   │
 └───────────┬─────────────┘     └─────────────────────────┘
             │
             ├──→ Ollama (localhost:11434)
             ├──→ OpenAI API
-            └──→ Google Gemini API
+            ├──→ Google Gemini API
+            ├──→ Google Custom Search API
+            └──→ Playwright (Chromium)
 ```
 
 ---
@@ -82,34 +98,26 @@ TenderAI es una plataforma Django que utiliza **Function Calling** para permitir
 **Ubicación**: `agent_ia_core/agent_function_calling.py`
 
 **Responsabilidades**:
-- Coordinar la ejecución de tools
-- Gestionar iteraciones (máximo 5)
+- Coordinar la ejecución de tools (16 disponibles)
+- Gestionar iteraciones (máximo 15)
 - Comunicarse con diferentes proveedores LLM
-- Mantener historial de conversación
+- Mantener historial conversacional
 
 **Métodos clave**:
 ```python
 class FunctionCallingAgent:
-    def __init__(self, llm_provider, llm_model, llm_api_key, retriever):
+    def __init__(self, llm_provider, llm_model, llm_api_key, retriever, db_session, user):
         # Inicializa LLM según proveedor
         self.llm = self._create_llm()
-        self.tool_registry = ToolRegistry(retriever, db_session)
+        self.tool_registry = ToolRegistry(retriever, db_session, user)
+        self.max_iterations = 15
 
     def query(self, question, conversation_history):
-        # Loop de function calling (máx 5 iteraciones)
+        # Loop de function calling (máx 15 iteraciones)
         # 1. LLM decide tools
         # 2. Ejecutar tools
         # 3. LLM procesa resultados
         # 4. Repetir o retornar respuesta
-
-    def _call_ollama_with_tools(self, messages):
-        # Llamada nativa a Ollama con tools
-
-    def _call_openai_with_tools(self, messages):
-        # Llamada a OpenAI via LangChain
-
-    def _call_gemini_with_tools(self, messages):
-        # Llamada a Gemini via LangChain
 ```
 
 ### 2. ToolRegistry
@@ -117,130 +125,124 @@ class FunctionCallingAgent:
 **Ubicación**: `agent_ia_core/tools/registry.py`
 
 **Responsabilidades**:
-- Registrar las 9 tools disponibles
+- Registrar las 16 tools disponibles
 - Convertir schemas al formato del proveedor
-- Ejecutar tool calls
+- Ejecutar tool calls en paralelo
+- Inyectar LLM a tools que lo necesitan
 
-**Métodos clave**:
+**Tools registradas**:
 ```python
-class ToolRegistry:
-    def __init__(self, retriever, db_session):
-        self.tools = {}
-        self._register_all_tools()
+# Tools de contexto (2)
+- get_company_info: Información de empresa del usuario
+- get_tenders_summary: Resumen de licitaciones guardadas
 
-    def get_ollama_tools(self):
-        # Schemas en formato Ollama
+# Tools de búsqueda (5)
+- search_tenders: Búsqueda vectorial ChromaDB
+- find_by_budget: Filtrado por presupuesto
+- find_by_deadline: Filtrado por fecha
+- find_by_cpv: Filtrado por sector
+- find_by_location: Filtrado geográfico
 
-    def get_openai_tools(self):
-        # Schemas en formato OpenAI
+# Tools de información (2)
+- get_tender_details: Detalles completos
+- get_tender_xml: XML original
 
-    def get_gemini_tools(self):
-        # Schemas en formato Gemini
+# Tools de análisis (2)
+- get_statistics: Estadísticas agregadas
+- compare_tenders: Comparación lado a lado
 
-    def execute_tool_calls(self, tool_calls):
-        # Ejecuta múltiples tools en paralelo
+# Tools opcionales (5)
+- grade_documents: Filtrado inteligente (opcional)
+- verify_fields: Verificación con XML (opcional)
+- web_search: Google Custom Search (opcional)
+- browse_webpage: Extracción web estática (opcional)
+- browse_interactive: Navegador Playwright (opcional)
 ```
 
-### 3. Tools (9 especializadas)
+### 3. ResponseReviewer
 
-**Ubicación**: `agent_ia_core/tools/`
+**Ubicación**: `chat/response_reviewer.py`
 
-**Búsqueda** (`search_tools.py`):
-1. **SearchTendersTool**: Búsqueda vectorial con ChromaDB
-2. **FindByBudgetTool**: Filtrado por presupuesto (Django ORM)
-3. **FindByDeadlineTool**: Filtrado por fecha límite
-4. **FindByCPVTool**: Filtrado por sector (ChromaDB)
-5. **FindByLocationTool**: Filtrado geográfico (ChromaDB)
+**Responsabilidades**:
+- Revisar respuesta inicial del agente principal
+- Evaluar formato, contenido y análisis
+- Proporcionar feedback específico y constructivo
+- Generar score de calidad (0-100)
 
-**Información** (`tender_tools.py`):
-6. **GetTenderDetailsTool**: Detalles completos (Django ORM)
-7. **GetTenderXMLTool**: Obtener XML completo (FileSystem)
-
-**Análisis** (`search_tools.py` y `tender_tools.py`):
-8. **GetStatisticsTool**: Estadísticas agregadas (Django Aggregate)
-9. **CompareTendersTool**: Comparación lado a lado
-
-**Cada tool implementa**:
+**Criterios de evaluación**:
 ```python
-class BaseTool(ABC):
-    name: str
-    description: str
+FORMATO (30 puntos):
+- ¿Usa Markdown correctamente?
+- ¿Headers ## para múltiples licitaciones?
+- ¿Estructura clara y legible?
 
-    @abstractmethod
-    def run(self, **kwargs) -> Dict[str, Any]:
-        # Lógica de ejecución
+CONTENIDO (40 puntos):
+- ¿Responde completamente la pregunta?
+- ¿Incluye todos los datos relevantes?
+- ¿Falta información importante?
 
-    @abstractmethod
-    def get_schema(self) -> Dict[str, Any]:
-        # Schema en formato JSON Schema
+ANÁLISIS (30 puntos):
+- ¿Justifica recomendaciones con datos?
+- ¿Usa documentos correctamente?
+- ¿Es útil y profesional?
 ```
 
-### 4. SchemaConverter
+**Proceso**:
+1. Recibe respuesta inicial + metadata
+2. Llama al LLM revisor con prompt específico
+3. Parsea resultado (status, score, issues, suggestions, feedback)
+4. Retorna análisis estructurado
 
-**Ubicación**: `agent_ia_core/tools/schema_converters.py`
-
-**Responsabilidad**: Convertir schemas entre formatos de proveedores
-
-**Conversiones soportadas**:
-- **Ollama**: Formato OpenAI compatible
-- **OpenAI**: Formato estándar OpenAI Function Calling
-- **Gemini**: Tipos en MAYÚSCULAS (STRING, INTEGER, etc.)
-
-```python
-class SchemaConverter:
-    @staticmethod
-    def to_openai_format(base_schema):
-        # JSON Schema → OpenAI format
-
-    @staticmethod
-    def to_gemini_format(base_schema):
-        # JSON Schema → Gemini format (tipos en MAYÚSCULAS)
-
-    @staticmethod
-    def to_ollama_format(base_schema):
-        # JSON Schema → Ollama format
-```
-
-### 5. ChatAgentService
+### 4. ChatAgentService (con Review Loop)
 
 **Ubicación**: `chat/services.py`
 
-**Responsabilidad**: Integración entre Django y agent_ia_core
+**Responsabilidad**: Orquestar el flujo completo con mejora automática
 
+**Flujo actualizado**:
 ```python
 class ChatAgentService:
-    def __init__(self, user, use_function_calling=None):
-        self.user = user
-        self.provider = user.llm_provider  # 'ollama', 'openai', 'google'
-        self.use_function_calling = use_function_calling
+    def process_message(self, message, conversation_history):
+        # 1. Ejecutar query inicial
+        result = agent.query(message, conversation_history)
+        response_content = result['answer']
 
-    def _create_function_calling_agent(self):
-        # Crear retriever
-        retriever = create_retriever(provider=self.provider)
-
-        # Determinar modelo según proveedor
-        if self.provider == 'ollama':
-            model = user.ollama_model
-        elif self.provider == 'openai':
-            model = 'gpt-4o-mini'
-        elif self.provider == 'google':
-            model = 'gemini-2.0-flash-exp'
-
-        # Crear agente
-        agent = FunctionCallingAgent(
-            llm_provider=self.provider,
-            llm_model=model,
-            llm_api_key=api_key,
-            retriever=retriever
+        # 2. REVIEW LOOP (SIEMPRE ejecutado)
+        reviewer = ResponseReviewer(agent.llm)
+        review_result = reviewer.review_response(
+            user_question=message,
+            conversation_history=conversation_history,
+            initial_response=response_content,
+            metadata=result
         )
-        return agent
 
-    def query(self, question, conversation_history):
-        agent = self._get_agent()
-        return agent.query(question, conversation_history)
+        # 3. Segunda iteración de mejora (SIEMPRE)
+        improvement_prompt = f"""Tu respuesta fue revisada.
+
+        Respuesta original: {response_content}
+
+        Problemas: {review_result['issues']}
+        Sugerencias: {review_result['suggestions']}
+        Feedback: {review_result['feedback']}
+
+        Genera una respuesta MEJORADA con acceso completo a tools."""
+
+        improved_result = agent.query(
+            improvement_prompt,
+            conversation_history + [
+                {'role': 'user', 'content': message},
+                {'role': 'assistant', 'content': response_content}
+            ]
+        )
+
+        # 4. Merge resultados de ambas iteraciones
+        final_response = improved_result['answer']
+        final_documents = result['documents'] + improved_result['documents']
+
+        return final_response, final_documents, review_metadata
 ```
 
-### 6. Retriever (ChromaDB)
+### 5. Retriever (ChromaDB)
 
 **Ubicación**: `agent_ia_core/retriever.py`
 
@@ -257,7 +259,6 @@ class HybridRetriever:
         )
 
     def retrieve(self, query, filters=None, k=None):
-        # Búsqueda por similitud con filtros opcionales
         results = self.vectorstore.similarity_search_with_score(
             query, k=k, filter=filters
         )
@@ -266,82 +267,198 @@ class HybridRetriever:
 
 ---
 
-## 🔄 Flujo de Datos
+## 🛠️ Sistema de Tools
 
-### Flujo Completo: Usuario hace pregunta
+### Categorización Completa (16 Tools)
+
+#### 🏢 Tools de Contexto (2)
+**Descripción**: Información específica del usuario
+
+1. **get_company_info**: Perfil de empresa del usuario
+2. **get_tenders_summary**: Resumen de licitaciones guardadas
+
+**Activación**: Automática si hay usuario autenticado
+
+#### 🔍 Tools de Búsqueda (5)
+**Descripción**: Búsqueda y filtrado de licitaciones
+
+3. **search_tenders**: Búsqueda vectorial semántica (ChromaDB)
+4. **find_by_budget**: Filtrado por rango de presupuesto (SQL)
+5. **find_by_deadline**: Filtrado por fecha límite (SQL)
+6. **find_by_cpv**: Filtrado por sector CPV (ChromaDB)
+7. **find_by_location**: Filtrado geográfico NUTS (ChromaDB)
+
+**Activación**: Siempre disponibles
+
+#### 📄 Tools de Información (2)
+**Descripción**: Detalles completos de licitaciones
+
+8. **get_tender_details**: Información completa desde DB
+9. **get_tender_xml**: XML original completo
+
+**Activación**: Siempre disponibles
+
+#### 📊 Tools de Análisis (2)
+**Descripción**: Estadísticas y comparaciones
+
+10. **get_statistics**: Estadísticas agregadas
+11. **compare_tenders**: Comparación lado a lado (2-5 licitaciones)
+
+**Activación**: Siempre disponibles
+
+#### 🎯 Tools de Calidad (2 - Opcionales)
+**Descripción**: Mejora de resultados
+
+12. **grade_documents**: Filtrado inteligente de documentos irrelevantes
+13. **verify_fields**: Verificación de campos críticos con XML
+
+**Activación**: `use_grading=True`, `use_verification=True` en User model
+
+#### 🌐 Tools de Web (3 - Opcionales)
+**Descripción**: Búsqueda e interacción web
+
+14. **web_search**: Google Custom Search API
+15. **browse_webpage**: Extracción HTML estática (requests + BeautifulSoup)
+16. **browse_interactive**: Navegador con Playwright (JavaScript, clicks, formularios)
+
+**Activación**:
+- `use_web_search=True` + Google API credentials
+- `browse_interactive` requiere Playwright instalado
+
+---
+
+## 🔄 Sistema de Review y Mejora
+
+### Flujo Completo del Review Loop
+
+```
+1. ITERACIÓN INICIAL
+   Usuario: "Dame las mejores licitaciones de software"
+   ↓
+   Agent ejecuta tools → Genera respuesta inicial
+   ↓
+
+2. REVIEW (SIEMPRE ejecutado)
+   ResponseReviewer analiza:
+   - Formato: ¿Usa ## para cada licitación?
+   - Contenido: ¿Incluye presupuestos, plazos?
+   - Análisis: ¿Justifica por qué son las "mejores"?
+   ↓
+   Resultado: {
+     status: "NEEDS_IMPROVEMENT" / "APPROVED",
+     score: 75,
+     issues: ["Falta justificación de por qué son mejores"],
+     suggestions: ["Agregar análisis de fit con perfil usuario"],
+     feedback: "Explica por qué cada licitación es adecuada"
+   }
+   ↓
+
+3. SEGUNDA ITERACIÓN (SIEMPRE ejecutada)
+   Prompt mejorado:
+   "Tu respuesta inicial: [...]
+    Problemas: [...]
+    Sugerencias: [...]
+
+    Genera respuesta MEJORADA con acceso a tools"
+   ↓
+   Agent ejecuta tools nuevamente si necesita → Genera respuesta mejorada
+   ↓
+
+4. MERGE Y RETORNO
+   - Response final: respuesta mejorada
+   - Documents: docs iteración 1 + docs iteración 2
+   - Tools used: union de ambas iteraciones
+   - Metadata: incluye info de review
+```
+
+### Metadata de Review
+
+```python
+{
+    'review': {
+        'review_performed': True,
+        'review_status': 'NEEDS_IMPROVEMENT',
+        'review_score': 75,
+        'review_issues': ['Falta X', 'Falta Y'],
+        'review_suggestions': ['Agregar Z'],
+        'improvement_applied': True
+    }
+}
+```
+
+---
+
+## 🔄 Flujo de Datos Completo
+
+### Usuario hace pregunta: "Busca licitaciones de IT > 50k con review"
 
 ```
 1. FRONTEND
-   Usuario escribe: "Busca licitaciones de IT con presupuesto > 50k"
-   → JavaScript envía AJAX POST a /chat/<session_id>/message/
+   JavaScript → POST /chat/<session_id>/message/
 
 2. DJANGO VIEWS
-   ChatMessageCreateView recibe request
-   → Guarda mensaje del usuario en DB
-   → Llama a ChatAgentService.query()
+   ChatMessageCreateView
+   → Guarda mensaje usuario
+   → Llama ChatAgentService.process_message()
 
-3. CHATAGENTSERVICE
-   → Lee proveedor del usuario (ollama/openai/google)
-   → Crea o reutiliza FunctionCallingAgent
-   → Convierte historial a formato estándar
-   → Llama a agent.query(question, history)
+3. CHATAGENTSERVICE - ITERACIÓN 1
+   → Crea FunctionCallingAgent
+   → Ejecuta agent.query()
 
-4. FUNCTIONCALLINGAGENT
-   ITERACIÓN 1:
-   → Prepara mensajes para LLM
-   → Obtiene tools en formato del proveedor (via ToolRegistry)
-   → Llama a _call_ollama_with_tools() / _call_openai_with_tools() / etc.
+4. FUNCTIONCALLINGAGENT - ITERACIÓN 1
+   Paso 1: LLM decide tools
+   → "Voy a usar find_by_cpv('IT') y find_by_budget(min=50000)"
 
-   LLM RESPONDE:
-   → "Voy a usar find_by_cpv('IT') y find_by_budget(min_budget=50000)"
+   Paso 2: ToolRegistry ejecuta
+   → find_by_cpv → 10 licitaciones IT
+   → find_by_budget → 8 licitaciones >50k
 
-   → ToolRegistry.execute_tool_calls([
-       {function: {name: 'find_by_cpv', arguments: {cpv_code: '72'}}},
-       {function: {name: 'find_by_budget', arguments: {min_budget: 50000}}}
-     ])
+   Paso 3: LLM genera respuesta inicial
+   → "Encontré 3 licitaciones que cumplen ambos criterios..."
 
-5. TOOLREGISTRY
-   → Obtiene tools: find_by_cpv, find_by_budget
-   → Ejecuta ambas en paralelo
+   Retorna: {answer, documents, tools_used, iterations}
 
-   find_by_cpv:
-   → Usa HybridRetriever (ChromaDB)
-   → Filtra por CPV = 72
-   → Retorna 10 licitaciones
+5. CHATAGENTSERVICE - REVIEW
+   → Crea ResponseReviewer(llm)
+   → reviewer.review_response()
 
-   find_by_budget:
-   → Usa Django ORM: Tender.objects.filter(budget_amount__gte=50000)
-   → Retorna 8 licitaciones
+6. RESPONSEREVIEWER
+   → Llama LLM con prompt de revisión
+   → Analiza formato, contenido, análisis
+   → Retorna: {status, score, issues, suggestions, feedback}
 
-   → Retorna resultados a FunctionCallingAgent
+7. CHATAGENTSERVICE - ITERACIÓN 2 (SIEMPRE)
+   → Construye improvement_prompt
+   → Ejecuta agent.query(improvement_prompt)
 
-6. FUNCTIONCALLINGAGENT
-   ITERACIÓN 2:
-   → Añade resultados al historial
-   → Vuelve a llamar al LLM con los datos
+8. FUNCTIONCALLINGAGENT - ITERACIÓN 2
+   Paso 1: LLM lee feedback
+   → "Necesito agregar análisis de por qué son las mejores"
+   → "Voy a usar get_company_info() para contexto"
 
-   LLM GENERA RESPUESTA FINAL:
-   → "Encontré 3 licitaciones de IT con presupuesto mayor a 50,000 EUR:
-      1. Desarrollo ERP - 150,000 EUR
-      2. Migración cloud - 85,000 EUR
-      3. Consultoría IT - 65,000 EUR"
+   Paso 2: Ejecuta get_company_info
+   → Perfil de empresa del usuario
 
-   → No hay tool_calls, es respuesta final
-   → Retorna respuesta a ChatAgentService
+   Paso 3: LLM genera respuesta mejorada
+   → "Basándome en tu perfil de empresa...
+      estas son las mejores porque:
+      1. Licitación X - match 95% con tu experiencia..."
 
-7. CHATAGENTSERVICE
-   → Recibe respuesta
-   → Extrae documentos usados
-   → Retorna a Django Views
+   Retorna: {answer mejorado, documents nuevos, tools_used}
 
-8. DJANGO VIEWS
-   → Guarda respuesta del asistente en DB
-   → Retorna JSON a frontend
+9. CHATAGENTSERVICE - MERGE
+   → Response final = respuesta mejorada
+   → Documents = docs iter1 + docs iter2
+   → Tools used = union
+   → Metadata incluye review tracking
 
-9. FRONTEND
-   → JavaScript recibe JSON
-   → Renderiza mensaje del asistente
-   → Muestra metadata (tools usadas, iteraciones)
+10. DJANGO VIEWS
+    → Guarda ChatMessage con respuesta final
+    → Retorna JSON al frontend
+
+11. FRONTEND
+    → Renderiza respuesta mejorada
+    → Muestra metadata (review score, tools usadas)
 ```
 
 ---
@@ -359,42 +476,36 @@ response = ollama.chat(
     messages=messages,
     tools=tool_registry.get_ollama_tools()
 )
-
-tool_calls = response['message'].get('tool_calls', [])
 ```
 
 **Ventajas**:
 - 🆓 Gratis
 - 🔒 100% local (privacidad)
-- ⚡ Rápido (sin latencia de red)
+- ⚡ Sin latencia de red
 
 **Desventajas**:
 - 💻 Requiere recursos (16GB+ RAM)
-- 🎯 Calidad depende del modelo local
+- 🎯 Calidad depende del modelo
 
 ### OpenAI (Cloud)
 
 **Comunicación**:
 ```python
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage
 
 llm = ChatOpenAI(model='gpt-4o-mini', api_key=api_key)
 llm_with_tools = llm.bind_tools(tool_registry.get_openai_tools())
 response = llm_with_tools.invoke(messages)
-
-tool_calls = response.tool_calls
 ```
 
 **Ventajas**:
 - 🎯 Alta calidad
 - ⚡ Rápido
-- 📊 Mejores resultados en consultas complejas
+- 📊 Excelente en consultas complejas
 
 **Desventajas**:
 - 💰 Costo por token
-- ☁️ Datos en cloud (privacidad)
-- 🌐 Requiere internet
+- ☁️ Datos en cloud
 
 ### Google Gemini (Cloud)
 
@@ -405,8 +516,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 llm = ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp', api_key=api_key)
 llm_with_tools = llm.bind_tools(tool_registry.get_gemini_tools())
 response = llm_with_tools.invoke(messages)
-
-tool_calls = response.tool_calls
 ```
 
 **Ventajas**:
@@ -415,49 +524,8 @@ tool_calls = response.tool_calls
 - 🎯 Buena calidad
 
 **Desventajas**:
-- 💰 Costo por token (menor que OpenAI)
+- 💰 Costo por token
 - ☁️ Datos en cloud
-- 🌐 Requiere internet
-
----
-
-## 🛠️ Sistema de Tools
-
-### Categorías
-
-#### 🔍 Búsqueda (5 tools)
-
-**Usan ChromaDB** (vectorial):
-- `search_tenders`: Búsqueda semántica general
-- `find_by_cpv`: Filtrado por sector (CPV codes)
-- `find_by_location`: Filtrado geográfico (NUTS codes)
-
-**Usan Django ORM** (SQL):
-- `find_by_budget`: Filtrado por presupuesto
-- `find_by_deadline`: Filtrado por fecha límite
-
-#### 📄 Información (2 tools)
-
-**Usan Django ORM**:
-- `get_tender_details`: Detalles completos de una licitación
-- `get_tender_xml`: Obtener XML completo del filesystem
-
-#### 📊 Análisis (2 tools)
-
-**Usan Django ORM + Aggregates**:
-- `get_statistics`: Estadísticas agregadas (Count, Avg, Sum, Min, Max)
-- `compare_tenders`: Comparación lado a lado de 2-5 licitaciones
-
-### Decisión del LLM
-
-El LLM decide automáticamente qué tools usar según la query:
-
-| Query | Tools Usadas | Razón |
-|-------|-------------|-------|
-| "Busca licitaciones de IT" | `search_tenders` + `find_by_cpv` | Búsqueda semántica + filtro por sector |
-| "Licitaciones > 50k euros" | `find_by_budget` | Filtro directo por presupuesto |
-| "Estadísticas generales" | `get_statistics` | Análisis agregado |
-| "Compara X e Y" | `get_tender_details` (x2) + `compare_tenders` | Obtiene detalles y compara |
 
 ---
 
@@ -468,11 +536,28 @@ El LLM decide automáticamente qué tools usar según la query:
 #### User (authentication/models.py)
 ```python
 class User(AbstractUser):
+    # Basic
     email = EmailField(unique=True)
+
+    # LLM Config
     llm_provider = CharField(max_length=50)  # 'ollama', 'openai', 'google'
     llm_api_key = TextField(blank=True)
     ollama_model = CharField(max_length=100)
-    use_function_calling = BooleanField(default=False)
+    openai_model = CharField(max_length=100)  # Nuevo campo
+
+    # Features
+    use_function_calling = BooleanField(default=True)
+    use_grading = BooleanField(default=False)
+    use_verification = BooleanField(default=False)
+    use_web_search = BooleanField(default=False)
+
+    # Google Custom Search (para web_search)
+    google_search_api_key = TextField(blank=True)
+    google_search_engine_id = CharField(max_length=100, blank=True)
+
+    # Browse settings
+    browse_max_chars = IntegerField(default=10000)
+    browse_chunk_size = IntegerField(default=1250)
 ```
 
 #### Tender (tenders/models.py)
@@ -487,18 +572,7 @@ class Tender(Model):
     tender_deadline_date = DateField(null=True)
     cpv_codes = JSONField(default=list)
     nuts_regions = JSONField(default=list)
-    source_path = CharField(max_length=500, blank=True)  # Path al XML
-    # ... más campos
-```
-
-#### ChatSession (chat/models.py)
-```python
-class ChatSession(Model):
-    user = ForeignKey(User, on_delete=CASCADE)
-    title = CharField(max_length=200)
-    created_at = DateTimeField(auto_now_add=True)
-    updated_at = DateTimeField(auto_now=True)
-    is_archived = BooleanField(default=False)
+    source_path = CharField(max_length=500, blank=True)
 ```
 
 #### ChatMessage (chat/models.py)
@@ -508,82 +582,65 @@ class ChatMessage(Model):
     role = CharField(max_length=20)  # 'user', 'assistant'
     content = TextField()
     timestamp = DateTimeField(auto_now_add=True)
-    metadata = JSONField(default=dict, blank=True)  # tools_used, iterations, etc.
+    metadata = JSONField(default=dict)  # Incluye review tracking
 ```
 
 ### ChromaDB
 
 **Colección**: `eforms_chunks`
-**Documentos**: 235+ chunks de 37 licitaciones
+**Documentos**: 235+ chunks
 
 **Metadata por documento**:
 ```python
 {
-    'ojs_notice_id': '123456-2024',
-    'section': 'object_description',  # o 'cpv_codes', 'nuts_regions', etc.
+    'ojs_notice_id': '00668461-2025',
+    'section': 'object_description',
     'title': 'Desarrollo de software',
     'buyer_name': 'Ministerio',
     'cpv_codes': ['72000000'],
     'nuts_regions': ['ES300'],
-    'budget_amount': 150000.0,
-    'tender_deadline_date': '2024-03-20'
+    'budget_amount': 961200.0,
+    'budget_eur': '961200.0',  # String para filtros
+    'tender_deadline_date': '2025-09-15'
 }
 ```
-
-**Filtros soportados**:
-- `cpv_codes`: Lista de códigos CPV
-- `nuts_regions`: Lista de códigos NUTS
-- `budget_amount`: Rango de presupuesto
-- `tender_deadline_date`: Rango de fechas
 
 ---
 
 ## 📊 Métricas de Rendimiento
 
-### Latencia Promedio
+### Latencia con Review Loop
 
-| Operación | Ollama (local) | OpenAI (API) | Gemini (API) |
-|-----------|----------------|--------------|--------------|
-| **Tool simple** (search) | 150-300ms | 200-500ms | 150-400ms |
-| **Tool compleja** (compare) | 300-600ms | 400-800ms | 300-700ms |
-| **Iteración completa** | 500-1000ms | 800-1500ms | 600-1200ms |
-| **Query multi-tool** | 1-2s | 1.5-3s | 1-2.5s |
+| Operación | Ollama | OpenAI | Gemini |
+|-----------|--------|--------|--------|
+| **Iteración 1** | 500-1000ms | 800-1500ms | 600-1200ms |
+| **Review** | 200-400ms | 300-600ms | 200-500ms |
+| **Iteración 2** | 500-1000ms | 800-1500ms | 600-1200ms |
+| **Total** | 1.2-2.4s | 1.9-3.6s | 1.4-2.9s |
 
 ### Consumo de Recursos
 
 | Proveedor | RAM | CPU | Disco | Red |
 |-----------|-----|-----|-------|-----|
-| **Ollama** | 8-16GB | Alto | 5-10GB (modelo) | No |
+| **Ollama** | 8-16GB | Alto | 5-10GB | No |
 | **OpenAI** | < 500MB | Bajo | Mínimo | Sí |
 | **Gemini** | < 500MB | Bajo | Mínimo | Sí |
 
 ---
 
-## 🔐 Seguridad
-
-### API Keys
-- Almacenadas por usuario en DB (encriptadas en producción)
-- No compartidas entre usuarios
-- Validadas antes de cada llamada
-
-### Datos
-- Ollama: 100% local, nada sale de la máquina
-- OpenAI/Gemini: Solo query y contexto necesario, no datos sensibles
-
-### Rate Limiting
-- Por usuario (no implementado aún, roadmap)
-- Por proveedor (límites de API)
-
----
-
 ## 🔗 Referencias
 
-- **Código fuente**: `agent_ia_core/`
+- **Código fuente**: `agent_ia_core/`, `chat/`
 - **Tools**: [TOOLS_REFERENCE.md](TOOLS_REFERENCE.md)
+- **Flujo completo**: [FLUJO_EJECUCION_CHAT.md](FLUJO_EJECUCION_CHAT.md)
 - **Configuración**: [CONFIGURACION_AGENTE.md](CONFIGURACION_AGENTE.md)
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
 ---
+
+**Versión**: 3.7.0
+**Última actualización**: 2025-01-19
+**Features destacadas**: Review Loop automático, Playwright Interactive Browser, 16 tools
 
 **🤖 Generated with [Claude Code](https://claude.com/claude-code)**
 
