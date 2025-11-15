@@ -1,776 +1,425 @@
-# 🔄 Flujo Completo de Ejecución del Chat - TenderAI
+# 🔄 Flujo de Ejecución del Chat - TenderAI v3.7
 
-**Documento técnico:** Explica paso a paso TODO lo que sucede cuando el usuario envía un mensaje en el chat, incluyendo qué se envía al LLM en cada momento.
+**Sistema Function Calling con Review Loop Automático**
 
 ---
 
 ## 📋 Índice
 
 1. [Visión General](#visión-general)
-2. [Flujo Paso a Paso](#flujo-paso-a-paso)
-3. [Mensajes Enviados al LLM](#mensajes-enviados-al-llm)
+2. [Flujo Completo Paso a Paso](#flujo-completo-paso-a-paso)
+3. [Review Loop en Detalle](#review-loop-en-detalle)
 4. [Ejemplos Reales](#ejemplos-reales)
-5. [Diagrama de Flujo](#diagrama-de-flujo)
 
 ---
 
 ## Visión General
 
 ```
-Usuario escribe mensaje → Django View → Chat Service → Agent Graph → LLM (1-3 veces) → Respuesta
-                                                           ↓
-                                                      ChromaDB (si necesita docs)
+Usuario → Django → ChatAgentService → Agent (Iter 1) → ResponseReviewer → Agent (Iter 2) → Respuesta Final
+                                            ↓                                    ↓
+                                      Tools (16)                            Tools (16)
 ```
 
-**Llamadas al LLM:**
-- **Mínimo:** 1 llamada (mensaje directo sin documentos)
-- **Normal:** 2 llamadas (routing + respuesta)
-- **Con grading:** 2-8 llamadas (routing + grading por documento + respuesta)
+**Novedades v3.7:**
+- ✅ Review Loop SIEMPRE ejecutado
+- ✅ Segunda iteración automática con feedback
+- ✅ Merge de resultados de ambas iteraciones
+- ✅ Metadata de review tracking
+
+**Llamadas mínimas:**
+- 2 iteraciones de agent (inicial + mejorada)
+- 1 llamada de review
+- Total: 3+ llamadas LLM por mensaje
 
 ---
 
-## Flujo Paso a Paso
+## Flujo Completo Paso a Paso
 
 ### 🎯 PASO 1: Usuario Envía Mensaje
 
 **Archivo:** `chat/views.py` → `ChatMessageCreateView.post()`
 
-**Líneas:** 61-86
-
 ```python
-# Usuario escribe: "cual es la licitacion con mas dinero"
 user_message_content = request.POST.get('message', '').strip()
 
-# Se crea el mensaje en BD
+# Crear mensaje en BD
 user_message = ChatMessage.objects.create(
     session=session,
     role='user',
-    content=user_message_content  # "cual es la licitacion con mas dinero"
+    content=user_message_content
 )
 ```
 
-**Logs en consola:**
+**Logs:**
 ```
-======================================================================
-[CHAT REQUEST] Usuario: pepe2012 (OLLAMA)
-[CHAT REQUEST] Sesión ID: 42 | Título: Consulta licitaciones
-[CHAT REQUEST] Mensaje: cual es la licitacion con mas dinero
-======================================================================
+[CHAT REQUEST] Usuario: usuario@ejemplo.com (OPENAI)
+[CHAT REQUEST] Sesión ID: 42
+[CHAT REQUEST] Mensaje: Dame las mejores licitaciones de software
 ```
 
 ---
 
-### 🎯 PASO 2: Preparar Historial Conversacional
+### 🎯 PASO 2: Preparar Historial
 
-**Archivo:** `chat/views.py` → líneas 98-120
+**Archivo:** `chat/views.py`
 
 ```python
-# Obtener mensajes anteriores de la sesión
+# Obtener mensajes anteriores
 previous_messages = session.messages.filter(
     created_at__lt=user_message.created_at
 ).order_by('created_at')
 
-# Convertir a formato para el agente
-conversation_history = []
-for msg in previous_messages:
-    conversation_history.append({
-        'role': msg.role,  # 'user' o 'assistant'
-        'content': msg.content
-    })
-```
-
-**Ejemplo de historial:**
-```python
-[
-    {'role': 'user', 'content': 'hola'},
-    {'role': 'assistant', 'content': '¡Hola! ¿En qué puedo ayudarte?'},
-    {'role': 'user', 'content': 'busca licitaciones de software'},
-    {'role': 'assistant', 'content': 'He encontrado 6 licitaciones...'}
+# Convertir a formato estándar
+conversation_history = [
+    {'role': msg.role, 'content': msg.content}
+    for msg in previous_messages
 ]
 ```
 
 ---
 
-### 🎯 PASO 3: Crear ChatAgentService
-
-**Archivo:** `chat/services.py` → `ChatAgentService.__init__()`
-
-**Líneas:** 28-75
-
-```python
-chat_service = ChatAgentService(request.user)
-
-# Lee configuración del usuario
-self.provider = user.llm_provider  # "ollama"
-self.model = user.ollama_model  # "qwen2.5:7b"
-self.embedding_model = user.ollama_embedding_model  # "nomic-embed-text"
-self.api_key = user.llm_api_key  # None para Ollama
-```
-
-**Logs en consola:**
-```
-[SERVICE] Inicializando process_message...
-[SERVICE] Proveedor: OLLAMA
-[SERVICE] Modelo LLM: qwen2.5:7b
-[SERVICE] Modelo Embeddings: nomic-embed-text:latest
-```
-
----
-
-### 🎯 PASO 4: Crear Agente RAG
-
-**Archivo:** `chat/services.py` → `_get_agent()`
-
-**Líneas:** 82-160
-
-```python
-# Se crea el agente con:
-agent = RAGAgent(
-    llm_provider=self.provider,  # "ollama"
-    llm_model=self.model,  # "qwen2.5:7b"
-    vectorstore=vectorstore,  # Conexión a ChromaDB
-    use_grading=self.user.use_grading,  # True/False
-    use_verification=self.user.use_verification  # True/False
-)
-```
-
-**Componentes inicializados:**
-
-1. **LLM (Ollama):**
-```python
-from langchain_ollama import ChatOllama
-
-llm = ChatOllama(
-    model="qwen2.5:7b",
-    temperature=0.3,  # Desde .env
-    num_ctx=2048,  # Contexto de tokens desde .env
-    base_url="http://localhost:11434"
-)
-```
-
-2. **Retriever (ChromaDB):**
-```python
-retriever = vectorstore.as_retriever(
-    search_kwargs={'k': 6}  # Recuperar 6 documentos
-)
-```
-
-**Logs en consola:**
-```
-[SERVICE] Creando agente RAG...
-INFO:agent_ia_core.agent_graph:Inicializando LLM: ollama - qwen2.5:7b
-INFO:agent_ia_core.agent_graph:Inicializando Ollama local con modelo: qwen2.5:7b
-INFO:index_build:Cargando índice existente desde data/index/chroma
-INFO:index_build:✓ Índice cargado: 235 documentos
-[SERVICE] ✓ Agente creado correctamente
-```
-
----
-
-### 🎯 PASO 5: Ejecutar Query en el Agente
+### 🎯 PASO 3: ChatAgentService - ITERACIÓN INICIAL
 
 **Archivo:** `chat/services.py` → `process_message()`
 
-**Líneas:** 252-284
-
 ```python
-# Pasar mensaje PURO (sin historial concatenado) + historial separado
-result = agent.query(
-    question=enriched_message,  # "cual es la licitacion con mas dinero"
-    conversation_history=formatted_history  # [{role, content}, ...]
+# Crear agente
+agent = FunctionCallingAgent(
+    llm_provider=user.llm_provider,
+    llm_model=user.openai_model,
+    llm_api_key=user.llm_api_key,
+    retriever=retriever,
+    db_session=None,
+    user=user
 )
+
+# ITERACIÓN 1: Ejecutar query inicial
+result = agent.query(message, conversation_history)
+response_content = result['answer']
 ```
 
-**El agente recibe:**
-```python
-{
-    "question": "cual es la licitacion con mas dinero",
-    "conversation_history": [
-        {'role': 'user', 'content': 'hola'},
-        {'role': 'assistant', 'content': '¡Hola! ¿En qué puedo ayudarte?'}
-    ]
-}
-```
-
-**Logs en consola:**
+**Logs:**
 ```
 [SERVICE] Ejecutando query en el agente...
-[SERVICE] Mensaje puro (para routing): cual es la licitacion con mas dinero...
-[SERVICE] Historial: 2 mensajes
+[SERVICE] Mensaje: Dame las mejores licitaciones de software
 ```
 
 ---
 
-### 🎯 PASO 6: Iniciar Graph State
+### 🎯 PASO 4: FunctionCallingAgent - ITERACIÓN 1
 
-**Archivo:** `agent_ia_core/agent_graph.py` → `query()`
+**Archivo:** `agent_ia_core/agent_function_calling.py`
 
-**Líneas:** 529-558
-
+**Loop de Function Calling:**
 ```python
-initial_state = {
-    "question": "cual es la licitacion con mas dinero",  # Solo pregunta actual
-    "messages": [],  # Vacío por ahora
-    "documents": [],  # Se llenará si busca docs
-    "relevant_documents": [],  # Docs después de grading
-    "answer": "",  # Se llenará al final
-    "route": "",  # "vectorstore" o "general"
-    "verified_fields": [],  # Para verificación XML
-    "iteration": 0,
-    "conversation_history": [  # Historial separado
-        {'role': 'user', 'content': 'hola'},
-        {'role': 'assistant', 'content': '¡Hola! ¿En qué puedo ayudarte?'}
-    ]
-}
+for iteration in range(1, max_iterations + 1):  # max 15
+    # 1. LLM decide tools
+    response = self._call_llm_with_tools(messages)
+    tool_calls = response.get('tool_calls', [])
+
+    if not tool_calls:
+        # Respuesta final
+        break
+
+    # 2. Ejecutar tools
+    results = self.tool_registry.execute_tool_calls(tool_calls)
+
+    # 3. Añadir resultados a mensajes
+    # 4. Continuar loop
 ```
 
-**Logs en consola:**
+**Ejemplo ejecución:**
 ```
-INFO:agent_ia_core.agent_graph:
-============================================================
-INFO:agent_ia_core.agent_graph:CONSULTA: cual es la licitacion con mas dinero
-INFO:agent_ia_core.agent_graph:HISTORIAL: 2 mensajes previos
-INFO:agent_ia_core.agent_graph:
-============================================================
-```
+Iteración 1:
+  LLM decide: search_tenders(query="software", limit=10)
+  Tool ejecuta: 10 licitaciones encontradas
 
----
+Iteración 2:
+  LLM decide: get_company_info()
+  Tool ejecuta: Perfil de empresa obtenido
 
-## 🤖 LLAMADAS AL LLM
-
-### 📞 LLAMADA #1: ROUTING (Clasificación)
-
-**Archivo:** `agent_ia_core/agent_graph.py` → `_route_node()`
-
-**Líneas:** 262-320
-
-**Propósito:** Decidir si necesita buscar documentos o es conversación general.
-
-#### Prompt enviado al LLM:
-
-**SYSTEM MESSAGE:**
-```
-Eres un clasificador de consultas para un sistema de licitaciones públicas.
-
-Tu trabajo es decidir si el usuario necesita buscar en la base de datos de licitaciones.
-
-**IMPORTANTE: Analiza el CONTEXTO COMPLETO de la conversación, no solo el mensaje aislado.**
-
-Categorías:
-1) "vectorstore" - El usuario pregunta por licitaciones/ofertas/contratos ESPECÍFICOS que están en la base de datos
-   Ejemplos:
-   - "cual es la mejor licitación en software"
-   - "busca ofertas para desarrollo web"
-   - "muéstrame contratos disponibles"
-   - "qué licitaciones hay en construcción"
-   - "propuestas interesantes para mi empresa"
-
-   **CLAVE:** Si la conversación ya está hablando de licitaciones específicas, preguntas como
-   "cuánto dinero podría ganar", "cuál es el presupuesto", "cuándo es el plazo" también necesitan vectorstore.
-
-2) "general" - Conversación general, saludos, o preguntas conceptuales que NO requieren buscar en documentos
-   Ejemplos:
-   - "hola, qué tal"
-   - "qué es una licitación pública" (concepto general)
-   - "cómo funciona el proceso de licitación" (explicación)
-   - "gracias por la ayuda"
-
-REGLAS CRÍTICAS:
-- Si el usuario pregunta por licitaciones/ofertas/contratos CONCRETOS que podrían estar en la base de datos → vectorstore
-- Si la conversación YA ESTÁ hablando de licitaciones específicas y el usuario hace preguntas de seguimiento → vectorstore
-- Si es pregunta conceptual, saludo, o explicación sin contexto de licitaciones específicas → general
-
-Responde SOLO con la categoría: "vectorstore" o "general" (sin explicaciones).
-```
-
-**HUMAN MESSAGE:**
-```
-Contexto de la conversación:
-Usuario: hola...
-Asistente: ¡Hola! ¿En qué puedo ayudarte?...
-
----
-
-Mensaje actual del usuario:
-"cual es la licitacion con mas dinero"
-
-Considerando el CONTEXTO COMPLETO de la conversación, ¿necesita buscar en la base de datos de licitaciones?
-Categoría (vectorstore o general):
-```
-
-#### Respuesta del LLM:
-```
-vectorstore
-```
-
-**HTTP Request a Ollama:**
-```http
-POST http://localhost:11434/api/chat
-{
-  "model": "qwen2.5:7b",
-  "messages": [
-    {"role": "system", "content": "Eres un clasificador de consultas..."},
-    {"role": "user", "content": "Contexto de la conversación:\nUsuario: hola...\n\n---\n\nMensaje actual del usuario:\n\"cual es la licitacion con mas dinero\"\n\nCategoría (vectorstore o general):"}
-  ],
-  "temperature": 0.3,
-  "stream": false
-}
-```
-
-**Logs en consola:**
-```
-[ROUTE] Clasificando mensaje CON contexto: cual es la licitacion con mas dinero
-[ROUTE] Historial disponible: 2 mensajes
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
-[ROUTE] LLM clasificó como DOCUMENTOS (respuesta: vectorstore)
-[ROUTE] Ruta final decidida: vectorstore
-```
-
-**Resultado:** `state["route"] = "vectorstore"`
-
----
-
-### 📞 LLAMADA #2: RETRIEVE (Búsqueda de Documentos)
-
-**Archivo:** `agent_ia_core/agent_graph.py` → `_retrieve_node()`
-
-**Líneas:** 322-365
-
-**Propósito:** Buscar documentos relevantes en ChromaDB.
-
-#### Proceso:
-
-1. **Generar embedding del mensaje:**
-```python
-# Se convierte el mensaje a vector con Ollama embeddings
-query_embedding = embeddings.embed_query("cual es la licitacion con mas dinero")
-# Resultado: [0.123, -0.456, 0.789, ...] (vector de 768 dimensiones)
-```
-
-**HTTP Request a Ollama:**
-```http
-POST http://localhost:11434/api/embed
-{
-  "model": "nomic-embed-text",
-  "input": "cual es la licitacion con mas dinero"
-}
-```
-
-2. **Buscar en ChromaDB:**
-```python
-# ChromaDB busca los 6 documentos más similares
-results = vectorstore.similarity_search(
-    query="cual es la licitacion con mas dinero",
-    k=6
-)
-```
-
-#### Documentos recuperados (ejemplo):
-
-```python
-[
-    Document(
-        page_content="Presupuesto estimado: 961,200.00 EUR",
-        metadata={
-            'ojs_notice_id': '00668461-2025',
-            'section': 'budget',
-            'buyer_name': 'Fundación Estatal',
-            'cpv_codes': '72267100',
-            'budget_eur': '961200.0',  # ← AHORA DISPONIBLE
-            'publication_date': '2025-09-15'
-        }
-    ),
-    Document(
-        page_content="Presupuesto estimado: 750,000.00 EUR",
-        metadata={
-            'ojs_notice_id': '00677736-2025',
-            'section': 'budget',
-            'buyer_name': 'Autoridad Portuaria',
-            'cpv_codes': '72267100,72212000',
-            'budget_eur': '750000.0',
-            'publication_date': '2025-09-20'
-        }
-    ),
-    # ... 4 documentos más
-]
-```
-
-**Logs en consola:**
-```
-[RETRIEVE] Buscando documentos para: cual es la licitacion con mas dinero
-INFO:retriever:Recuperando documentos: query='cual es la licitacion con mas dinero', k=6, filters={}
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/embed "HTTP/1.1 200 OK"
-INFO:retriever:Recuperados 6 documentos (de 18 candidatos)
-[RETRIEVE] Recuperados 6 documentos
-```
-
-**Resultado:** `state["documents"] = [doc1, doc2, doc3, doc4, doc5, doc6]`
-
----
-
-### 📞 LLAMADAS #3-8: GRADING (Opcional - si use_grading=True)
-
-**Archivo:** `agent_ia_core/agent_graph.py` → `_grade_node()`
-
-**Líneas:** 367-407
-
-**Propósito:** Evaluar si cada documento es realmente relevante.
-
-**Se hace UNA llamada al LLM POR CADA DOCUMENTO (6 llamadas en este caso).**
-
-#### Prompt por documento:
-
-**SYSTEM MESSAGE:**
-```
-Eres un evaluador de relevancia de documentos.
-
-Tu tarea es determinar si un documento recuperado es relevante para responder la pregunta del usuario.
-
-Criterios de relevancia:
-- El documento contiene información directamente relacionada con la pregunta
-- El documento puede ayudar a responder total o parcialmente la pregunta
-- El contenido es específico y no genérico
-
-Si NO es relevante, identifica internamente una razón breve (para logging).
-Responde SOLO con "yes" o "no".
-```
-
-**HUMAN MESSAGE (ejemplo para documento 1):**
-```
-Pregunta: cual es la licitacion con mas dinero
-
-Documento:
-ID: 00668461-2025
-Sección: budget
-Contenido: Presupuesto estimado: 961,200.00 EUR
-
-¿Es este documento relevante para responder la pregunta?
-Responde solo "yes" o "no":
-```
-
-#### Respuesta del LLM:
-```
-yes
-```
-
-**HTTP Requests (6 llamadas):**
-```http
-POST http://localhost:11434/api/chat  # Doc 1 → yes
-POST http://localhost:11434/api/chat  # Doc 2 → yes
-POST http://localhost:11434/api/chat  # Doc 3 → yes
-POST http://localhost:11434/api/chat  # Doc 4 → no
-POST http://localhost:11434/api/chat  # Doc 5 → yes
-POST http://localhost:11434/api/chat  # Doc 6 → yes
-```
-
-**Logs en consola:**
-```
-[GRADE] Evaluando relevancia de 6 documentos
-[GRADE] Doc 1/6: yes - Presupuesto estimado: 961,200.00 EUR
-[GRADE] Doc 2/6: yes - Presupuesto estimado: 750,000.00 EUR
-[GRADE] Doc 3/6: yes - Presupuesto estimado: 500,000.00 EUR
-[GRADE] Doc 4/6: no - Requisitos de elegibilidad según...
-[GRADE] Doc 5/6: yes - Presupuesto estimado: 373,831.76 EUR
-[GRADE] Doc 6/6: yes - Presupuesto estimado: 300,000.00 EUR
-[GRADE] Documentos relevantes: 5/6
-```
-
-**Resultado:** `state["relevant_documents"] = [doc1, doc2, doc3, doc5, doc6]` (5 docs)
-
----
-
-### 📞 LLAMADA #9: ANSWER (Generación de Respuesta)
-
-**Archivo:** `agent_ia_core/agent_graph.py` → `_answer_node()`
-
-**Líneas:** 409-491
-
-**Propósito:** Generar la respuesta final usando documentos + historial.
-
-#### Construcción del prompt:
-
-**Paso 1: Construir contexto con historial**
-```python
-def build_context_with_history(current_question: str) -> str:
-    if not conversation_history:
-        return current_question
-
-    history_text = "Historial de la conversación:\n"
-    for msg in conversation_history:
-        role_label = "Usuario" if msg['role'] == 'user' else "Asistente"
-        history_text += f"{role_label}: {msg['content']}\n"
-
-    return f"{history_text}\n---\n\nPregunta actual del usuario:\n{current_question}"
+Iteración 3:
+  LLM genera respuesta final con ambos datos
+  No tool_calls → FIN
 ```
 
 **Resultado:**
-```
-Historial de la conversación:
-Usuario: hola
-Asistente: ¡Hola! ¿En qué puedo ayudarte?
-
----
-
-Pregunta actual del usuario:
-cual es la licitacion con mas dinero
-```
-
-**Paso 2: Formatear documentos**
-
-Usando `create_answer_prompt()` de `agent_ia_core/prompts.py`:
-
 ```python
-context_text = """
-[Documento 1]
-ID: 00668461-2025
-Sección: budget
-Comprador: Fundación Estatal
-CPV: 72267100
-Presupuesto: 961200.0 EUR
-Publicado: 2025-09-15
-Contenido:
-Presupuesto estimado: 961,200.00 EUR
-
----
-
-[Documento 2]
-ID: 00677736-2025
-Sección: budget
-Comprador: Autoridad Portuaria
-CPV: 72267100,72212000
-Presupuesto: 750000.0 EUR
-Publicado: 2025-09-20
-Contenido:
-Presupuesto estimado: 750,000.00 EUR
-
----
-
-[Documento 3]
-ID: 00670256-2025
-Sección: budget
-Comprador: Ajuntament de València
-CPV: 72267100,48000000
-Presupuesto: 500000.0 EUR
-Publicado: 2025-09-18
-Contenido:
-Presupuesto estimado: 500,000.00 EUR
-
----
-
-[Documento 4]
-ID: 00623257-2025
-Sección: budget
-Comprador: Consejo Insular de Aguas
-CPV: 79341000,79341400
-Presupuesto: 373831.76 EUR
-Publicado: 2025-09-24
-Contenido:
-Presupuesto estimado: 373,831.76 EUR
-
----
-
-[Documento 5]
-ID: 00660806-2025
-Sección: budget
-Comprador: Ayuntamiento de El Sauzal
-CPV: 72000000,48900000
-Presupuesto: 300000.0 EUR
-Publicado: 2025-09-22
-Contenido:
-Presupuesto estimado: 300,000.00 EUR
-"""
-```
-
-#### Prompt completo enviado al LLM:
-
-**SYSTEM MESSAGE:**
-```
-Eres un asistente conversacional natural y útil. Tu especialidad es ayudar con licitaciones públicas, pero puedes hablar de cualquier tema.
-
-**Cómo eres:**
-- Conversas de forma natural, como un humano amigable
-- Respondes de manera clara y directa
-- Te adaptas al tono del usuario (formal/informal)
-- Eres útil y práctico
-
-**Tu conocimiento:**
-- Conoces sobre licitaciones públicas, TED (Tenders Electronic Daily), CPV, plazos, presupuestos
-- Tienes acceso a documentos oficiales cuando hay consultas específicas
-
-**Lo importante:**
-- Cuando tengas documentos, úsalos para dar información precisa
-- Cuando NO tengas documentos, responde natural basándote en tu conocimiento general
-- Si algo no lo sabes o no está en los documentos, dilo honestamente
-- Puedes usar Markdown para formatear (listas, **negritas**, tablas, etc.)
-
-Responde de la forma más natural y útil posible. No te limites a fórmulas rígidas.
-```
-
-**HUMAN MESSAGE:**
-```
-Historial de la conversación:
-Usuario: hola
-Asistente: ¡Hola! ¿En qué puedo ayudarte?
-
----
-
-Pregunta actual del usuario:
-cual es la licitacion con mas dinero
-
----
-
-Tienes acceso a estos documentos de licitaciones:
-
-[Documento 1]
-ID: 00668461-2025
-Sección: budget
-Comprador: Fundación Estatal
-CPV: 72267100
-Presupuesto: 961200.0 EUR
-Publicado: 2025-09-15
-Contenido:
-Presupuesto estimado: 961,200.00 EUR
-
----
-
-[Documento 2]
-ID: 00677736-2025
-Sección: budget
-Comprador: Autoridad Portuaria
-CPV: 72267100,72212000
-Presupuesto: 750000.0 EUR
-Publicado: 2025-09-20
-Contenido:
-Presupuesto estimado: 750,000.00 EUR
-
----
-
-[Documento 3]
-ID: 00670256-2025
-Sección: budget
-Comprador: Ajuntament de València
-CPV: 72267100,48000000
-Presupuesto: 500000.0 EUR
-Publicado: 2025-09-18
-Contenido:
-Presupuesto estimado: 500,000.00 EUR
-
----
-
-[Documento 4]
-ID: 00623257-2025
-Sección: budget
-Comprador: Consejo Insular de Aguas
-CPV: 79341000,79341400
-Presupuesto: 373831.76 EUR
-Publicado: 2025-09-24
-Contenido:
-Presupuesto estimado: 373,831.76 EUR
-
----
-
-[Documento 5]
-ID: 00660806-2025
-Sección: budget
-Comprador: Ayuntamiento de El Sauzal
-CPV: 72000000,48900000
-Presupuesto: 300000.0 EUR
-Publicado: 2025-09-22
-Contenido:
-Presupuesto estimado: 300,000.00 EUR
-
----
-
-El usuario pregunta: cual es la licitacion con mas dinero
-
-Usa la información de los documentos para responder. Sé útil y claro. Si usas datos específicos de los documentos, cita la fuente con [ID | sección].
-
-Respuesta:
-```
-
-#### Respuesta del LLM:
-
-```
-Basándome en los documentos proporcionados, la licitación con el presupuesto más alto es:
-
-**Licitación 00668461-2025** [00668461-2025 | budget]
-- **Comprador:** Fundación Estatal
-- **Presupuesto:** 961,200.00 EUR
-- **CPV:** 72267100
-- **Fecha de publicación:** 2025-09-15
-
-Esta es la licitación más grande en términos de presupuesto entre las disponibles.
-
-Si necesitas más detalles sobre esta licitación o quieres explorar otras opciones, no dudes en preguntar.
-```
-
-**HTTP Request:**
-```http
-POST http://localhost:11434/api/chat
 {
-  "model": "qwen2.5:7b",
-  "messages": [
-    {
-      "role": "system",
-      "content": "Eres un asistente conversacional natural y útil..."
-    },
-    {
-      "role": "user",
-      "content": "Historial de la conversación:\nUsuario: hola\nAsistente: ¡Hola! ¿En qué puedo ayudarte?\n\n---\n\nPregunta actual del usuario:\ncual es la licitacion con mas dinero\n\n---\n\nTienes acceso a estos documentos de licitaciones:\n\n[Documento 1]\nID: 00668461-2025\n..."
-    }
-  ],
-  "temperature": 0.3,
-  "num_ctx": 2048,
-  "stream": false
+    'answer': "He encontrado 10 licitaciones de software...",
+    'documents': [doc1, doc2, ...],
+    'tools_used': ['search_tenders', 'get_company_info'],
+    'iterations': 3
 }
 ```
 
-**Logs en consola:**
-```
-[ANSWER] Generando respuesta
-[ANSWER] Usando historial de 2 mensajes para contexto
-[ANSWER] Respuesta con 5 documentos
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
-[ANSWER] Respuesta generada (285 caracteres)
-```
-
-**Resultado:** `state["answer"] = "Basándome en los documentos proporcionados..."`
-
 ---
 
-### 🎯 PASO 7: Guardar Respuesta en BD
+### 🎯 PASO 5: ResponseReviewer - REVISIÓN ⭐ NUEVO
 
-**Archivo:** `chat/views.py` → líneas 130-160
+**Archivo:** `chat/services.py` → `process_message()`
 
 ```python
-# Crear mensaje del asistente
-assistant_message = ChatMessage.objects.create(
-    session=session,
-    role='assistant',
-    content=response['content'],  # La respuesta del LLM
+# REVIEW LOOP (SIEMPRE ejecutado)
+from chat.response_reviewer import ResponseReviewer
+
+reviewer = ResponseReviewer(agent.llm)
+
+review_result = reviewer.review_response(
+    user_question=message,
+    conversation_history=formatted_history,
+    initial_response=response_content,
     metadata={
-        'route': response['metadata'].get('route'),  # "vectorstore"
-        'num_documents': response['metadata'].get('num_documents'),  # 5
-        'total_tokens': response['metadata'].get('total_tokens'),  # 450
-        'cost_eur': response['metadata'].get('cost_eur')  # 0.0000 (Ollama)
+        'documents_used': result.get('documents', []),
+        'tools_used': result.get('tools_used', []),
+        'route': result.get('route', 'unknown')
     }
 )
 ```
 
-**Logs en consola:**
+**Logs:**
 ```
-[SERVICE] ✓ Query ejecutado correctamente
-[SERVICE] ✓ Respuesta procesada: 285 caracteres
-[SERVICE] Documentos recuperados: 5
-[SERVICE] Tokens totales: 450 (in: 220, out: 230)
-[SERVICE] Costo: €0.0000
+[SERVICE] Iniciando revisión de respuesta...
+[REVIEWER] Llamando al LLM revisor...
+[REVIEWER] Revisión completada: NEEDS_IMPROVEMENT (score: 75/100)
+```
+
+**ResponseReviewer analiza:**
+
+1. **FORMATO (30%):**
+   - ¿Usa Markdown correctamente?
+   - ¿Headers ## para cada licitación?
+   - ¿Estructura clara?
+
+2. **CONTENIDO (40%):**
+   - ¿Responde completamente?
+   - ¿Incluye presupuestos, plazos?
+   - ¿Falta información?
+
+3. **ANÁLISIS (30%):**
+   - ¿Justifica por qué son las "mejores"?
+   - ¿Usa datos objetivos?
+   - ¿Es útil?
+
+**Resultado del review:**
+```python
+{
+    'status': 'NEEDS_IMPROVEMENT',  # o 'APPROVED'
+    'score': 75,
+    'issues': [
+        'Falta justificación de por qué son las mejores',
+        'No incluye análisis de fit con perfil de empresa'
+    ],
+    'suggestions': [
+        'Agregar análisis de match con experiencia del usuario',
+        'Incluir presupuestos y plazos de cada licitación'
+    ],
+    'feedback': 'La respuesta lista las licitaciones pero no explica por qué son las mejores para el usuario. Falta análisis personalizado.'
+}
 ```
 
 ---
 
-### 🎯 PASO 8: Enviar Respuesta al Frontend
+### 🎯 PASO 6: Segunda Iteración - MEJORA ⭐ SIEMPRE
 
-**Archivo:** `chat/views.py` → líneas 180-195
+**Archivo:** `chat/services.py` → `process_message()`
+
+```python
+# SIEMPRE ejecutar segunda iteración
+print("[SERVICE] Ejecutando segunda iteración de mejora (siempre activo)...")
+
+# Construir prompt de mejora
+issues_list = '\n'.join([f"- {issue}" for issue in review_result['issues']])
+suggestions_list = '\n'.join([f"- {sug}" for sug in review_result['suggestions']])
+
+improvement_prompt = f"""Tu respuesta anterior fue revisada. Vamos a mejorarla.
+
+**Tu respuesta original:**
+{response_content}
+
+**Problemas detectados:**
+{issues_list if issues_list else '- Ningún problema grave detectado'}
+
+**Sugerencias:**
+{suggestions_list if suggestions_list else '- Mantener el buen formato actual'}
+
+**Feedback del revisor:**
+{review_result['feedback'] if review_result['feedback'] else 'La respuesta está bien estructurada, pero siempre podemos mejorarla.'}
+
+**Tu tarea:**
+Genera una respuesta MEJORADA que sea aún más completa y útil.
+
+**IMPORTANTE:**
+- Usa herramientas (tools) si necesitas buscar más información
+- Si faltan datos específicos (presupuestos, plazos, etc.), búscalos
+- Si el formato es incorrecto, corrígelo (usa ## para licitaciones múltiples)
+- Si falta análisis, justifica tus recomendaciones con datos concretos
+
+**Pregunta original del usuario:**
+{message}
+
+Genera tu respuesta mejorada:"""
+```
+
+**Ejecutar con historial extendido:**
+```python
+improvement_history = formatted_history + [
+    {'role': 'user', 'content': message},
+    {'role': 'assistant', 'content': response_content}
+]
+
+improved_result = agent.query(
+    improvement_prompt,
+    conversation_history=improvement_history
+)
+```
+
+**Logs:**
+```
+[SERVICE] Ejecutando segunda iteración de mejora (siempre activo)...
+[SERVICE] Ejecutando query de mejora...
+```
+
+**El agente en la 2da iteración:**
+```
+Iteración 1:
+  LLM lee feedback
+  LLM decide: get_tender_details(tender_id="00668461-2025")
+            get_tender_details(tender_id="00677736-2025")
+  Tools ejecutan: Detalles completos de 2 licitaciones
+
+Iteración 2:
+  LLM genera respuesta MEJORADA con:
+    - Análisis personalizado basado en perfil
+    - Presupuestos y plazos específicos
+    - Justificación de por qué cada una es adecuada
+    - Formato correcto con ##
+  No tool_calls → FIN
+```
+
+**Resultado mejorado:**
+```python
+{
+    'answer': """Basándome en tu perfil de empresa de desarrollo de software, te recomiendo:
+
+## Desarrollo de plataforma ERP - ID: 00668461-2025
+
+**Por qué es la más adecuada:**
+- Presupuesto: 961,200 EUR - Ideal para empresas de tu tamaño
+- Tu experiencia en desarrollo coincide con el CPV 72267100
+- Plazo: 45 días restantes, tiempo suficiente para preparar propuesta
+
+**Análisis de fit:**
+- Match 95% con tu perfil
+- Sector: Desarrollo de software (tu especialidad)
+- Presupuesto adecuado para tu capacidad
+
+## Sistema de gestión documental - ID: 00677736-2025
+
+**Por qué es recomendable:**
+- Presupuesto: 750,000 EUR
+- Plazo: 30 días restantes
+- Match 90% con tu experiencia
+
+**Datos clave:**
+- CPV: 72000000 (Software)
+- Ubicación: ES300 (Madrid)
+- Comprador: Autoridad Portuaria
+
+[ID: 00668461-2025 | title]
+[ID: 00677736-2025 | title]""",
+    'documents': [doc1, doc2, doc3, doc4],  # Nuevos docs
+    'tools_used': ['get_tender_details'],  # Nuevas tools
+    'iterations': 2
+}
+```
+
+---
+
+### 🎯 PASO 7: Merge de Resultados
+
+**Archivo:** `chat/services.py`
+
+```python
+# Update response con versión mejorada
+response_content = improved_result.get('answer', response_content)
+
+# Merge documents (evitar duplicados)
+existing_doc_ids = {doc.get('ojs_notice_id') for doc in result.get('documents', [])}
+new_docs = [
+    doc for doc in improved_result.get('documents', [])
+    if doc.get('ojs_notice_id') not in existing_doc_ids
+]
+result['documents'] = result.get('documents', []) + new_docs
+
+# Merge tools used
+result['tools_used'] = list(set(
+    result.get('tools_used', []) + improved_result.get('tools_used', [])
+))
+
+# Update iterations count
+result['iterations'] = result.get('iterations', 0) + improved_result.get('iterations', 0)
+```
+
+**Resultado final combinado:**
+```python
+{
+    'answer': "[respuesta mejorada completa]",
+    'documents': [doc1, doc2, doc3, doc4],  # Iter 1 + Iter 2
+    'tools_used': ['search_tenders', 'get_company_info', 'get_tender_details'],
+    'iterations': 5,  # 3 de iter1 + 2 de iter2
+    'review': {
+        'review_performed': True,
+        'review_status': 'NEEDS_IMPROVEMENT',
+        'review_score': 75,
+        'review_issues': ['...'],
+        'review_suggestions': ['...'],
+        'improvement_applied': True
+    }
+}
+```
+
+---
+
+### 🎯 PASO 8: Guardar en BD
+
+**Archivo:** `chat/views.py`
+
+```python
+assistant_message = ChatMessage.objects.create(
+    session=session,
+    role='assistant',
+    content=response['content'],  # Respuesta mejorada
+    metadata={
+        'route': response['metadata'].get('route'),
+        'num_documents': len(documents_used),
+        'tools_used': response['metadata'].get('tools_used'),
+        'iterations': response['metadata'].get('iterations'),
+        'total_tokens': cost_data['total_tokens'],
+        'cost_eur': cost_data['total_cost_eur'],
+        # Review tracking
+        'review': response['metadata'].get('review')
+    }
+)
+```
+
+**Logs:**
+```
+[SERVICE] ✓ Respuesta mejorada generada: 850 caracteres
+[SERVICE] ✓ Respuesta procesada: 850 caracteres
+[SERVICE] Documentos recuperados: 4
+[SERVICE] Herramientas usadas: search_tenders → get_company_info → get_tender_details
+[SERVICE] Tokens totales: 1250 (in: 600, out: 650)
+[SERVICE] Review - Status: NEEDS_IMPROVEMENT, Score: 75/100
+[SERVICE] Review - Mejora aplicada (2da iteración ejecutada)
+```
+
+---
+
+### 🎯 PASO 9: Respuesta al Frontend
+
+**Archivo:** `chat/views.py`
 
 ```python
 return JsonResponse({
@@ -785,20 +434,29 @@ return JsonResponse({
 })
 ```
 
-**JSON enviado al navegador:**
+**JSON enviado:**
 ```json
 {
   "success": true,
   "message": {
     "id": 1234,
-    "content": "Basándome en los documentos proporcionados, la licitación con el presupuesto más alto es:\n\n**Licitación 00668461-2025**...",
-    "created_at": "2025-01-19T14:30:45.123456",
+    "content": "Basándome en tu perfil de empresa...",
     "role": "assistant",
     "metadata": {
-      "route": "vectorstore",
-      "num_documents": 5,
-      "total_tokens": 450,
-      "cost_eur": 0.0
+      "route": "function_calling",
+      "num_documents": 4,
+      "tools_used": ["search_tenders", "get_company_info", "get_tender_details"],
+      "iterations": 5,
+      "total_tokens": 1250,
+      "cost_eur": 0.0125,
+      "review": {
+        "review_performed": true,
+        "review_status": "NEEDS_IMPROVEMENT",
+        "review_score": 75,
+        "review_issues": ["Falta justificación..."],
+        "review_suggestions": ["Agregar análisis..."],
+        "improvement_applied": true
+      }
     }
   }
 }
@@ -806,278 +464,238 @@ return JsonResponse({
 
 ---
 
-## 📊 Resumen de Llamadas al LLM
+## 🔄 Review Loop en Detalle
 
-Para la query: **"cual es la licitacion con mas dinero"** (con `use_grading=True`)
-
-| # | Tipo | Propósito | Input Tokens | Output Tokens | Modelo |
-|---|------|-----------|--------------|---------------|--------|
-| 1 | Routing | Clasificar query | ~50 | ~5 | qwen2.5:7b |
-| 2 | Embed | Generar vector de búsqueda | ~15 | 768 dim | nomic-embed-text |
-| 3 | Grading | Evaluar doc 1 | ~30 | ~3 | qwen2.5:7b |
-| 4 | Grading | Evaluar doc 2 | ~30 | ~3 | qwen2.5:7b |
-| 5 | Grading | Evaluar doc 3 | ~30 | ~3 | qwen2.5:7b |
-| 6 | Grading | Evaluar doc 4 | ~30 | ~3 | qwen2.5:7b |
-| 7 | Grading | Evaluar doc 5 | ~30 | ~3 | qwen2.5:7b |
-| 8 | Grading | Evaluar doc 6 | ~30 | ~3 | qwen2.5:7b |
-| 9 | Answer | Generar respuesta | ~220 | ~230 | qwen2.5:7b |
-| **TOTAL** | | | **~465** | **~256** | |
-
-**Con `use_grading=False`:** Solo 3 llamadas (routing, embed, answer) = ~285 tokens total
-
----
-
-## 🔄 Diagrama de Flujo Visual
+### Arquitectura del Review
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     USUARIO ENVÍA MENSAJE                        │
-│                "cual es la licitacion con mas dinero"            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
+│                    ITERACIÓN INICIAL                             │
+│  Agent ejecuta tools → Genera respuesta → Retorna resultado     │
+└────────────────────────────┬─────────────────────────────────────┘
+                            ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  PASO 1: Django View (chat/views.py)                            │
-│  - Crear ChatMessage en BD                                       │
-│  - Obtener historial de conversación                            │
-│  - Logs: [CHAT REQUEST] Usuario, Sesión, Mensaje                │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  PASO 2: ChatAgentService (chat/services.py)                    │
-│  - Leer config del usuario (provider, modelo, API key)          │
-│  - Crear agente RAG con LLM + Retriever                         │
-│  - Logs: [SERVICE] Proveedor, Modelo LLM, Modelo Embeddings     │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  PASO 3: Iniciar Agent Graph (agent_ia_core/agent_graph.py)     │
-│  - Crear initial_state con question + conversation_history      │
-│  - Logs: [CONSULTA] Pregunta, [HISTORIAL] X mensajes            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  🤖 LLAMADA LLM #1: ROUTING                                      │
+│                    RESPONSEREVIEWER                              │
 │                                                                  │
 │  Input:                                                          │
-│  - System: "Eres un clasificador de consultas..."               │
-│  - Human: "Contexto:\nUsuario: hola\n...\n---\nMensaje actual:  │
-│            cual es la licitacion con mas dinero"                │
+│  - user_question: "Dame las mejores licitaciones de software"  │
+│  - conversation_history: [...]                                  │
+│  - initial_response: "He encontrado 10 licitaciones..."        │
+│  - metadata: {documents, tools_used, route}                     │
 │                                                                  │
-│  Output: "vectorstore"                                           │
+│  Proceso:                                                        │
+│  1. Construir prompt de revisión con criterios                 │
+│  2. Llamar LLM con prompt                                       │
+│  3. Parsear respuesta (STATUS, SCORE, ISSUES, SUGGESTIONS)     │
+│  4. Retornar análisis estructurado                              │
 │                                                                  │
-│  HTTP: POST localhost:11434/api/chat                             │
-│  Logs: [ROUTE] Clasificó como DOCUMENTOS                        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                   ┌─────────┴─────────┐
-                   │  route=vectorstore │
-                   └─────────┬─────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  🔍 LLAMADA #2: EMBED (Generar vector)                           │
-│                                                                  │
-│  Input: "cual es la licitacion con mas dinero"                  │
-│  Output: [0.123, -0.456, 0.789, ...] (768 dimensiones)          │
-│                                                                  │
-│  HTTP: POST localhost:11434/api/embed                            │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  📚 BUSCAR EN CHROMADB                                           │
-│  - Similarity search con vector                                 │
-│  - Recuperar top 6 documentos                                   │
-│  - Logs: [RETRIEVE] Recuperados 6 documentos                    │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-            ┌────────────────┴────────────────┐
-            │   use_grading=True?             │
-            └────┬─────────────────────┬──────┘
-                 │ YES                 │ NO
-                 ▼                     │
-┌────────────────────────────┐         │
-│  🤖 LLAMADAS #3-8: GRADING │         │
-│                            │         │
-│  Por cada documento (6):   │         │
-│  - System: "Evaluador..."  │         │
-│  - Human: "Pregunta: ...   │         │
-│           Documento: ...   │         │
-│           ¿Relevante?"     │         │
-│  - Output: "yes" o "no"    │         │
-│                            │         │
-│  HTTP: 6x POST /api/chat   │         │
-│  Logs: [GRADE] 5/6 docs OK │         │
-└────────────┬───────────────┘         │
-             │                         │
-             └─────────┬───────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  🤖 LLAMADA #9: ANSWER (Generar respuesta)                       │
-│                                                                  │
-│  Input:                                                          │
-│  - System: "Eres un asistente conversacional natural..."        │
-│  - Human: "Historial:\nUsuario: hola\nAsistente: ...\n---\n     │
-│            Pregunta actual: cual es...\n---\n                   │
-│            Documentos:\n[Documento 1]\nID: 00668461-2025\n      │
-│            Presupuesto: 961200.0 EUR\n...\n[Documento 2]..."    │
-│                                                                  │
-│  Output: "Basándome en los documentos proporcionados, la        │
-│           licitación con el presupuesto más alto es:\n          │
-│           **Licitación 00668461-2025**..."                      │
-│                                                                  │
-│  HTTP: POST localhost:11434/api/chat                             │
-│  Logs: [ANSWER] Respuesta generada (285 caracteres)             │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  PASO 4: Guardar en BD (chat/views.py)                          │
-│  - Crear ChatMessage con role='assistant'                       │
-│  - Guardar metadata (route, num_documents, tokens, cost)        │
-│  - Logs: [SERVICE] ✓ Respuesta procesada                        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  PASO 5: Enviar JSON al Frontend                                │
+│  Output:                                                         │
 │  {                                                               │
-│    "success": true,                                              │
-│    "message": {                                                  │
-│      "id": 1234,                                                 │
-│      "content": "Basándome en los documentos...",               │
-│      "role": "assistant",                                        │
-│      "metadata": {                                               │
-│        "route": "vectorstore",                                   │
-│        "num_documents": 5,                                       │
-│        "total_tokens": 450                                       │
-│      }                                                            │
-│    }                                                              │
+│    status: 'NEEDS_IMPROVEMENT',                                 │
+│    score: 75,                                                    │
+│    issues: [...],                                                │
+│    suggestions: [...],                                           │
+│    feedback: "..."                                               │
 │  }                                                               │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
+└────────────────────────────┬─────────────────────────────────────┘
+                            ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                     USUARIO VE RESPUESTA                         │
-│  "Basándome en los documentos proporcionados, la licitación con │
-│   el presupuesto más alto es: **Licitación 00668461-2025**..."  │
+│               SEGUNDA ITERACIÓN (SIEMPRE)                        │
 │                                                                  │
-│  5 documento(s) consultado(s)                                    │
-└─────────────────────────────────────────────────────────────────┘
+│  Prompt mejorado:                                                │
+│  "Tu respuesta: [...]                                            │
+│   Problemas: [...]                                               │
+│   Sugerencias: [...]                                             │
+│   Feedback: [...]                                                │
+│                                                                  │
+│   Genera respuesta MEJORADA con acceso a tools"                │
+│                                                                  │
+│  Agent ejecuta con tools completos → Respuesta mejorada         │
+└────────────────────────────┬─────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    MERGE Y RETORNO                               │
+│  - Response final = respuesta mejorada                           │
+│  - Documents = iter1 + iter2                                     │
+│  - Tools = union de ambas                                        │
+│  - Metadata incluye review tracking                              │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Criterios de Evaluación
 
-## 📝 Ejemplos Reales
+**Prompt del ResponseReviewer:**
+```
+Analiza la respuesta y evalúa:
 
-### Ejemplo 1: Mensaje Simple (Sin Documentos)
+1. FORMATO (30 puntos):
+   - ¿Usa Markdown correctamente?
+   - Si hay múltiples licitaciones, ¿usa ## para cada una?
+   - ¿Está bien estructurado y legible?
 
-**Input:** "hola"
+2. CONTENIDO (40 puntos):
+   - ¿Responde completamente a la pregunta?
+   - ¿Incluye todos los datos relevantes (IDs, presupuestos, plazos)?
+   - ¿Falta información importante?
 
-**Llamadas al LLM:**
-1. **Routing:** "general"
-2. **Answer:** Respuesta directa sin docs
+3. ANÁLISIS (30 puntos):
+   - Si pidió recomendaciones, ¿justifica con datos?
+   - ¿Usa los documentos consultados correctamente?
+   - ¿Es útil y profesional?
 
-**Total:** 2 llamadas, ~80 tokens
+Responde en formato:
+STATUS: [APPROVED o NEEDS_IMPROVEMENT]
+SCORE: [0-100]
+ISSUES: [lista]
+SUGGESTIONS: [lista]
+FEEDBACK: [explicación específica]
+```
 
----
+### Decisión: SIEMPRE Mejorar
 
-### Ejemplo 2: Pregunta Específica (Con Documentos)
-
-**Input:** "cual es la licitacion con mas dinero"
-
-**Llamadas al LLM:**
-1. **Routing:** "vectorstore"
-2. **Embed:** Generar vector
-3. **Grading x6:** Evaluar cada doc
-4. **Answer:** Generar respuesta con docs
-
-**Total:** 9 llamadas, ~465 tokens
-
----
-
-### Ejemplo 3: Pregunta de Seguimiento (Contextual)
-
-**Historial:**
-- Usuario: "busca licitaciones de software"
-- Asistente: "He encontrado 6 licitaciones..."
-
-**Input:** "cuanto dinero podria ganar"
-
-**Llamadas al LLM:**
-1. **Routing CON CONTEXTO:** "vectorstore" (detecta continuación)
-2. **Embed:** Generar vector
-3. **Grading x6:** Evaluar cada doc
-4. **Answer CON HISTORIAL:** Generar respuesta con contexto
-
-**Total:** 9 llamadas, ~520 tokens (más largo por historial)
+**Por qué SIEMPRE se ejecuta la segunda iteración:**
+- ✅ Incluso respuestas "APPROVED" pueden mejorarse
+- ✅ El revisor siempre proporciona sugerencias constructivas
+- ✅ La segunda iteración puede agregar más contexto
+- ✅ Garantiza máxima calidad en todas las respuestas
+- ✅ El usuario solicitó este comportamiento explícitamente
 
 ---
 
-## ⚙️ Configuración (Variables de .env)
+## 📊 Ejemplos Reales
 
+### Ejemplo 1: Consulta Simple → Review → Mejora
+
+**Input:** "Dame licitaciones de IT"
+
+**Iteración 1:**
+- Tools: `search_tenders(query="IT", limit=10)`
+- Respuesta: "He encontrado 10 licitaciones de IT..."
+- Formato: Lista numerada 1, 2, 3...
+
+**Review:**
+- Status: NEEDS_IMPROVEMENT
+- Score: 65/100
+- Issue: "Usa lista numerada en vez de headers ##"
+- Suggestion: "Usar ## para cada licitación"
+
+**Iteración 2 (mejora):**
+- Lee feedback
+- No usa tools adicionales
+- Reformatea con ## para cada licitación
+- Respuesta mejorada con formato correcto
+
+**Resultado:** Mismos datos, mejor formato
+
+---
+
+### Ejemplo 2: Consulta Compleja → Review → Búsqueda Adicional
+
+**Input:** "Cuáles son las mejores licitaciones para mi empresa?"
+
+**Iteración 1:**
+- Tools: `search_tenders(query="licitaciones", limit=10)`
+- Respuesta: "Encontré 10 licitaciones..."
+- Issue: No usa perfil de empresa
+
+**Review:**
+- Status: NEEDS_IMPROVEMENT
+- Score: 70/100
+- Issue: "Falta análisis personalizado"
+- Suggestion: "Usar get_company_info() para contexto"
+
+**Iteración 2 (mejora):**
+- Tools: `get_company_info()`, `get_tender_details(id1)`, `get_tender_details(id2)`
+- Genera análisis de match basado en perfil
+- Explica por qué cada licitación es adecuada
+- Respuesta con análisis completo
+
+**Resultado:** Más documentos, mejor análisis
+
+---
+
+### Ejemplo 3: Respuesta Correcta → Review → Refinamiento
+
+**Input:** "Presupuesto de licitación 00668461-2025"
+
+**Iteración 1:**
+- Tools: `get_tender_details(tender_id="00668461-2025")`
+- Respuesta: "El presupuesto es 961,200 EUR"
+- Formato: Correcto
+
+**Review:**
+- Status: APPROVED
+- Score: 85/100
+- Issue: Ninguno
+- Suggestion: "Agregar contexto (comprador, plazo)"
+
+**Iteración 2 (mejora):**
+- No usa tools adicionales (ya tiene los datos)
+- Agrega información de contexto
+- Respuesta: "El presupuesto es 961,200 EUR. Comprador: Fundación Estatal. Plazo: 45 días restantes."
+
+**Resultado:** Respuesta más completa
+
+---
+
+## ⚙️ Configuración
+
+**Variables relevantes en .env:**
 ```bash
 # LLM Settings
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=qwen2.5:7b
-OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+LLM_PROVIDER=openai
 LLM_TEMPERATURE=0.3
-OLLAMA_CONTEXT_LENGTH=2048
-LLM_TIMEOUT=120
 
-# Retrieval Settings
-DEFAULT_K_RETRIEVE=6
-MIN_SIMILARITY_SCORE=0.5
+# Iteraciones
+MAX_ITERATIONS=15
 
-# Agent Features
-USE_GRADING=True
-USE_XML_VERIFICATION=False
+# Review (siempre activo, no configurable)
+```
 
-# Conversation
-MAX_CONVERSATION_HISTORY=10
+**User model:**
+```python
+llm_provider = 'openai'
+openai_model = 'gpt-4o-mini'
+llm_api_key = 'sk-...'
 ```
 
 ---
 
-## 🔍 Debugging
+## 📊 Métricas
 
-Para ver TODO el flujo en tiempo real, revisa los logs en la consola del servidor:
+### Tokens Consumidos (ejemplo)
 
-```bash
-# Terminal donde corre: python manage.py runserver 8001
+| Etapa | Tokens In | Tokens Out | Total |
+|-------|-----------|------------|-------|
+| Iteración 1 (3 ciclos) | 400 | 250 | 650 |
+| Review | 150 | 100 | 250 |
+| Iteración 2 (2 ciclos) | 350 | 200 | 550 |
+| **TOTAL** | **900** | **550** | **1450** |
 
-======================================================================
-[CHAT REQUEST] Usuario: pepe2012 (OLLAMA)
-[CHAT REQUEST] Sesión ID: 42 | Título: Consulta licitaciones
-[CHAT REQUEST] Mensaje: cual es la licitacion con mas dinero
-======================================================================
-[SERVICE] Inicializando process_message...
-[SERVICE] Proveedor: OLLAMA
-[SERVICE] Modelo LLM: qwen2.5:7b
-[SERVICE] Creando agente RAG...
-INFO:agent_ia_core.agent_graph:CONSULTA: cual es la licitacion con mas dinero
-[ROUTE] Clasificando mensaje CON contexto: cual es la licitacion con mas dinero
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
-[ROUTE] LLM clasificó como DOCUMENTOS (respuesta: vectorstore)
-[RETRIEVE] Buscando documentos para: cual es la licitacion con mas dinero
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/embed "HTTP/1.1 200 OK"
-INFO:retriever:Recuperados 6 documentos
-[GRADE] Evaluando relevancia de 6 documentos
-[GRADE] Documentos relevantes: 5/6
-[ANSWER] Generando respuesta
-INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
-[ANSWER] Respuesta generada (285 caracteres)
-[SERVICE] ✓ Respuesta procesada: 285 caracteres
-[SERVICE] Documentos recuperados: 5
-[SERVICE] Tokens totales: 450
-```
+### Latencia (ejemplo con OpenAI)
+
+| Etapa | Tiempo |
+|-------|--------|
+| Iteración 1 | 1.2s |
+| Review | 0.4s |
+| Iteración 2 | 0.9s |
+| Merge + BD | 0.1s |
+| **TOTAL** | **2.6s** |
 
 ---
 
-**Fecha de creación:** 2025-01-19
-**Versión del sistema:** v1.4.0
-**Autor:** Claude Code Assistant
+## 🔗 Referencias
+
+- **Arquitectura**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Tools**: [TOOLS_REFERENCE.md](TOOLS_REFERENCE.md)
+- **Configuración**: [CONFIGURACION_AGENTE.md](CONFIGURACION_AGENTE.md)
+
+---
+
+**Versión**: 3.7.0
+**Última actualización**: 2025-01-19
+**Feature destacada**: Review Loop automático SIEMPRE activo
+
+**🤖 Generated with [Claude Code](https://claude.com/claude-code)**
+
+**Co-Authored-By: Claude <noreply@anthropic.com>**
