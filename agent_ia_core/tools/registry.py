@@ -103,8 +103,15 @@ class ToolRegistry:
                     # Se habilita cuando use_web_search está activo Y hay credenciales de Google Search
                     from .browse_webpage_tool import BrowseWebpageTool
                     browse_max_chars = getattr(self.user, 'browse_max_chars', 10000)
-                    self.tools['browse_webpage'] = BrowseWebpageTool(default_max_chars=browse_max_chars)
-                    logger.info(f"[REGISTRY] ✓ Browse webpage tool habilitada (use_web_search=True, max_chars={browse_max_chars})")
+                    browse_chunk_size = getattr(self.user, 'browse_chunk_size', 1250)
+                    self.tools['browse_webpage'] = BrowseWebpageTool(
+                        default_max_chars=browse_max_chars,
+                        default_chunk_size=browse_chunk_size
+                    )
+                    logger.info(
+                        f"[REGISTRY] ✓ Browse webpage tool habilitada "
+                        f"(use_web_search=True, max_chars={browse_max_chars}, chunk_size={browse_chunk_size})"
+                    )
                 else:
                     logger.warning(
                         "[REGISTRY] ⚠ use_web_search=True pero faltan credenciales. "
@@ -128,6 +135,9 @@ class ToolRegistry:
             from .grading_tool import GradeDocumentsTool
             self.tools['grade_documents'] = GradeDocumentsTool(llm)
             logger.info("[REGISTRY] GradeDocumentsTool inicializada con LLM")
+
+        # Guardar referencia al LLM para browse_webpage
+        self.llm = llm
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """
@@ -203,6 +213,11 @@ class ToolRegistry:
                 'success': False,
                 'error': f"Tool '{name}' no existe. Tools disponibles: {self.get_tool_names()}"
             }
+
+        # Si la tool es browse_webpage y tiene LLM disponible, inyectarlo
+        if name == 'browse_webpage' and hasattr(self, 'llm') and self.llm:
+            kwargs['llm'] = self.llm
+            logger.info(f"[REGISTRY] Inyectando LLM a browse_webpage para extracción progresiva")
 
         logger.info(f"[REGISTRY] Ejecutando tool '{name}'...")
         return tool.execute_safe(**kwargs)

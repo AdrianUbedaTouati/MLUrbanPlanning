@@ -120,6 +120,11 @@ class User(AbstractUser):
         verbose_name='Máximo de caracteres por página',
         help_text='Número máximo de caracteres a extraer de cada página web (1,000 - 50,000). Más caracteres = más tokens = mayor costo pero más información detallada.'
     )
+    browse_chunk_size = models.IntegerField(
+        default=1250,
+        verbose_name='Tamaño de fragmento de página',
+        help_text='Número de caracteres por fragmento al analizar páginas (500 - browse_max_chars). Fragmentos más pequeños = más verificaciones pero mayor precisión. Aproximadamente 1 token = 4 caracteres.'
+    )
 
     # Shipping address fields
     address_line1 = models.CharField(max_length=255, blank=True, verbose_name='Dirección (Línea 1)')

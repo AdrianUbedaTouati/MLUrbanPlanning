@@ -16,59 +16,79 @@ logger = logging.getLogger(__name__)
 
 class BrowseWebpageTool(BaseTool):
     """
-    Tool para extraer y leer el contenido completo de una página web.
+    Tool para extraer y leer el contenido de una página web con extracción progresiva inteligente.
 
     A diferencia de web_search que solo obtiene snippets, esta tool:
     - Entra en la URL proporcionada
     - Descarga el HTML completo
     - Extrae el texto principal limpio
-    - Devuelve el contenido para análisis del LLM
+    - Procesa el contenido en fragmentos (chunks) progresivamente
+    - Usa LLM para verificar si cada chunk contiene la información buscada
+    - Detiene la extracción cuando encuentra la respuesta (early stopping)
+    - Devuelve la respuesta extraída (no todo el contenido)
     """
 
     name = "browse_webpage"
-    description = """Browse and extract the COMPLETE content from a specific webpage URL.
+    description = """Browse and extract SPECIFIC INFORMATION from a webpage URL using progressive extraction.
 
 WHEN TO USE THIS TOOL:
-- After using web_search, to read the FULL content of a URL (not just the snippet)
-- When you need EXACT, DETAILED information that snippets don't provide
-- To get the complete text of articles, documentation, news, or product pages
+- After using web_search, to find SPECIFIC information from a URL
+- When you need EXACT, DETAILED data that snippets don't provide
+- To extract specific prices, dates, facts, or details from web pages
 - When the user asks for "exact", "detailed", or "complete" information
 
 WORKFLOW EXAMPLE:
 1. User asks: "What is the exact Bitcoin price?"
 2. You call web_search to find relevant URLs
-3. You call browse_webpage with the URL to get the FULL page content
-4. You extract the exact price from the complete content
+3. You call browse_webpage(url, user_query="What is the exact Bitcoin price?")
+4. The tool processes the page in chunks, verifying each one
+5. When it finds the price, it returns the ANSWER directly
+6. You reformulate the answer for the user in a conversational way
 
-This tool downloads the webpage, extracts the main text content, and returns it cleaned and formatted.
-Unlike web_search (which only gives snippets), this tool gives you the COMPLETE page content.
+PROGRESSIVE EXTRACTION:
+- The tool analyzes the page in chunks (configurable size per user)
+- Each chunk is verified by an LLM: "Does this contain the answer?"
+- If NO: continues to next chunk
+- If YES: returns the extracted answer immediately (early stopping)
+- Saves tokens by not processing unnecessary content
 
 IMPORTANT:
-- Use this AFTER web_search to get full details
+- You MUST provide a user_query parameter (the question to answer)
 - You must provide a complete URL (starting with http:// or https://)
 - This tool reads static HTML content (no JavaScript rendering)
 - Best for: articles, documentation, news, blogs, product pages, pricing pages
+- Returns the ANSWER to your question, not the full page content
 
-Input: A complete URL to browse and extract content from.
-Output: The main text content of the webpage, cleaned and formatted."""
+Input:
+  - url: Complete URL to browse
+  - user_query: The specific question you want answered from this page
+Output:
+  - If found: The extracted answer to the user_query
+  - If not found: A message indicating the information was not found"""
 
-    def __init__(self, default_max_chars: int = 10000):
+    def __init__(self, default_max_chars: int = 10000, default_chunk_size: int = 1250):
         """
         Inicializa la tool.
 
         Args:
             default_max_chars: Número máximo de caracteres por defecto (configurable por usuario)
+            default_chunk_size: Tamaño de cada fragmento para extracción progresiva
         """
         self.default_max_chars = default_max_chars
+        self.default_chunk_size = default_chunk_size
         super().__init__()
 
-    def run(self, url: str, max_chars: int = None) -> Dict[str, Any]:
+    def run(self, url: str, user_query: str = None, max_chars: int = None,
+            chunk_size: int = None, llm = None) -> Dict[str, Any]:
         """
-        Navega a una URL y extrae su contenido principal.
+        Navega a una URL y extrae información específica usando extracción progresiva.
 
         Args:
             url: URL completa de la página a navegar (debe empezar con http:// o https://)
-            max_chars: Número máximo de caracteres a retornar (si es None, usa default_max_chars)
+            user_query: Pregunta específica a responder con el contenido de la página
+            max_chars: Número máximo de caracteres a procesar (si es None, usa default_max_chars)
+            chunk_size: Tamaño de cada fragmento para análisis (si es None, usa default_chunk_size)
+            llm: Instancia del LLM para verificación de chunks (ChatOpenAI, ChatGemini, etc.)
 
         Returns:
             Dict con formato:
@@ -77,15 +97,20 @@ Output: The main text content of the webpage, cleaned and formatted."""
                 'data': {
                     'url': str,
                     'title': str,
-                    'content': str (texto limpio),
-                    'length': int (caracteres)
+                    'answer': str (respuesta extraída) o 'content': str (si no hay user_query),
+                    'found': bool (si encontró la respuesta),
+                    'chunks_processed': int,
+                    'chars_analyzed': int,
+                    'chars_saved': int
                 },
                 'error': str (si success=False)
             }
         """
-        # Usar default_max_chars si no se especifica max_chars
+        # Usar defaults si no se especifican
         if max_chars is None:
             max_chars = self.default_max_chars
+        if chunk_size is None:
+            chunk_size = self.default_chunk_size
 
         try:
             # Validar URL
@@ -173,6 +198,20 @@ Output: The main text content of the webpage, cleaned and formatted."""
 
             logger.info(f"[BROWSE] Contenido extraído: {len(text)} caracteres de {url}")
 
+            # Si se proporciona user_query y LLM, usar extracción progresiva
+            if user_query and llm:
+                logger.info(f"[BROWSE] Iniciando extracción progresiva con user_query: {user_query}")
+                return self._progressive_extraction(
+                    url=url,
+                    title=title,
+                    full_text=text.strip(),
+                    user_query=user_query,
+                    max_chars=max_chars,
+                    chunk_size=chunk_size,
+                    llm=llm
+                )
+
+            # Si no hay user_query, retornar contenido completo (modo legacy)
             return {
                 'success': True,
                 'data': {
@@ -230,6 +269,134 @@ Output: The main text content of the webpage, cleaned and formatted."""
                 'error': f'Error browsing webpage: {error_msg}'
             }
 
+    def _progressive_extraction(self, url: str, title: str, full_text: str,
+                                user_query: str, max_chars: int, chunk_size: int,
+                                llm) -> Dict[str, Any]:
+        """
+        Extrae información progresivamente, chunk por chunk, usando contexto conversacional.
+
+        Args:
+            url: URL de la página
+            title: Título de la página
+            full_text: Texto completo ya extraído y limpio
+            user_query: Pregunta del usuario a responder
+            max_chars: Límite máximo de caracteres a procesar
+            chunk_size: Tamaño de cada fragmento
+            llm: Instancia del LLM para verificación
+
+        Returns:
+            Dict con la respuesta extraída o mensaje de no encontrado
+        """
+        try:
+            # Limitar el texto al max_chars
+            text_to_process = full_text[:max_chars] if len(full_text) > max_chars else full_text
+
+            # Inicializar contexto conversacional
+            verification_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un asistente que analiza fragmentos de páginas web para extraer información específica.\n\n"
+                        "INSTRUCCIONES:\n"
+                        "- Si el fragmento actual NO contiene suficiente información para responder la pregunta → Responde EXACTAMENTE: 'NO'\n"
+                        "- Si el fragmento actual SÍ contiene suficiente información → Responde DIRECTAMENTE con la respuesta completa y precisa\n"
+                        "- No uses frases como 'Según el fragmento' o 'El texto dice'. Responde directamente.\n"
+                        "- Se conciso pero completo. Da la respuesta exacta que el usuario necesita.\n"
+                        "- Puedes usar información de fragmentos anteriores que ya has visto para construir una respuesta completa."
+                    )
+                }
+            ]
+
+            chunks_processed = 0
+            chars_analyzed = 0
+            total_chars = len(text_to_process)
+
+            logger.info(f"[BROWSE] Extracción progresiva: {total_chars} chars totales, chunks de {chunk_size} chars")
+
+            # Procesar chunks secuencialmente
+            for i in range(0, len(text_to_process), chunk_size):
+                chunk = text_to_process[i:i + chunk_size]
+                chunks_processed += 1
+                chars_analyzed += len(chunk)
+
+                # Agregar chunk al contexto conversacional
+                verification_messages.append({
+                    "role": "user",
+                    "content": (
+                        f"Pregunta del usuario: \"{user_query}\"\n\n"
+                        f"Fragmento {chunks_processed}/{(total_chars + chunk_size - 1) // chunk_size}:\n"
+                        f"{chunk}\n\n"
+                        f"¿Puedes responder a la pregunta con la información disponible hasta ahora?\n"
+                        f"Si NO → Responde 'NO'\n"
+                        f"Si SÍ → Responde directamente con la respuesta completa"
+                    )
+                })
+
+                # Llamar al LLM para verificar
+                logger.info(f"[BROWSE] Procesando chunk {chunks_processed} ({len(chunk)} chars)")
+
+                response = llm.invoke(verification_messages)
+                answer = response.content.strip()
+
+                # Agregar respuesta al historial conversacional
+                verification_messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+
+                # Verificar si encontró la respuesta
+                if answer.upper() != "NO":
+                    # ¡Encontró la respuesta! Early stopping
+                    chars_saved = total_chars - chars_analyzed
+
+                    logger.info(
+                        f"[BROWSE] ✓ Respuesta encontrada en chunk {chunks_processed}/{(total_chars + chunk_size - 1) // chunk_size}. "
+                        f"Ahorro: {chars_saved} chars ({(chars_saved/total_chars)*100:.1f}%)"
+                    )
+
+                    return {
+                        'success': True,
+                        'data': {
+                            'url': url,
+                            'title': title,
+                            'answer': answer,
+                            'found': True,
+                            'chunks_processed': chunks_processed,
+                            'total_chunks': (total_chars + chunk_size - 1) // chunk_size,
+                            'chars_analyzed': chars_analyzed,
+                            'total_chars': total_chars,
+                            'chars_saved': chars_saved,
+                            'efficiency': f"{(chars_saved/total_chars)*100:.1f}%"
+                        }
+                    }
+
+            # Si llegó aquí, no encontró la respuesta en ningún chunk
+            logger.warning(f"[BROWSE] ✗ No se encontró respuesta después de {chunks_processed} chunks ({chars_analyzed} chars)")
+
+            return {
+                'success': True,
+                'data': {
+                    'url': url,
+                    'title': title,
+                    'answer': f"No se encontró información específica para responder: '{user_query}' en la página {url}",
+                    'found': False,
+                    'chunks_processed': chunks_processed,
+                    'total_chunks': (total_chars + chunk_size - 1) // chunk_size,
+                    'chars_analyzed': chars_analyzed,
+                    'total_chars': total_chars,
+                    'chars_saved': 0,
+                    'efficiency': '0%'
+                }
+            }
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"[BROWSE] Error en extracción progresiva: {error_msg}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Error during progressive extraction: {error_msg}'
+            }
+
     def get_schema(self) -> Dict[str, Any]:
         """
         Retorna el schema de la tool en formato OpenAI Function Calling.
@@ -245,16 +412,20 @@ Output: The main text content of the webpage, cleaned and formatted."""
                 'properties': {
                     'url': {
                         'type': 'string',
-                        'description': 'Complete URL of the webpage to browse and extract content from. Must start with http:// or https://. Example: https://example.com/article'
+                        'description': 'Complete URL of the webpage to browse and extract information from. Must start with http:// or https://. Example: https://example.com/article'
+                    },
+                    'user_query': {
+                        'type': 'string',
+                        'description': 'The SPECIFIC QUESTION you want answered from this webpage. Be clear and precise. Example: "What is the exact Bitcoin price?", "When does the event start?", "What are the system requirements?". This enables progressive extraction and early stopping for efficiency.'
                     },
                     'max_chars': {
                         'type': 'integer',
-                        'description': 'Maximum number of characters to return from the webpage content. Default is 10000. Use lower values for quick summaries, higher for detailed analysis.',
+                        'description': 'Maximum number of characters to process from the webpage content. Default is based on user settings (typically 10000). Higher values = more content analyzed but higher token cost.',
                         'minimum': 1000,
                         'maximum': 50000,
                         'default': 10000
                     }
                 },
-                'required': ['url']
+                'required': ['url', 'user_query']
             }
         }

@@ -169,6 +169,20 @@ class EditProfileForm(forms.ModelForm):
         }),
         help_text='Máximo de caracteres a extraer de cada página web (1,000 - 50,000). Aproximadamente 1 token = 4 caracteres. Por defecto 10,000 (≈2,500 tokens)'
     )
+    browse_chunk_size = forms.IntegerField(
+        required=False,
+        label='Tamaño de fragmento de página',
+        initial=1250,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '1250',
+            'min': 500,
+            'max': 50000,
+            'step': 250,
+            'id': 'browse_chunk_size_input'
+        }),
+        help_text='Tamaño de cada fragmento al analizar páginas (500 - 50,000). Fragmentos más pequeños = mayor precisión pero más llamadas. Por defecto 1,250 (≈312 tokens). DEBE ser menor que "Máximo de caracteres".'
+    )
 
     # Campos de dirección
     address_line1 = forms.CharField(
@@ -225,7 +239,7 @@ class EditProfileForm(forms.ModelForm):
         fields = ('username', 'email', 'first_name', 'last_name', 'phone',
                  'llm_provider', 'llm_api_key', 'openai_model', 'ollama_model', 'ollama_embedding_model',
                  'use_grading', 'use_verification',
-                 'use_web_search', 'google_search_api_key', 'google_search_engine_id', 'browse_max_chars',
+                 'use_web_search', 'google_search_api_key', 'google_search_engine_id', 'browse_max_chars', 'browse_chunk_size',
                  'address_line1', 'address_line2', 'city', 'state_province',
                  'postal_code', 'country')
 
@@ -247,3 +261,17 @@ class EditProfileForm(forms.ModelForm):
         if User.objects.filter(username=username).exclude(pk=self.current_user.pk).exists():
             raise ValidationError('Este nombre de usuario ya está en uso.')
         return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        browse_max_chars = cleaned_data.get('browse_max_chars')
+        browse_chunk_size = cleaned_data.get('browse_chunk_size')
+
+        # Validar que browse_chunk_size sea menor que browse_max_chars
+        if browse_max_chars and browse_chunk_size:
+            if browse_chunk_size >= browse_max_chars:
+                raise ValidationError({
+                    'browse_chunk_size': 'El tamaño de fragmento debe ser menor que el máximo de caracteres por página.'
+                })
+
+        return cleaned_data

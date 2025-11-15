@@ -362,6 +362,35 @@
                                         </div>
                                     </div>
 
+                                    <div class="mb-3">
+                                        <label for="{{ form.browse_chunk_size.id_for_label }}" class="form-label fw-bold">
+                                            <i class="bi bi-puzzle"></i> {{ form.browse_chunk_size.label }}
+                                        </label>
+                                        {{ form.browse_chunk_size }}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            {{ form.browse_chunk_size.help_text }}
+                                        </small>
+                                        {% if form.browse_chunk_size.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.browse_chunk_size.errors }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            <small class="text-info d-block">
+                                                <i class="bi bi-lightbulb"></i> <strong>¿Cómo funciona?</strong>
+                                            </small>
+                                            <small class="text-muted d-block">
+                                                • Fragmentos pequeños (500-1,000 chars) = Mayor precisión pero más verificaciones
+                                            </small>
+                                            <small class="text-muted d-block">
+                                                • Fragmentos medianos (1,250 chars) = Balance óptimo (recomendado)
+                                            </small>
+                                            <small class="text-muted d-block">
+                                                • Fragmentos grandes (2,500+ chars) = Menos verificaciones pero puede perder detalles
+                                            </small>
+                                        </div>
+                                    </div>
+
                                     <div class="alert alert-info">
                                         <h6 class="alert-heading">
                                             <i class="bi bi-info-circle"></i> ¿Cómo obtener las credenciales?
