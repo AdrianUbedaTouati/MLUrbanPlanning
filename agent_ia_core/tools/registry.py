@@ -105,6 +105,12 @@ class ToolRegistry:
                         f"Engine ID: {'OK' if google_search_engine_id else 'FALTA'}"
                     )
 
+                # Browse Webpage: Navega y extrae contenido completo de páginas web
+                # Se habilita cuando use_web_search está activo (no requiere credenciales adicionales)
+                from .browse_webpage_tool import BrowseWebpageTool
+                self.tools['browse_webpage'] = BrowseWebpageTool()
+                logger.info("[REGISTRY] ✓ Browse webpage tool habilitada (use_web_search=True)")
+
         logger.info(f"[REGISTRY] {len(self.tools)} tools registradas: {list(self.tools.keys())}")
 
     def initialize_grading_tool(self, llm):
