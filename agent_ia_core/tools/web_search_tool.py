@@ -20,12 +20,19 @@ class GoogleWebSearchTool(BaseTool):
     """
 
     name = "web_search"
-    description = """Search the web for up-to-date information using Google Custom Search API.
-Use this tool when you need current information not available in the tender database, such as:
-- Recent news about companies or public procurement
-- Current regulations or legal frameworks
-- Updates on specific tenders or contracts
-- General information about procurement topics
+    description = """Search the web for up-to-date real-time information using Google Custom Search API.
+
+Use this tool to find current information about ANY topic, including:
+- Current prices, exchange rates, stock values (e.g., Bitcoin price, EUR/USD rate)
+- Recent news and events (e.g., latest developments, breaking news)
+- Company information and updates
+- Technical specifications and product details
+- Regulations, laws, and legal frameworks
+- Statistics and data
+- ANY other topic that requires real-time or recent information
+
+IMPORTANT: This tool can search for ANY topic, not just procurement or tenders.
+Use it whenever you need information that is current, recent, or not in the tender database.
 
 Input: A search query string and optional limit for number of results.
 Output: List of search results with titles, snippets, and URLs."""
@@ -178,7 +185,7 @@ Output: List of search results with titles, snippets, and URLs."""
                 'properties': {
                     'query': {
                         'type': 'string',
-                        'description': 'Search query to find relevant web information. Be specific and use keywords related to public procurement, tenders, or general topics.'
+                        'description': 'Search query to find relevant web information. Can be about ANY topic: prices (Bitcoin, stocks), news, companies, technical specs, statistics, etc. Be specific and use clear keywords.'
                     },
                     'limit': {
                         'type': 'integer',
