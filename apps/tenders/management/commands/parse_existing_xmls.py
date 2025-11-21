@@ -34,7 +34,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from agent_ia_core.xml_parser import EFormsXMLParser
+        from agent_ia_core.parser.xml_parser import EFormsXMLParser
 
         limit = options.get('limit')
         force = options.get('force')

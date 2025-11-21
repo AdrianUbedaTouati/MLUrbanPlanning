@@ -312,7 +312,7 @@ class FunctionCallingAgent:
 
         # Instrucciones (siempre presentes)
         system_prompt_parts.extend([
-            "IMPORTANTE: Debes SIEMPRE usar las herramientas disponibles para responder preguntas sobre licitaciones. NO inventes información.",
+            "IMPORTANTE: Debes SIEMPRE usar las herramientas disponibles para responder preguntas. NO inventes información.",
             "",
             "Herramientas disponibles:",
             "- search_tenders: Búsqueda general por contenido/tema",
@@ -324,12 +324,30 @@ class FunctionCallingAgent:
             "- get_statistics: Obtener estadísticas (úsala para \"¿cuál es la más cara?\", \"promedio\", etc.)",
             "- compare_tenders: Comparar múltiples licitaciones",
             "- get_tender_xml: Obtener XML original de una licitación",
+        ])
+
+        # Añadir web_search y browse_webpage si están disponibles
+        if 'web_search' in self.tool_registry.tools:
+            system_prompt_parts.extend([
+                "- web_search: Buscar información en internet (clima, noticias, precios, datos actuales)",
+                "- browse_webpage: Navegar a una URL específica para extraer contenido detallado",
+            ])
+
+        system_prompt_parts.extend([
             "",
             "Cuando el usuario pregunte por licitaciones, DEBES usar las herramientas apropiadas. Por ejemplo:",
             "- \"¿Cuál es la licitación más cara?\" → USA get_statistics",
             "- \"Licitaciones de software\" → USA search_tenders",
-            "- \"Licitaciones entre 50k y 100k\" → USA find_by_budget"
+            "- \"Licitaciones entre 50k y 100k\" → USA find_by_budget",
         ])
+
+        # Instrucciones para web_search
+        if 'web_search' in self.tool_registry.tools:
+            system_prompt_parts.extend([
+                "- \"¿Qué tiempo hace en París?\" → USA web_search",
+                "- \"Precio del Bitcoin\" → USA web_search",
+                "- \"Noticias recientes sobre...\" → USA web_search",
+            ])
 
         system_prompt = "\n".join(system_prompt_parts)
 

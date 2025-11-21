@@ -49,7 +49,7 @@ class VerifyFieldsTool(BaseTool):
         """
         Inicializa la tool con XmlLookupTool para validación.
         """
-        from agent_ia_core.tools_xml import XmlLookupTool
+        from agent_ia_core.parser.tools_xml import XmlLookupTool
         self.xml_lookup = XmlLookupTool()
         self.name = "verify_fields"
         self.description = (

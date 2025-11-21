@@ -114,10 +114,10 @@ class ToolRegistry:
                     )
 
                     # Browse Interactive: Navegador interactivo con Playwright para sitios JavaScript
-                    # Se habilita automáticamente cuando use_web_search está activo
-                    from .browse_interactive_tool import BrowseInteractiveTool
-                    self.tools['browse_interactive'] = BrowseInteractiveTool()
-                    logger.info("[REGISTRY] ✓ Browse interactive tool habilitada (use_web_search=True, Playwright)")
+                    # DESHABILITADO temporalmente - requiere Playwright instalado
+                    # from .browse_interactive_tool import BrowseInteractiveTool
+                    # self.tools['browse_interactive'] = BrowseInteractiveTool()
+                    # logger.info("[REGISTRY] ✓ Browse interactive tool habilitada (use_web_search=True, Playwright)")
                 else:
                     logger.warning(
                         "[REGISTRY] ⚠ use_web_search=True pero faltan credenciales. "

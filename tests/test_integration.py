@@ -9,7 +9,7 @@ import django
 
 # Setup Django
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
@@ -174,7 +174,7 @@ def test_agent_ia_modules():
             return False
 
         try:
-            from agent_ia_core.chunking import chunk_tender_xml
+            from agent_ia_core.parser.chunking import chunk_tender_xml
             print("[OK] chunk_tender_xml importado")
         except ImportError as e:
             print(f"[FAIL] Error importando chunk_tender_xml: {e}")

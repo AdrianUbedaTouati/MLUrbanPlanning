@@ -49,7 +49,7 @@ class VectorizationService:
         """
         try:
             from agent_ia_core import config
-            from agent_ia_core.retriever import create_retriever
+            from agent_ia_core.indexing.retriever import create_retriever
             import chromadb
 
             # Get ChromaDB configuration (usar la misma ubicación que agent_ia_core)
@@ -148,7 +148,7 @@ class VectorizationService:
         """
         try:
             from agent_ia_core import config
-            from agent_ia_core.chunking import chunk_eforms_record
+            from agent_ia_core.parser.chunking import chunk_eforms_record
             from apps.core.llm_providers import LLMProviderFactory
             from apps.core.token_pricing import calculate_embedding_cost, format_cost
             import chromadb
@@ -335,7 +335,7 @@ class VectorizationService:
                         })
 
                     # Parse and chunk the XML
-                    from agent_ia_core.xml_parser import EFormsXMLParser
+                    from agent_ia_core.parser.xml_parser import EFormsXMLParser
                     from lxml import etree
                     import io
 

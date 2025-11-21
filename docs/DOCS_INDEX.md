@@ -1,4 +1,4 @@
-# 📚 Índice de Documentación - TenderAI v3.7
+# 📚 Índice de Documentación - TenderAI v3.7.1
 
 **Sistema de Function Calling con Review Loop Automático y Navegación Web Interactiva**
 

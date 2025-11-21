@@ -46,7 +46,7 @@ class GetTenderDetailsTool(BaseTool):
             if not django.apps.apps.ready:
                 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
                 import os
-                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
                 django.setup()
 
             from apps.tenders.models import Tender
@@ -286,7 +286,7 @@ IMPORTANTE: Esta herramienta devuelve el XML completo (3000-5000 tokens). Úsala
             if not django.apps.apps.ready:
                 import os
                 import sys
-                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
                 django.setup()
 
             from apps.tenders.models import Tender
@@ -403,7 +403,7 @@ class CompareTendersTool(BaseTool):
             import django
             if not django.apps.apps.ready:
                 import os, sys
-                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+                os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
                 django.setup()
 
             from apps.tenders.models import Tender

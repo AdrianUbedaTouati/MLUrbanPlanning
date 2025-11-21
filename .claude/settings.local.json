@@ -3,7 +3,13 @@
     "allow": [
       "Bash(timeout 5 python:*)",
       "Bash(.venvScriptspip install beautifulsoup4)",
-      "Bash(\".venv\\Scripts\\pip.exe\" install beautifulsoup4)"
+      "Bash(\".venv\\Scripts\\pip.exe\" install beautifulsoup4)",
+      "Bash(temp_old.py)",
+      "Bash(fc:*)",
+      "Bash(git checkout:*)",
+      "Bash(del temp_old.py temp_old_agent.py nul 2)",
+      "Bash(timeout 30 python:*)",
+      "Bash(timeout 10 python manage.py runserver:*)"
     ],
     "deny": [],
     "ask": []

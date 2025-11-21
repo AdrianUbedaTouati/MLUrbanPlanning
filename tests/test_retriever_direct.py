@@ -6,11 +6,11 @@ import sys
 import django
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from agent_ia_core.retriever import create_retriever
+from agent_ia_core.indexing.retriever import create_retriever
 from agent_ia_core import config
 
 User = get_user_model()

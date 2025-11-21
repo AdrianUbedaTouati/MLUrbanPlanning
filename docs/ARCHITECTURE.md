@@ -1,4 +1,4 @@
-# 🏗️ Arquitectura del Sistema TenderAI v3.7
+# 🏗️ Arquitectura del Sistema TenderAI v3.7.1
 
 **Sistema de Function Calling Multi-Proveedor con Review Loop Automático**
 
@@ -8,12 +8,13 @@
 
 1. [Visión General](#visión-general)
 2. [Arquitectura de Alto Nivel](#arquitectura-de-alto-nivel)
-3. [Componentes Principales](#componentes-principales)
-4. [Sistema de Tools](#sistema-de-tools)
-5. [Sistema de Review y Mejora](#sistema-de-review-y-mejora)
-6. [Flujo de Datos Completo](#flujo-de-datos-completo)
-7. [Proveedores LLM](#proveedores-llm)
-8. [Base de Datos](#base-de-datos)
+3. [Estructura de agent_ia_core](#estructura-de-agent_ia_core)
+4. [Componentes Principales](#componentes-principales)
+5. [Sistema de Tools](#sistema-de-tools)
+6. [Sistema de Review y Mejora](#sistema-de-review-y-mejora)
+7. [Flujo de Datos Completo](#flujo-de-datos-completo)
+8. [Proveedores LLM](#proveedores-llm)
+9. [Base de Datos](#base-de-datos)
 
 ---
 
@@ -87,6 +88,53 @@ TenderAI es una plataforma Django que utiliza **Function Calling** para permitir
             ├──→ Google Gemini API
             ├──→ Google Custom Search API
             └──→ Playwright (Chromium)
+```
+
+---
+
+## 📦 Estructura de agent_ia_core (v3.7.1)
+
+El motor de IA ha sido reorganizado en modulos especializados:
+
+```
+agent_ia_core/
+├── agent_function_calling.py   # Motor principal del agente
+├── config.py                   # Configuracion centralizada
+├── prompts_config.py           # CPV codes, NUTS codes, templates
+│
+├── parser/                     # Parsing y chunking de XMLs
+│   ├── xml_parser.py           # EFormsXMLParser - parser de eForms
+│   ├── chunking.py             # EFormsChunker - chunking semantico
+│   └── tools_xml.py            # XmlLookupTool - XPath queries
+│
+├── prompts/                    # System prompts
+│   └── prompts.py              # SYSTEM_PROMPT, RAG_PROMPT, etc.
+│
+├── indexing/                   # RAG y vectorizacion
+│   ├── retriever.py            # HybridRetriever - busqueda vectorial
+│   ├── index_build.py          # IndexBuilder - construccion de indices
+│   └── ingest.py               # EFormsIngestor - ingesta de datos
+│
+├── download/                   # Descarga de licitaciones
+│   ├── descarga_xml.py         # Descarga desde TED API
+│   └── token_tracker.py        # TokenTracker - costos y uso
+│
+├── engines/                    # Motores especializados
+│   └── recommendation_engine.py # Motor de recomendaciones
+│
+├── tools/                      # 16 Tools del agente
+│   ├── registry.py             # ToolRegistry
+│   ├── base.py                 # BaseTool
+│   ├── search_tools.py         # find_by_*, search_tenders
+│   ├── tender_tools.py         # get_tender_*, compare_*
+│   ├── context_tools.py        # get_company_info, get_tenders_summary
+│   ├── web_search_tool.py      # Google Custom Search
+│   ├── browse_tool.py          # browse_webpage
+│   ├── browse_interactive_tool.py # Playwright navigation
+│   ├── grading_tool.py         # grade_documents
+│   └── verification_tool.py    # verify_fields
+│
+└── schema/                     # Schemas eForms UBL
 ```
 
 ---

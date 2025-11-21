@@ -15,11 +15,11 @@ import django
 
 # Setup Django
 sys.path.insert(0, os.path.dirname(os.path.abspath('.')))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from agent_ia_core.agent_function_calling import FunctionCallingAgent
-from agent_ia_core.retriever import create_retriever
+from agent_ia_core.indexing.retriever import create_retriever
 
 
 def test_provider(provider: str, model: str, api_key: str = None):

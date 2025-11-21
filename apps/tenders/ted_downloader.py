@@ -26,7 +26,7 @@ from apps.core.logging_config import ObtenerLogger
 
 # Import EFormsXMLParser for robust XML parsing
 try:
-    from xml_parser import EFormsXMLParser
+    from agent_ia_core.parser.xml_parser import EFormsXMLParser
     EFORMS_PARSER_AVAILABLE = True
 except ImportError:
     EFORMS_PARSER_AVAILABLE = False

@@ -15,8 +15,8 @@ import json
 from typing import Any, Dict, Optional
 
 
-# Directorio base de logs
-LOGS_DIR = Path(__file__).resolve().parent.parent / 'logs'
+# Directorio base de logs (raíz del proyecto)
+LOGS_DIR = Path(__file__).resolve().parent.parent.parent / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Subdirectorios

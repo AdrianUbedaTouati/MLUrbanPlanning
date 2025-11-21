@@ -74,7 +74,7 @@ class ChatAgentService:
         """
         try:
             from agent_ia_core.agent_function_calling import FunctionCallingAgent
-            from agent_ia_core.retriever import create_retriever
+            from agent_ia_core.indexing.retriever import create_retriever
 
             print(f"[SERVICE] Creando FunctionCallingAgent...", file=sys.stderr)
             print(f"[SERVICE] Proveedor: {self.provider}", file=sys.stderr)
