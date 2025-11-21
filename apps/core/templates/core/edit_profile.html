@@ -437,7 +437,7 @@
                                 // Función para cargar modelos de Ollama desde la API
                                 async function loadOllamaModels() {
                                     try {
-                                        const response = await fetch('{% url "core:ollama_models" %}');
+                                        const response = await fetch('{% url "apps_core:ollama_models" %}');
                                         const data = await response.json();
 
                                         if (data.success) {

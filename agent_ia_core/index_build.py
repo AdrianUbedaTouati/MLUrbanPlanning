@@ -16,7 +16,7 @@ import sys
 
 # Importar configuración
 sys.path.append(str(Path(__file__).parent))
-from config import (
+from agent_ia_core.config import (
     RECORDS_DIR, INDEX_DIR, CHROMA_PERSIST_DIRECTORY,
     CHROMA_COLLECTION_NAME, EMBEDDING_MODEL, LLM_PROVIDER
 )

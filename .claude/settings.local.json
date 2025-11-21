@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(timeout 5 python:*)"
+      "Bash(timeout 5 python:*)",
+      "Bash(.venvScriptspip install beautifulsoup4)",
+      "Bash(\".venv\\Scripts\\pip.exe\" install beautifulsoup4)"
     ],
     "deny": [],
     "ask": []

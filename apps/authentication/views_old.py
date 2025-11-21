@@ -22,7 +22,7 @@ import uuid
 
 def register_view(request):
     if request.user.is_authenticated:
-        return redirect('core:home')
+        return redirect('apps_core:home')
 
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -62,7 +62,7 @@ def register_view(request):
             else:
                 messages.success(request, 'Registro exitoso! Ya puedes iniciar sesión.')
 
-            return redirect('authentication:login')
+            return redirect('apps_authentication:login')
     else:
         form = CustomUserCreationForm()
 
@@ -71,7 +71,7 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('core:home')
+        return redirect('apps_core:home')
 
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
@@ -86,7 +86,7 @@ def login_view(request):
                 request.session.set_expiry(1209600)  # 2 weeks
 
             messages.success(request, f'Bienvenido, {user.username}!')
-            next_url = request.GET.get('next', 'core:home')
+            next_url = request.GET.get('next', 'apps_core:home')
             return redirect(next_url)
         else:
             # Verificar si hay un error de verificación de email
@@ -114,7 +114,7 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     messages.info(request, 'Has cerrado sesión exitosamente.')
-    return redirect('authentication:login')
+    return redirect('apps_authentication:login')
 
 
 def password_reset_request_view(request):
@@ -205,7 +205,7 @@ def password_reset_request_view(request):
                     request,
                     'Se ha enviado un enlace de recuperación a tu correo electrónico.'
                 )
-                return redirect('authentication:login')
+                return redirect('apps_authentication:login')
     else:
         form = PasswordResetRequestForm()
 
@@ -218,7 +218,7 @@ def password_reset_confirm_view(request, token):
 
         if not reset_token.is_valid():
             messages.error(request, 'El enlace de recuperación ha expirado o ya fue usado.')
-            return redirect('authentication:password_reset_request')
+            return redirect('apps_authentication:password_reset_request')
 
         if request.method == 'POST':
             form = SetNewPasswordForm(request.POST)
@@ -232,7 +232,7 @@ def password_reset_confirm_view(request, token):
                 reset_token.save()
 
                 messages.success(request, 'Tu contraseña ha sido actualizada exitosamente.')
-                return redirect('authentication:login')
+                return redirect('apps_authentication:login')
         else:
             form = SetNewPasswordForm()
 
@@ -243,7 +243,7 @@ def password_reset_confirm_view(request, token):
 
     except PasswordResetToken.DoesNotExist:
         messages.error(request, 'Enlace de recuperación inválido.')
-        return redirect('authentication:password_reset_request')
+        return redirect('apps_authentication:password_reset_request')
 
 
 def verify_email_view(request, token):
@@ -297,7 +297,7 @@ def resend_verification_view(request):
                         'message': 'Por favor proporciona un email o nombre de usuario.'
                     })
                 messages.error(request, 'Por favor proporciona un email o nombre de usuario.')
-                return redirect('authentication:resend_verification')
+                return redirect('apps_authentication:resend_verification')
 
             # Buscar usuario por email O username
             from django.db.models import Q
@@ -312,7 +312,7 @@ def resend_verification_view(request):
                         'message': 'No existe una cuenta con ese email o nombre de usuario.'
                     })
                 messages.error(request, 'No existe una cuenta con ese email o nombre de usuario.')
-                return redirect('authentication:resend_verification')
+                return redirect('apps_authentication:resend_verification')
 
         # Si el usuario ya está verificado
         if user.email_verified:
@@ -322,7 +322,7 @@ def resend_verification_view(request):
                     'message': 'Tu cuenta ya está confirmada.'
                 })
             messages.info(request, 'Tu cuenta ya está confirmada.')
-            return redirect('authentication:login')
+            return redirect('apps_authentication:login')
 
         # Enviar email de verificación
         subject = 'Confirma tu cuenta'
@@ -359,7 +359,7 @@ def resend_verification_view(request):
                 })
             messages.error(request, 'Error al enviar el email. Por favor intenta más tarde.')
 
-        return redirect('authentication:login')
+        return redirect('apps_authentication:login')
 
     return render(request, 'authentication/resend_verification.html')
 

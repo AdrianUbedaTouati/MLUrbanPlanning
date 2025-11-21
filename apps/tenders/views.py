@@ -330,7 +330,7 @@ class SaveTenderView(LoginRequiredMixin, View):
             return JsonResponse({'success': True, 'saved': created})
 
         # Si no, redirigir a la página anterior
-        return redirect(request.META.get('HTTP_REFERER', 'tenders:dashboard'))
+        return redirect(request.META.get('HTTP_REFERER', 'apps_tenders:dashboard'))
 
 
 class UpdateSavedTenderStatusView(LoginRequiredMixin, View):
@@ -355,7 +355,7 @@ class UpdateSavedTenderStatusView(LoginRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
 
-        return redirect('tenders:detail', ojs_notice_id=ojs_notice_id)
+        return redirect('apps_tenders:detail', ojs_notice_id=ojs_notice_id)
 
 
 class GenerateRecommendationsView(LoginRequiredMixin, View):
@@ -367,16 +367,16 @@ class GenerateRecommendationsView(LoginRequiredMixin, View):
             company_profile = request.user.company_profile
             if not company_profile.is_complete:
                 messages.warning(request, 'Por favor, completa tu perfil de empresa para generar recomendaciones.')
-                return redirect('company:profile')
+                return redirect('apps_company:profile')
         except CompanyProfile.DoesNotExist:
             messages.warning(request, 'Por favor, crea tu perfil de empresa para generar recomendaciones.')
-            return redirect('company:profile')
+            return redirect('apps_company:profile')
 
         # Verificar API key (Ollama no la necesita)
         user_provider = getattr(request.user, 'llm_provider', 'gemini')
         if not request.user.llm_api_key and user_provider != 'ollama':
             messages.warning(request, 'Por favor, configura tu API key del LLM en tu perfil para usar las recomendaciones IA.')
-            return redirect('core:edit_profile')
+            return redirect('apps_core:edit_profile')
 
         # Generar recomendaciones usando Agent_IA
         try:
@@ -392,7 +392,7 @@ class GenerateRecommendationsView(LoginRequiredMixin, View):
 
             if not active_tenders:
                 messages.info(request, 'No hay nuevas licitaciones para recomendar. Ya has evaluado todas las disponibles.')
-                return redirect('tenders:recommended')
+                return redirect('apps_tenders:recommended')
 
             # Generate recommendations
             recommendations_data = rec_service.generate_recommendations(active_tenders)
@@ -424,7 +424,7 @@ class GenerateRecommendationsView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, f'Error al generar recomendaciones: {str(e)}')
 
-        return redirect('tenders:recommended')
+        return redirect('apps_tenders:recommended')
 
 
 class DownloadTendersFormView(LoginRequiredMixin, TemplateView):

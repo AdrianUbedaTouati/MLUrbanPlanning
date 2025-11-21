@@ -79,19 +79,19 @@ class CompanyProfileView(LoginRequiredMixin, View):
             profile.save()
 
             messages.success(request, 'Perfil de empresa actualizado correctamente.')
-            return redirect('company:profile')
+            return redirect('apps_company:profile')
 
         except json.JSONDecodeError as e:
             messages.error(request, f'Error al procesar los datos: {str(e)}')
-            return redirect('company:profile')
+            return redirect('apps_company:profile')
 
         except ValueError as e:
             messages.error(request, f'Error en los datos numéricos: {str(e)}')
-            return redirect('company:profile')
+            return redirect('apps_company:profile')
 
         except Exception as e:
             messages.error(request, f'Error al guardar el perfil: {str(e)}')
-            return redirect('company:profile')
+            return redirect('apps_company:profile')
 
 
 class ExtractCompanyInfoView(LoginRequiredMixin, View):

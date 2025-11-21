@@ -389,7 +389,7 @@ def get_global_tracker() -> TokenTracker:
     """
     global _global_tracker
     if _global_tracker is None:
-        from config import LOGS_DIR
+        from agent_ia_core.config import LOGS_DIR
         log_file = LOGS_DIR / "tokens.jsonl"
         _global_tracker = TokenTracker(log_file=log_file)
     return _global_tracker

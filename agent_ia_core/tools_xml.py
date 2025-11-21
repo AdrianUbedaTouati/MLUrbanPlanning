@@ -13,7 +13,7 @@ import sys
 
 # Importar configuración
 sys.path.append(str(Path(__file__).parent))
-from config import XML_DIR, EFORMS_NAMESPACES
+from agent_ia_core.config import XML_DIR, EFORMS_NAMESPACES
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)

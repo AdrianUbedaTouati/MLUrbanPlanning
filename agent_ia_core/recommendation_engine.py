@@ -15,7 +15,7 @@ from datetime import datetime
 
 # Importar módulos propios
 sys.path.append(str(Path(__file__).parent))
-from config import PROJECT_ROOT, RECORDS_DIR
+from agent_ia_core.config import PROJECT_ROOT, RECORDS_DIR
 
 logger = logging.getLogger(__name__)
 

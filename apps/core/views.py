@@ -94,7 +94,7 @@ def edit_profile_view(request):
 
             user.save()
             messages.success(request, 'Tu perfil ha sido actualizado exitosamente.')
-            return redirect('core:profile')
+            return redirect('apps_core:profile')
     else:
         form = EditProfileForm(instance=request.user)
 

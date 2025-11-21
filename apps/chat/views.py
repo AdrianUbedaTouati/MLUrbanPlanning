@@ -79,9 +79,9 @@ class ChatSessionCreateView(LoginRequiredMixin, View):
                     'success': False,
                     'error': 'ChromaDB no inicializado',
                     'message': 'No hay licitaciones indexadas. Ve a la página de vectorización primero.',
-                    'redirect_url': reverse('tenders:vectorization_index')
+                    'redirect_url': reverse('apps_tenders:vectorization_index')
                 })
-            return redirect('tenders:vectorization_dashboard')
+            return redirect('apps_tenders:vectorization_dashboard')
 
         session = ChatSession.objects.create(user=request.user)
 
@@ -92,7 +92,7 @@ class ChatSessionCreateView(LoginRequiredMixin, View):
                 'redirect_url': f'/chat/{session.id}/'
             })
 
-        return redirect('chat:session_detail', session_id=session.id)
+        return redirect('apps_chat:session_detail', session_id=session.id)
 
 
 class ChatSessionDetailView(LoginRequiredMixin, DetailView):
@@ -117,7 +117,7 @@ class ChatSessionDetailView(LoginRequiredMixin, DetailView):
                 '⚠️ No puedes usar el chat porque no hay licitaciones indexadas. '
                 'Primero debes indexar las licitaciones en la página de vectorización.'
             )
-            return redirect('tenders:vectorization_dashboard')
+            return redirect('apps_tenders:vectorization_dashboard')
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -142,7 +142,7 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': 'El mensaje no puede estar vacío.'})
             messages.error(request, 'El mensaje no puede estar vacío.')
-            return redirect('chat:session_detail', session_id=session_id)
+            return redirect('apps_chat:session_detail', session_id=session_id)
 
         # Log de inicio de proceso
         print("\n" + "="*70, file=sys.stderr)
@@ -284,7 +284,7 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
                 }
             })
 
-        return redirect('chat:session_detail', session_id=session_id)
+        return redirect('apps_chat:session_detail', session_id=session_id)
 
 
 class ChatSessionArchiveView(LoginRequiredMixin, View):
@@ -302,7 +302,7 @@ class ChatSessionArchiveView(LoginRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'is_archived': session.is_archived})
 
-        return redirect('chat:session_list')
+        return redirect('apps_chat:session_list')
 
 
 class ChatSessionDeleteView(LoginRequiredMixin, View):
@@ -317,4 +317,4 @@ class ChatSessionDeleteView(LoginRequiredMixin, View):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True})
 
-        return redirect('chat:session_list')
+        return redirect('apps_chat:session_list')

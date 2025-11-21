@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Importar configuración
 sys.path.append(str(Path(__file__).parent))
-from config import MAX_CHUNK_SIZE, CHUNK_OVERLAP, CHUNK_SECTIONS
+from agent_ia_core.config import MAX_CHUNK_SIZE, CHUNK_OVERLAP, CHUNK_SECTIONS
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)

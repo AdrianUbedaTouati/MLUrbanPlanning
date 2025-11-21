@@ -19,7 +19,7 @@ from langchain_chroma import Chroma
 
 # Importar configuración y módulos propios
 sys.path.append(str(Path(__file__).parent))
-from config import DEFAULT_K, MIN_SIMILARITY_SCORE
+from agent_ia_core.config import DEFAULT_K, MIN_SIMILARITY_SCORE
 from index_build import get_vectorstore
 
 # Configurar logging

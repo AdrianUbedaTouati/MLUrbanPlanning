@@ -15,7 +15,7 @@ from datetime import datetime
 # Importar configuración y namespaces
 import sys
 sys.path.append(str(Path(__file__).parent))
-from config import EFORMS_NAMESPACES, STRICT_VALIDATION
+from agent_ia_core.config import EFORMS_NAMESPACES, STRICT_VALIDATION
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)

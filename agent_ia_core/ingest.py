@@ -16,7 +16,7 @@ import sys
 
 # Importar módulos propios
 sys.path.append(str(Path(__file__).parent))
-from config import XML_DIR, RECORDS_DIR, STRICT_VALIDATION
+from agent_ia_core.config import XML_DIR, RECORDS_DIR, STRICT_VALIDATION
 from xml_parser import parse_eforms_xml, EFormsXMLParser
 
 # Importar validador
