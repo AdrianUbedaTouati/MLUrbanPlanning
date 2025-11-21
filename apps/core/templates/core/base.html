@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +22,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'core:home' %}">
+            <a class="navbar-brand fw-bold" href="{% url 'apps_core:home' %}">
                 <i class="bi bi-file-earmark-text"></i> TenderAI
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -31,43 +31,43 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:home' %}">
+                        <a class="nav-link" href="{% url 'apps_core:home' %}">
                             <i class="bi bi-house"></i> Inicio
                         </a>
                     </li>
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:dashboard' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:dashboard' %}">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:list' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:list' %}">
                                 <i class="bi bi-search"></i> Buscar
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:download_tenders' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:download_tenders' %}">
                                 <i class="bi bi-download"></i> Obtener
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:recommended' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:recommended' %}">
                                 <i class="bi bi-star"></i> Recomendadas
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:saved' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:saved' %}">
                                 <i class="bi bi-bookmark"></i> Guardadas
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'chat:session_list' %}">
+                            <a class="nav-link" href="{% url 'apps_chat:session_list' %}">
                                 <i class="bi bi-chat-dots"></i> Chat
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'tenders:vectorization_dashboard' %}">
+                            <a class="nav-link" href="{% url 'apps_tenders:vectorization_dashboard' %}">
                                 <i class="bi bi-database"></i> Vectorización
                             </a>
                         </li>
@@ -77,18 +77,18 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'company:profile' %}">
+                                    <a class="dropdown-item" href="{% url 'apps_company:profile' %}">
                                         <i class="bi bi-building"></i> Mi Empresa
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'core:profile' %}">
+                                    <a class="dropdown-item" href="{% url 'apps_core:profile' %}">
                                         <i class="bi bi-person"></i> Mi Perfil
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'authentication:logout' %}">
+                                    <a class="dropdown-item" href="{% url 'apps_authentication:logout' %}">
                                         <i class="bi bi-box-arrow-right"></i> Cerrar sesión
                                     </a>
                                 </li>
@@ -96,12 +96,12 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'authentication:login' %}">
+                            <a class="nav-link" href="{% url 'apps_authentication:login' %}">
                                 <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link btn btn-light text-primary ms-2" href="{% url 'authentication:register' %}">
+                            <a class="nav-link btn btn-light text-primary ms-2" href="{% url 'apps_authentication:register' %}">
                                 <i class="bi bi-person-plus"></i> Registrarse
                             </a>
                         </li>

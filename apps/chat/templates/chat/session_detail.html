@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}{{ session.title|default:"Chat con IA" }} - TenderAI{% endblock %}
@@ -20,14 +20,14 @@
                     </h1>
                 </div>
                 <div class="chat-header-actions">
-                    <a href="{% url 'chat:session_list' %}"
+                    <a href="{% url 'apps_chat:session_list' %}"
                        class="btn-icon"
                        title="Ver todas las conversaciones"
                        data-bs-toggle="tooltip">
                         <i class="bi bi-list"></i>
                     </a>
                     <form method="post"
-                          action="{% url 'chat:session_archive' session.id %}"
+                          action="{% url 'apps_chat:session_archive' session.id %}"
                           class="d-inline">
                         {% csrf_token %}
                         <button type="submit"
@@ -38,7 +38,7 @@
                         </button>
                     </form>
                     <form method="post"
-                          action="{% url 'chat:session_delete' session.id %}"
+                          action="{% url 'apps_chat:session_delete' session.id %}"
                           class="d-inline"
                           onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta conversación?');">
                         {% csrf_token %}
@@ -76,7 +76,7 @@
             <!-- Chat Input -->
             <div class="chat-input-container">
                 <form method="post"
-                      action="{% url 'chat:message_create' session.id %}"
+                      action="{% url 'apps_chat:message_create' session.id %}"
                       id="messageForm">
                     {% csrf_token %}
                     <div class="chat-input-wrapper">

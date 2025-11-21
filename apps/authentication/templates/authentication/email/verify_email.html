@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,7 @@
         <p>Gracias por registrarte en BasePage. Para completar tu registro y verificar tu dirección de correo electrónico, por favor haz clic en el siguiente enlace:</p>
 
         <div style="text-align: center; margin: 30px 0;">
-            <a href="{{ protocol }}://{{ domain }}{% url 'authentication:verify_email' token=token %}"
+            <a href="{{ protocol }}://{{ domain }}{% url 'apps_authentication:verify_email' token=token %}"
                style="display: inline-block; padding: 12px 30px; background-color: #0066cc; color: #ffffff; text-decoration: none; border-radius: 5px;">
                 Verificar mi cuenta
             </a>
@@ -21,7 +21,7 @@
 
         <p>O copia y pega el siguiente enlace en tu navegador:</p>
         <p style="word-break: break-all; color: #666;">
-            {{ protocol }}://{{ domain }}{% url 'authentication:verify_email' token=token %}
+            {{ protocol }}://{{ domain }}{% url 'apps_authentication:verify_email' token=token %}
         </p>
 
         <p>Si no te registraste en BasePage, puedes ignorar este correo.</p>

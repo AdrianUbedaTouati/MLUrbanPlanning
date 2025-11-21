@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Obtener Licitaciones - TenderAI{% endblock %}
 
@@ -217,7 +217,7 @@
 
                 <!-- Botón para ir a buscar (oculto hasta completar) -->
                 <div id="completeActions" style="display: none; margin-top: 24px; text-align: center;">
-                    <a href="{% url 'tenders:list' %}" style="display: inline-block; padding: 14px 32px; background: #34c759; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; transition: all 0.2s;">
+                    <a href="{% url 'apps_tenders:list' %}" style="display: inline-block; padding: 14px 32px; background: #34c759; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; transition: all 0.2s;">
                         <i class="bi bi-search"></i> Ir a Buscar Licitaciones
                     </a>
                 </div>
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
         progressPanel.style.display = 'block';
 
         // Iniciar SSE
-        eventSource = new EventSource(`{% url 'tenders:download_tenders_execute' %}?${params}`);
+        eventSource = new EventSource(`{% url 'apps_tenders:download_tenders_execute' %}?${params}`);
 
         addLog('🚀 Conectando con TED API...', 'info');
 
@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.disabled = true;
             btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cancelando...';
 
-            fetch("{% url 'tenders:cancel_download' %}", {
+            fetch("{% url 'apps_tenders:cancel_download' %}", {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
@@ -711,7 +711,7 @@ function confirmDeleteAll() {
         deleteBtn.disabled = true;
         deleteBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Borrando...';
 
-        fetch("{% url 'tenders:delete_all_xmls' %}", {
+        fetch("{% url 'apps_tenders:delete_all_xmls' %}", {
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',

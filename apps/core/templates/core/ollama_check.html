@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}Verificación de Ollama - TenderAI{% endblock %}
@@ -78,7 +78,7 @@
                         {% endif %}
                     </div>
 
-                    <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-outline-primary">
+                    <a href="{% url 'apps_core:edit_profile' %}" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-pencil"></i> Cambiar Configuración
                     </a>
                 </div>
@@ -169,7 +169,7 @@
 
     <div class="row mt-4">
         <div class="col-md-12">
-            <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">Volver al Dashboard</a>
+            <a href="{% url 'apps_core:dashboard' %}" class="btn btn-secondary">Volver al Dashboard</a>
             <a href="https://ollama.com/library" target="_blank" class="btn btn-outline-info">Ver Modelos Disponibles</a>
         </div>
     </div>

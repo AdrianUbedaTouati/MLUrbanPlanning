@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}Buscar Licitaciones - TenderAI{% endblock %}
@@ -400,7 +400,7 @@
     <!-- Formulario de Búsqueda -->
     <div class="search-card">
         <h2>Filtros de Búsqueda</h2>
-        <form method="get" action="{% url 'tenders:list' %}">
+        <form method="get" action="{% url 'apps_tenders:list' %}">
             <div class="filter-grid">
                 <!-- Códigos CPV con Autocompletado -->
                 <div class="filter-group">
@@ -601,7 +601,7 @@
                 <button type="submit" class="btn-search">
                     🔍 Buscar Licitaciones
                 </button>
-                <a href="{% url 'tenders:list' %}" class="btn-reset">
+                <a href="{% url 'apps_tenders:list' %}" class="btn-reset">
                     ✕ Limpiar Filtros
                 </a>
             </div>
@@ -618,7 +618,7 @@
         {% for tender in tenders %}
         <div class="result-item">
             <div class="result-header">
-                <a href="{% url 'tenders:detail' tender.ojs_notice_id %}" class="result-title">
+                <a href="{% url 'apps_tenders:detail' tender.ojs_notice_id %}" class="result-title">
                     {{ tender.title }}
                 </a>
                 <span class="result-date">{{ tender.publication_date|date:"d/m/Y" }}</span>
@@ -702,7 +702,7 @@
                 </p>
 
                 <!-- Formulario de descarga -->
-                <form method="GET" action="{% url 'tenders:download_tenders' %}" id="downloadForm" style="max-width: 500px; margin: 20px auto; text-align: left;">
+                <form method="GET" action="{% url 'apps_tenders:download_tenders' %}" id="downloadForm" style="max-width: 500px; margin: 20px auto; text-align: left;">
                     <div style="margin-bottom: 16px;">
                         <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #1d1d1f;">
                             Período de búsqueda (días hacia atrás):
@@ -750,7 +750,7 @@
                     </ul>
                 </div>
                 <p style="margin-top: 20px;">
-                    <a href="{% url 'tenders:list' %}" class="btn-reset" style="display: inline-block; text-decoration: none;">
+                    <a href="{% url 'apps_tenders:list' %}" class="btn-reset" style="display: inline-block; text-decoration: none;">
                         ✕ Limpiar Filtros y Ver Todas
                     </a>
                 </p>

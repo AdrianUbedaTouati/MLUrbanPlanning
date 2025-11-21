@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Inicio - TenderAI{% endblock %}
 
@@ -14,20 +14,20 @@
                 {% if user.is_authenticated %}
                     <p class="mb-4">Hola, <strong>{{ user.email }}</strong>!</p>
                     <div class="d-flex justify-content-center gap-2">
-                        <a class="btn btn-primary btn-lg" href="{% url 'tenders:dashboard' %}" role="button">
+                        <a class="btn btn-primary btn-lg" href="{% url 'apps_tenders:dashboard' %}" role="button">
                             <i class="bi bi-speedometer2"></i> Ir al Dashboard
                         </a>
-                        <a class="btn btn-success btn-lg" href="{% url 'tenders:list' %}" role="button">
+                        <a class="btn btn-success btn-lg" href="{% url 'apps_tenders:list' %}" role="button">
                             <i class="bi bi-search"></i> Buscar Licitaciones
                         </a>
                     </div>
                 {% else %}
                     <p class="mb-4">Encuentra y analiza las mejores oportunidades de licitación para tu empresa</p>
                     <div class="d-flex justify-content-center gap-2">
-                        <a class="btn btn-primary btn-lg" href="{% url 'authentication:login' %}" role="button">
+                        <a class="btn btn-primary btn-lg" href="{% url 'apps_authentication:login' %}" role="button">
                             <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
                         </a>
-                        <a class="btn btn-outline-primary btn-lg" href="{% url 'authentication:register' %}" role="button">
+                        <a class="btn btn-outline-primary btn-lg" href="{% url 'apps_authentication:register' %}" role="button">
                             <i class="bi bi-person-plus"></i> Registrarse
                         </a>
                     </div>
@@ -118,16 +118,16 @@
                 <div class="card-body text-center py-5">
                     <h3 class="mb-4">¿Listo para encontrar tu próxima licitación?</h3>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="{% url 'tenders:dashboard' %}" class="btn btn-primary btn-lg">
+                        <a href="{% url 'apps_tenders:dashboard' %}" class="btn btn-primary btn-lg">
                             <i class="bi bi-speedometer2"></i> Dashboard
                         </a>
-                        <a href="{% url 'tenders:recommended' %}" class="btn btn-warning btn-lg">
+                        <a href="{% url 'apps_tenders:recommended' %}" class="btn btn-warning btn-lg">
                             <i class="bi bi-star"></i> Ver Recomendadas
                         </a>
-                        <a href="{% url 'company:profile' %}" class="btn btn-info btn-lg">
+                        <a href="{% url 'apps_company:profile' %}" class="btn btn-info btn-lg">
                             <i class="bi bi-building"></i> Mi Empresa
                         </a>
-                        <a href="{% url 'chat:session_list' %}" class="btn btn-success btn-lg">
+                        <a href="{% url 'apps_chat:session_list' %}" class="btn btn-success btn-lg">
                             <i class="bi bi-chat-dots"></i> Chat IA
                         </a>
                     </div>

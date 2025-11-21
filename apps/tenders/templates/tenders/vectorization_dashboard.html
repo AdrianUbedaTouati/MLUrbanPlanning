@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Vectorización - TenderAI{% endblock %}
 
@@ -28,7 +28,7 @@
                             Por favor, configura tu API key del LLM en tu perfil de usuario.
                         </p>
                         <div style="margin-top: 24px;">
-                            <a href="{% url 'core:edit_profile' %}" style="display: inline-block; padding: 14px 32px; background: #007aff; color: white; text-decoration: none; border-radius: 10px; font-weight: 600;">
+                            <a href="{% url 'apps_core:edit_profile' %}" style="display: inline-block; padding: 14px 32px; background: #007aff; color: white; text-decoration: none; border-radius: 10px; font-weight: 600;">
                                 <i class="bi bi-gear"></i> Ir a Configuración
                             </a>
                         </div>
@@ -142,7 +142,7 @@
                                     Primero descarga algunas licitaciones desde la sección "Obtener".
                                 </p>
                                 <div style="margin-top: 12px;">
-                                    <a href="{% url 'tenders:download_tenders' %}" style="color: #856404; text-decoration: underline; font-weight: 600;">
+                                    <a href="{% url 'apps_tenders:download_tenders' %}" style="color: #856404; text-decoration: underline; font-weight: 600;">
                                         Ir a Obtener Licitaciones →
                                     </a>
                                 </div>
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
             reloadBtn.style.display = 'none';
 
             // Iniciar SSE
-            eventSource = new EventSource("{% url 'tenders:index_all_tenders' %}");
+            eventSource = new EventSource("{% url 'apps_tenders:index_all_tenders' %}");
 
             addLog('🚀 Iniciando indexación de licitaciones...', 'info');
             progressEmoji.textContent = '🔄';
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.disabled = true;
                 this.innerHTML = '<i class="bi bi-hourglass-split"></i> Cancelando...';
 
-                fetch("{% url 'tenders:cancel_indexing' %}", {
+                fetch("{% url 'apps_tenders:cancel_indexing' %}", {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Borrando...';
 
-                fetch("{% url 'tenders:clear_vectorstore' %}", {
+                fetch("{% url 'apps_tenders:clear_vectorstore' %}", {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',

@@ -1,4 +1,4 @@
-{% load chat_extras %}
+﻿{% load chat_extras %}
 <div class="message-group {{ msg.role }}">
     <div class="message-avatar avatar-{{ msg.role }}">
         {% if msg.role == 'user' %}
@@ -80,7 +80,7 @@
                     onmouseout="this.style.background='rgba(255, 255, 255, 0.6)'; this.style.boxShadow='none';">
 
                         <div style="margin-bottom: 8px;">
-                            <a href="{% url 'tenders:detail' doc.id %}?highlight={{ doc.section }}"
+                            <a href="{% url 'apps_tenders:detail' doc.id %}?highlight={{ doc.section }}"
                                target="_blank"
                                rel="noopener noreferrer"
                                style="

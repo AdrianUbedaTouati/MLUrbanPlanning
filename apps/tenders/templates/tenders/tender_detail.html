@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}{{ tender.title }} - TenderAI{% endblock %}
 
@@ -9,7 +9,7 @@
             <!-- Título y Acciones -->
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <h1>{{ tender.title }}</h1>
-                <form method="post" action="{% url 'tenders:save' tender.ojs_notice_id %}">
+                <form method="post" action="{% url 'apps_tenders:save' tender.ojs_notice_id %}">
                     {% csrf_token %}
                     <button type="submit" class="btn {% if is_saved %}btn-warning{% else %}btn-outline-warning{% endif %}">
                         <i class="bi bi-bookmark{% if is_saved %}-fill{% endif %}"></i>
@@ -612,7 +612,7 @@
                     <h5 class="mb-0">Estado</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'tenders:update_status' tender.ojs_notice_id %}">
+                    <form method="post" action="{% url 'apps_tenders:update_status' tender.ojs_notice_id %}">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="status" class="form-label">Estado</label>
@@ -639,10 +639,10 @@
                     <h5 class="mb-0">Acciones</h5>
                 </div>
                 <div class="card-body">
-                    <a href="{% url 'chat:session_create' %}" class="btn btn-success w-100 mb-2" onclick="event.preventDefault(); fetch('{% url 'chat:session_create' %}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(d => window.location.href = d.redirect_url + '?tender_id={{ tender.ojs_notice_id }}');">
+                    <a href="{% url 'apps_chat:session_create' %}" class="btn btn-success w-100 mb-2" onclick="event.preventDefault(); fetch('{% url 'apps_chat:session_create' %}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(d => window.location.href = d.redirect_url + '?tender_id={{ tender.ojs_notice_id }}');">
                         <i class="bi bi-chat-dots"></i> Consultar con IA
                     </a>
-                    <a href="{% url 'tenders:list' %}" class="btn btn-secondary w-100">
+                    <a href="{% url 'apps_tenders:list' %}" class="btn btn-secondary w-100">
                         <i class="bi bi-arrow-left"></i> Volver al Listado
                     </a>
                 </div>

@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Mi Perfil - BasePage{% endblock %}
 
@@ -45,7 +45,7 @@
                                     <span class="badge bg-warning ms-2">
                                         <i class="bi bi-exclamation-circle"></i> Sin confirmar
                                     </span>
-                                    <a href="{% url 'authentication:resend_verification' %}" class="btn btn-sm btn-link">
+                                    <a href="{% url 'apps_authentication:resend_verification' %}" class="btn btn-sm btn-link">
                                         Reenviar confirmación
                                     </a>
                                 {% endif %}
@@ -131,7 +131,7 @@
                                             <i class="bi bi-info-circle"></i>
                                             <strong>IA Local</strong> - Sin costes, 100% privado
                                         </div>
-                                        <a href="{% url 'core:ollama_check' %}" class="btn btn-sm btn-primary">
+                                        <a href="{% url 'apps_core:ollama_check' %}" class="btn btn-sm btn-primary">
                                             <i class="bi bi-check-circle"></i> Verificar Configuración
                                         </a>
                                     </div>
@@ -211,7 +211,7 @@
                                                             <i class="bi bi-box-arrow-up-right"></i> Obtener API Key
                                                         </a>
                                                     {% endif %}
-                                                    <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-primary">
+                                                    <a href="{% url 'apps_core:edit_profile' %}" class="btn btn-sm btn-primary">
                                                         <i class="bi bi-gear"></i> Configurar Ahora
                                                     </a>
                                                 </div>
@@ -292,7 +292,7 @@
                                         <i class="bi bi-exclamation-triangle"></i>
                                         <strong>Configuración incompleta</strong>
                                         <p class="mb-2 mt-2">Para que el agente pueda buscar en internet, necesitas configurar ambas credenciales de Google Search API.</p>
-                                        <a href="{% url 'core:edit_profile' %}" class="btn btn-sm btn-primary">
+                                        <a href="{% url 'apps_core:edit_profile' %}" class="btn btn-sm btn-primary">
                                             <i class="bi bi-gear"></i> Configurar Credenciales
                                         </a>
                                     </div>
@@ -342,7 +342,7 @@
                     <div class="alert alert-warning alert-permanent">
                         <i class="bi bi-exclamation-triangle"></i>
                         No tienes una dirección de envío completa.
-                        <a href="{% url 'core:edit_profile' %}">Añádela ahora</a>
+                        <a href="{% url 'apps_core:edit_profile' %}">Añádela ahora</a>
                     </div>
                     {% endif %}
 
@@ -369,10 +369,10 @@
                     <hr class="my-4">
 
                     <div class="text-center">
-                        <a href="{% url 'core:edit_profile' %}" class="btn btn-primary me-2">
+                        <a href="{% url 'apps_core:edit_profile' %}" class="btn btn-primary me-2">
                             <i class="bi bi-pencil"></i> Editar Perfil
                         </a>
-                        <a href="{% url 'authentication:password_reset_request' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'apps_authentication:password_reset_request' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-key"></i> Cambiar Contraseña
                         </a>
                     </div>

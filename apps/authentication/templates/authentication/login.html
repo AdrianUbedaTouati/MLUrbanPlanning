@@ -1,4 +1,4 @@
-{% extends 'authentication/base_auth.html' %}
+﻿{% extends 'authentication/base_auth.html' %}
 
 {% block title %}Iniciar Sesión - BasePage{% endblock %}
 
@@ -63,13 +63,13 @@
 
                         <div class="text-center">
                             <p class="mb-2">
-                                <a href="{% url 'authentication:password_reset_request' %}" class="text-decoration-none">
+                                <a href="{% url 'apps_authentication:password_reset_request' %}" class="text-decoration-none">
                                     ¿Olvidaste tu contraseña?
                                 </a>
                             </p>
                             <p>
                                 ¿No tienes cuenta?
-                                <a href="{% url 'authentication:register' %}" class="text-decoration-none">
+                                <a href="{% url 'apps_authentication:register' %}" class="text-decoration-none">
                                     Regístrate aquí
                                 </a>
                             </p>

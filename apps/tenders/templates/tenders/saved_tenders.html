@@ -1,4 +1,4 @@
-{% extends 'core/base.html' %}
+﻿{% extends 'core/base.html' %}
 
 {% block title %}Licitaciones Guardadas - TenderAI{% endblock %}
 
@@ -9,7 +9,7 @@
     <!-- Filtros por Estado -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="get" action="{% url 'tenders:saved' %}">
+            <form method="get" action="{% url 'apps_tenders:saved' %}">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="status" class="form-label">Filtrar por Estado</label>
@@ -31,7 +31,7 @@
         <div class="card-body">
             <div class="list-group">
                 {% for saved in saved_tenders %}
-                <a href="{% url 'tenders:detail' saved.tender.ojs_notice_id %}" class="list-group-item list-group-item-action">
+                <a href="{% url 'apps_tenders:detail' saved.tender.ojs_notice_id %}" class="list-group-item list-group-item-action">
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">{{ saved.tender.title }}</h6>
                         <small class="text-muted">Guardada: {{ saved.saved_at|date:"d/m/Y" }}</small>
@@ -83,7 +83,7 @@
     <div class="alert alert-info text-center">
         <h5>No tienes licitaciones guardadas</h5>
         <p>Busca licitaciones y guárdalas para hacer seguimiento.</p>
-        <a href="{% url 'tenders:list' %}" class="btn btn-primary">Buscar Licitaciones</a>
+        <a href="{% url 'apps_tenders:list' %}" class="btn btn-primary">Buscar Licitaciones</a>
     </div>
     {% endif %}
 </div>
