@@ -160,7 +160,7 @@ class FindByBudgetTool(BaseTool):
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
 
             # Query a la base de datos - construir filtro dinámicamente
             queryset = Tender.objects.exclude(budget_amount__isnull=True)
@@ -289,7 +289,7 @@ class FindByDeadlineTool(BaseTool):
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
             from datetime import datetime
 
             # Query a la base de datos - construir filtro dinámicamente
@@ -699,7 +699,7 @@ class GetStatisticsTool(BaseTool):
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
             from django.db.models import Count, Avg, Sum, Min, Max
             from datetime import date, timedelta
 

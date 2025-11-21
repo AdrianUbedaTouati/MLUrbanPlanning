@@ -5,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
 django.setup()
 
-from tenders.models import Tender
+from apps.tenders.models import Tender
 
 # Estadísticas
 total = Tender.objects.count()

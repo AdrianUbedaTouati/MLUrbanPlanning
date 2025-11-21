@@ -49,7 +49,7 @@ class GetTenderDetailsTool(BaseTool):
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
 
             # Buscar la licitación con búsqueda flexible
             logger.info(f"[GET_TENDER_DETAILS] Buscando licitación con ID: '{tender_id}'")
@@ -289,7 +289,7 @@ IMPORTANTE: Esta herramienta devuelve el XML completo (3000-5000 tokens). Úsala
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
 
             # Buscar la licitación con búsqueda flexible
             logger.info(f"[GET_TENDER_XML] Buscando licitación con ID: '{tender_id}'")
@@ -406,7 +406,7 @@ class CompareTendersTool(BaseTool):
                 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
                 django.setup()
 
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
 
             tenders = []
             for tender_id in tender_ids[:5]:

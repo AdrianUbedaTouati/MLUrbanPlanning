@@ -103,7 +103,7 @@ class VerifyFieldsTool(BaseTool):
                 - error: str - Mensaje de error (si falla)
         """
         try:
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
 
             logger.info(f"[VERIFICATION] Verificando {fields} para tender {tender_id}")
 

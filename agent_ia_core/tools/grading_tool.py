@@ -96,7 +96,7 @@ class GradeDocumentsTool(BaseTool):
                 - details: List[Dict] - Detalles de cada evaluación
         """
         try:
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
             from agent_ia_core.prompts import create_grading_prompt
 
             logger.info(f"[GRADING] Evaluando {len(document_ids)} documentos para: {question[:60]}...")

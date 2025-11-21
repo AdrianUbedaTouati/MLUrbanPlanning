@@ -5,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
 django.setup()
 
-from tenders.ted_downloader import download_and_save_tenders
+from apps.tenders.ted_downloader import download_and_save_tenders
 
 print("="*60)
 print("DESCARGA DE LICITACIONES CON XML")
@@ -39,7 +39,7 @@ try:
     print(f"Errores: {len(result['errors'])}")
 
     # Verificar que se guardaron con XML
-    from tenders.models import Tender
+    from apps.tenders.models import Tender
     with_xml = Tender.objects.exclude(xml_content='').exclude(xml_content__isnull=True).count()
     print(f"\nLicitaciones con XML en BD: {with_xml}")
 

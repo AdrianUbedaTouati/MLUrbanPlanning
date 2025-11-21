@@ -52,7 +52,7 @@ class GetCompanyInfoTool(BaseTool):
                 - error: mensaje de error si falla
         """
         try:
-            from company.models import CompanyProfile
+            from apps.company.models import CompanyProfile
 
             # Buscar perfil de empresa
             profile = CompanyProfile.objects.filter(user=self.user).first()
@@ -152,7 +152,7 @@ class GetTendersSummaryTool(BaseTool):
                 - error: mensaje de error si falla
         """
         try:
-            from tenders.models import Tender
+            from apps.tenders.models import Tender
             import json
 
             # Validar límite

@@ -1,0 +1,113 @@
+﻿{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{{ session.title|default:"Chat con IA" }} - TenderAI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'chat/css/chat.css' %}?v=3.0">
+{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper">
+    <div class="chat-layout">
+        <!-- Main Chat Area -->
+        <div class="chat-main">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div>
+                    <h1 class="chat-header-title">
+                        {{ session.title|default:"Nueva Conversación" }}
+                    </h1>
+                </div>
+                <div class="chat-header-actions">
+                    <a href="{% url 'apps_chat:session_list' %}"
+                       class="btn-icon"
+                       title="Ver todas las conversaciones"
+                       data-bs-toggle="tooltip">
+                        <i class="bi bi-list"></i>
+                    </a>
+                    <form method="post"
+                          action="{% url 'apps_chat:session_archive' session.id %}"
+                          class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="btn-icon"
+                                title="Archivar conversación"
+                                data-bs-toggle="tooltip">
+                            <i class="bi bi-archive"></i>
+                        </button>
+                    </form>
+                    <form method="post"
+                          action="{% url 'apps_chat:session_delete' session.id %}"
+                          class="d-inline"
+                          onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta conversación?');">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="btn-icon"
+                                title="Eliminar conversación"
+                                data-bs-toggle="tooltip">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                {% if messages %}
+                    {% for msg in messages %}
+                        {% include 'chat/partials/_message_bubble.html' %}
+                    {% endfor %}
+                {% else %}
+                <div class="chat-empty-state">
+                    <div class="chat-empty-icon">
+                        <i class="bi bi-chat-dots"></i>
+                    </div>
+                    <h3 class="chat-empty-title">Comienza una conversación</h3>
+                    <p class="chat-empty-text">
+                        Puedes saludarme, hacerme preguntas generales sobre licitaciones públicas, o consultar información específica de documentos indexados.
+                        Estoy aquí para ayudarte con análisis de licitaciones, explicar conceptos, o simplemente charlar.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <form method="post"
+                      action="{% url 'apps_chat:message_create' session.id %}"
+                      id="messageForm">
+                    {% csrf_token %}
+                    <div class="chat-input-wrapper">
+                        <textarea class="chat-input"
+                                  name="message"
+                                  id="messageInput"
+                                  placeholder="Pregúntame sobre licitaciones o chatea conmigo..."
+                                  rows="1"
+                                  required
+                                  autocomplete="off"></textarea>
+                        <button type="submit"
+                                class="btn-send"
+                                id="sendButton"
+                                title="Enviar mensaje (Enter)"
+                                data-bs-toggle="tooltip">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Presiona Enter para enviar, Shift+Enter para nueva línea
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'chat/js/chat.js' %}?v=3.2.4"></script>
+{% endblock %}

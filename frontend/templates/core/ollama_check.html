@@ -1,0 +1,177 @@
+﻿{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Verificación de Ollama - TenderAI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Verificación de Ollama</h1>
+
+    <!-- Debug Info (temporal) -->
+    <div class="alert alert-info">
+        <h6><i class="bi bi-info-circle"></i> Información de sesión:</h6>
+        <p class="mb-0"><strong>Usuario logueado:</strong> {{ user.username }} (ID: {{ user.id }})</p>
+        <p class="mb-0"><strong>Modelo en BD (chat):</strong> <code>{{ debug_info.db_chat_model }}</code></p>
+        <p class="mb-0"><strong>Modelo en BD (embed):</strong> <code>{{ debug_info.db_embed_model }}</code></p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            {% if health_status.overall_status == 'healthy' %}
+                <div class="alert alert-success">
+                    <h4><i class="bi bi-check-circle-fill"></i> Ollama está configurado correctamente</h4>
+                    <p>{{ health_status.message }}</p>
+                </div>
+            {% elif health_status.overall_status == 'not_installed' %}
+                <div class="alert alert-danger">
+                    <h4><i class="bi bi-x-circle-fill"></i> Ollama no está instalado</h4>
+                    <p>{{ health_status.message }}</p>
+                    <p><strong>Solución:</strong> Ejecuta el script <code>instalar_ollama.bat</code> en la carpeta del proyecto</p>
+                </div>
+            {% elif health_status.overall_status == 'server_not_running' %}
+                <div class="alert alert-warning">
+                    <h4><i class="bi bi-exclamation-triangle-fill"></i> Servidor no está corriendo</h4>
+                    <p>{{ health_status.message }}</p>
+                    <p><strong>Solución:</strong> Ejecuta <code>ollama serve</code> en una terminal</p>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <h4><i class="bi bi-exclamation-triangle-fill"></i> Problemas detectados</h4>
+                    <p>{{ health_status.message }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-person-gear"></i> Tu Configuración</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="fw-bold text-primary"><i class="bi bi-cpu"></i> Modelo de Chat:</label>
+                        <p class="mb-0 fs-5">
+                            <code class="bg-light text-dark p-2 rounded">{{ user_chat_model }}</code>
+                        </p>
+                        {% if health_status.checks.user_chat_model %}
+                            {% if health_status.checks.user_chat_model.installed %}
+                                <small class="text-success"><i class="bi bi-check-circle-fill"></i> Instalado</small>
+                            {% else %}
+                                <small class="text-danger"><i class="bi bi-x-circle-fill"></i> No instalado</small>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-primary"><i class="bi bi-diagram-3"></i> Modelo de Embeddings:</label>
+                        <p class="mb-0 fs-5">
+                            <code class="bg-light text-dark p-2 rounded">{{ user_embedding_model }}</code>
+                        </p>
+                        {% if health_status.checks.user_embedding_model %}
+                            {% if health_status.checks.user_embedding_model.installed %}
+                                <small class="text-success"><i class="bi bi-check-circle-fill"></i> Instalado</small>
+                            {% else %}
+                                <small class="text-danger"><i class="bi bi-x-circle-fill"></i> No instalado</small>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'apps_core:edit_profile' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Cambiar Configuración
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5>Estado del Servidor</h5>
+                </div>
+                <div class="card-body">
+                    {% if health_status.checks.server %}
+                        {% if health_status.checks.server.running %}
+                            <p class="text-success"><i class="bi bi-check-circle-fill"></i> Servidor corriendo</p>
+                            <p><small>URL: {{ health_status.checks.server.url }}</small></p>
+                        {% else %}
+                            <p class="text-danger"><i class="bi bi-x-circle-fill"></i> Servidor detenido</p>
+                            <code>ollama serve</code>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5><i class="bi bi-list-ul"></i> Modelos Instalados ({{ health_status.checks.models.count }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if health_status.checks.models.models %}
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Modelo</th>
+                                    <th>ID</th>
+                                    <th>Tamaño</th>
+                                    <th>Modificado</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for model in health_status.checks.models.models %}
+                                <tr {% if model.name == user_chat_model or model.name == user_embedding_model %}class="table-primary"{% endif %}>
+                                    <td>
+                                        <strong>{{ model.name }}</strong>
+                                        {% if model.name == user_chat_model %}
+                                            <span class="badge bg-success">Tu modelo de chat</span>
+                                        {% endif %}
+                                        {% if model.name == user_embedding_model %}
+                                            <span class="badge bg-info">Tu modelo de embeddings</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ model.id }}</small></td>
+                                    <td><span class="badge bg-secondary">{{ model.size }}</span></td>
+                                    <td><small>{{ model.modified }}</small></td>
+                                    <td>
+                                        {% if model.name == user_chat_model or model.name == user_embedding_model %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Los modelos resaltados en azul son los que tienes configurados actualmente.
+                        </small>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><i class="bi bi-exclamation-triangle"></i> <strong>No hay modelos instalados</strong></p>
+                            <p class="mb-2">Descarga el modelo recomendado:</p>
+                            <code>ollama pull qwen2.5:72b</code>
+                            <hr>
+                            <small>También puedes descargar el modelo de embeddings:</small><br>
+                            <code>ollama pull nomic-embed-text</code>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <a href="{% url 'apps_core:dashboard' %}" class="btn btn-secondary">Volver al Dashboard</a>
+            <a href="https://ollama.com/library" target="_blank" class="btn btn-outline-info">Ver Modelos Disponibles</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

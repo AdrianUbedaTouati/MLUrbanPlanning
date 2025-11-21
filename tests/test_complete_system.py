@@ -9,9 +9,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from tenders.vectorization_service import VectorizationService
-from chat.services import ChatAgentService
-from core.token_pricing import get_nvidia_limits_info, calculate_chat_cost, format_cost
+from apps.tenders.vectorization_service import VectorizationService
+from apps.chat.services import ChatAgentService
+from apps.core.token_pricing import get_nvidia_limits_info, calculate_chat_cost, format_cost
 
 User = get_user_model()
 

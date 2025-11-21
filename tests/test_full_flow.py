@@ -6,8 +6,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TenderAI.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from tenders.vectorization_service import VectorizationService
-from chat.services import ChatAgentService
+from apps.tenders.vectorization_service import VectorizationService
+from apps.chat.services import ChatAgentService
 
 User = get_user_model()
 

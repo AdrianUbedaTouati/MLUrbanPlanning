@@ -1,9 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add agent_ia_core/agent_graph.py)",
-      "Bash(git commit -m \"Fix: Solucionar bucle infinito en agent_graph cuando ChromaDB está vacío\n\nProblema identificado:\n- El agente entraba en bucle infinito (recursion limit 25) cuando no encontraba documentos\n- El contador ''iteration'' se incrementaba en _route_node en cada pasada del grafo\n- Cuando ChromaDB está vacío (0 documentos), el grading rechaza todo e intenta reintentar infinitamente\n\nSolución implementada:\n1. Mover incremento de ''iteration'' de _route_node a _retrieve_node\n   - Solo incrementar cuando realmente se recuperan documentos\n   - Contador ahora refleja número de intentos de retrieve\n\n2. Detectar ChromaDB vacío en _decide_after_grade\n   - Si no hay documentos EN ABSOLUTO, ir directo a ''answer''\n   - No reintentar si ChromaDB está vacío (previene bucle infinito)\n\n3. Mejorar logs para debugging\n   - Log del número de intento en RETRIEVE\n   - Warning cuando ChromaDB está vacío\n\nResultado:\n- El agente ahora responde correctamente incluso con ChromaDB vacío\n- Máximo 2 intentos de retrieve (evita bucles infinitos)\n- Mensajes claros al usuario sobre falta de documentos\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
-      "Bash(git add .claude/settings.local.json)"
+      "Bash(timeout 5 python:*)"
     ],
     "deny": [],
     "ask": []
