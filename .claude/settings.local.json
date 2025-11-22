@@ -9,7 +9,9 @@
       "Bash(git checkout:*)",
       "Bash(del temp_old.py temp_old_agent.py nul 2)",
       "Bash(timeout 30 python:*)",
-      "Bash(timeout 10 python manage.py runserver:*)"
+      "Bash(timeout 10 python manage.py runserver:*)",
+      "Bash(python manage.py check:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
