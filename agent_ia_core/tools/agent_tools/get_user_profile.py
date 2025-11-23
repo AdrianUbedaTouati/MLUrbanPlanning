@@ -45,17 +45,31 @@ class GetUserProfileTool(BaseTool):
                     'error': 'El usuario no tiene un perfil configurado. Debe completar su CV primero.'
                 }
 
-            # Obtener contexto formateado
-            profile_context = profile.get_chat_context()
+            # Usar cv_summary como información principal para el LLM
+            if profile.cv_summary:
+                # El ranking de puestos es la info principal
+                profile_info = profile.cv_summary
+            else:
+                # Fallback al contexto tradicional si no hay cv_summary
+                profile_info = profile.get_chat_context()
 
-            # Datos estructurados
-            profile_data = profile.to_agent_format()
+            # Datos adicionales de preferencias
+            preferences = {
+                'city': getattr(self.user, 'city', '') or profile.location,
+                'work_mode': getattr(self.user, 'work_mode', ''),
+                'preferred_locations': profile.preferred_locations,
+                'preferred_sectors': profile.preferred_sectors,
+                'salary_min': profile.salary_min,
+                'salary_max': profile.salary_max,
+                'availability': profile.availability,
+            }
 
             return {
                 'success': True,
                 'data': {
-                    'formatted_context': profile_context,
-                    'structured_data': profile_data,
+                    'profile_summary': profile_info,
+                    'preferences': preferences,
+                    'full_name': profile.full_name,
                     'cv_analyzed': profile.cv_analyzed,
                     'is_complete': profile.is_complete
                 }

@@ -512,47 +512,33 @@ class FunctionCallingAgent:
         """
         parts = []
 
+        # Nombre del usuario
         if profile_data.get('full_name'):
             parts.append(f"Nombre: {profile_data['full_name']}")
 
-        if profile_data.get('title'):
-            parts.append(f"Título profesional: {profile_data['title']}")
+        # Preferencias de búsqueda
+        preferences = profile_data.get('preferences', {})
+        if preferences:
+            if preferences.get('city'):
+                parts.append(f"Ciudad: {preferences['city']}")
+            if preferences.get('work_mode'):
+                work_mode_display = {
+                    'remote': '100% Remoto',
+                    'hybrid': 'Híbrido',
+                    'onsite': 'Presencial',
+                    'any': 'Cualquiera'
+                }.get(preferences['work_mode'], preferences['work_mode'])
+                parts.append(f"Modalidad preferida: {work_mode_display}")
+            if preferences.get('preferred_locations'):
+                parts.append(f"Ubicaciones preferidas: {', '.join(preferences['preferred_locations'])}")
+            if preferences.get('preferred_sectors'):
+                parts.append(f"Sectores de interés: {', '.join(preferences['preferred_sectors'])}")
+            if preferences.get('salary_min'):
+                parts.append(f"Salario mínimo: {preferences['salary_min']}€/año")
 
-        if profile_data.get('location'):
-            parts.append(f"Ubicación: {profile_data['location']}")
-
-        if profile_data.get('preferred_location'):
-            parts.append(f"Ubicación preferida para trabajo: {profile_data['preferred_location']}")
-
-        if profile_data.get('skills'):
-            skills = profile_data['skills']
-            if isinstance(skills, list):
-                parts.append(f"Habilidades: {', '.join(skills)}")
-            else:
-                parts.append(f"Habilidades: {skills}")
-
-        if profile_data.get('experience'):
-            parts.append(f"Experiencia: {profile_data['experience']}")
-
-        if profile_data.get('education'):
-            parts.append(f"Educación: {profile_data['education']}")
-
-        if profile_data.get('preferred_sectors'):
-            sectors = profile_data['preferred_sectors']
-            if isinstance(sectors, list):
-                parts.append(f"Sectores de interés: {', '.join(sectors)}")
-            else:
-                parts.append(f"Sectores de interés: {sectors}")
-
-        if profile_data.get('job_type'):
-            parts.append(f"Tipo de trabajo buscado: {profile_data['job_type']}")
-
-        if profile_data.get('salary_expectation'):
-            parts.append(f"Expectativa salarial: {profile_data['salary_expectation']}")
-
-        # Incluir curriculum completo si está disponible
-        if profile_data.get('curriculum_text'):
-            parts.append(f"\nCURRICULUM/CV:\n{profile_data['curriculum_text']}")
+        # Ranking de puestos recomendados (información principal)
+        if profile_data.get('profile_summary'):
+            parts.append(f"\nRANKING DE PUESTOS RECOMENDADOS PARA ESTE USUARIO:\n{profile_data['profile_summary']}")
 
         if not parts:
             return "Perfil del usuario no completado. Sugiere que complete su perfil para mejores recomendaciones."

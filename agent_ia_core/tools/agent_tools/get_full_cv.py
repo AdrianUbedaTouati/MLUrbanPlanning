@@ -47,23 +47,10 @@ class GetFullCVTool(BaseTool):
                     'error': 'No tienes un CV guardado. Sube tu CV en la sección de configuración.'
                 }
 
-            # Retornar CV completo
+            # Retornar solo el texto del CV
             return {
                 'success': True,
-                'data': {
-                    'curriculum_text': profile.curriculum_text,
-                    'full_name': profile.full_name,
-                    'location': profile.location,
-                    'phone': profile.phone,
-                    'skills': profile.skills,
-                    'experience': profile.experience,
-                    'education': profile.education,
-                    'languages': profile.languages,
-                    'professional_summary': profile.professional_summary,
-                    'linkedin_url': profile.linkedin_url,
-                    'github_url': profile.github_url,
-                    'portfolio_url': profile.portfolio_url,
-                }
+                'data': profile.curriculum_text
             }
 
         except Exception as e:

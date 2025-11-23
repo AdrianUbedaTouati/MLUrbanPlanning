@@ -73,37 +73,22 @@ class ToolRegistry:
                     self.tools['browse_webpage'] = browse_tool
                     logger.info("[REGISTRY] ✓ Browse webpage tool habilitada")
 
-        # Obtener perfil de usuario para tools que lo necesiten
+        # Obtener datos esenciales del usuario para auto-fill en tools
+        # (city y work_mode para filtros automáticos)
         user_profile = None
         if self.user:
             try:
-                from apps.company.models import UserProfile
-                profile = UserProfile.objects.filter(user=self.user).first()
-                if profile:
-                    user_profile = profile.to_agent_format()
-                else:
-                    user_profile = {}
+                user_profile = {}
 
-                # Añadir datos del modelo User (ciudad, modalidad de trabajo)
+                # Solo datos esenciales para auto-fill de parámetros
                 if hasattr(self.user, 'city') and self.user.city:
                     user_profile['city'] = self.user.city
-                    # También añadir a preferred_locations si no existe
-                    if 'preferred_locations' not in user_profile or not user_profile['preferred_locations']:
-                        user_profile['preferred_locations'] = [self.user.city]
 
                 if hasattr(self.user, 'work_mode') and self.user.work_mode:
                     user_profile['work_mode'] = self.user.work_mode
-                    # Mapear a texto legible
-                    work_mode_map = {
-                        'any': 'Indiferente',
-                        'remote': 'Remoto',
-                        'onsite': 'Presencial',
-                        'hybrid': 'Híbrido'
-                    }
-                    user_profile['work_mode_text'] = work_mode_map.get(self.user.work_mode, 'Indiferente')
 
             except Exception as e:
-                logger.warning(f"No se pudo obtener perfil de usuario: {e}")
+                logger.warning(f"No se pudo obtener datos del usuario: {e}")
 
         # Tool de búsqueda de ofertas
         self.tools['search_jobs'] = JobSearchTool(

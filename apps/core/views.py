@@ -16,6 +16,9 @@ import base64
 from openai import OpenAI
 from pdf2image import convert_from_bytes
 from io import BytesIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def home_view(request):
@@ -563,50 +566,44 @@ def _generate_cv_summary(curriculum_text: str, user) -> dict:
     """
     try:
         # Obtener LLM del usuario
-        from .llm_providers import get_llm_for_user
-        llm = get_llm_for_user(user)
+        from .llm_providers import LLMProviderFactory
+        llm = LLMProviderFactory.get_llm(
+            provider=user.llm_provider,
+            api_key=user.llm_api_key,
+            model_name=user.openai_model if user.llm_provider == 'openai' else user.ollama_model
+        )
 
         if not llm:
             return {}
 
-        prompt = f"""Analiza este CV y genera un resumen estructurado en formato JSON.
+        # Extraer puestos recomendados basados en el CV
+        extraction_prompt = f"""Analiza este CV y genera un RANKING de puestos de trabajo en los que encajarías, ordenados del más adecuado al menos.
+
+Habla directamente al propietario del CV en segunda persona.
+
+Para cada puesto incluye:
+- Nombre del puesto
+- Tecnologías/habilidades de tu CV que aplicarían
+- Justificación breve de por qué encajas (basada en tu experiencia y proyectos reales)
+
+Ordena de mayor a menor adecuación. Sé realista y específico. Solo incluye puestos para los que tengas experiencia demostrable en tu CV.
 
 CV:
-{curriculum_text[:4000]}
+{curriculum_text}
+"""
 
-Genera un JSON con esta estructura exacta (sin explicaciones, solo el JSON):
-{{
-    "titulo_profesional": "título que mejor describe al candidato",
-    "años_experiencia": número entero de años totales,
-    "skills_principales": ["skill1", "skill2", "skill3", "skill4", "skill5"],
-    "skills_secundarias": ["skill1", "skill2", "skill3"],
-    "nivel": "Junior/Mid/Senior/Lead/Manager",
-    "tipos_rol": ["Backend", "Frontend", "Full Stack", etc.],
-    "sectores_experiencia": ["sector1", "sector2"],
-    "formacion": "título académico principal",
-    "certificaciones": ["cert1", "cert2"],
-    "idiomas": [{{"idioma": "nombre", "nivel": "nivel"}}],
-    "keywords_busqueda": ["keyword1", "keyword2", "keyword3"],
-    "logros_destacados": "logro más relevante en 1 frase"
-}}
-
-JSON:"""
-
-        response = llm.invoke(prompt)
+        response = llm.invoke(extraction_prompt)
         response_text = response.content if hasattr(response, 'content') else str(response)
 
-        # Parsear JSON
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', response_text)
-        if json_match:
-            summary = json.loads(json_match.group())
-            return summary
+        # Convertir markdown a HTML
+        import markdown
+        html_content = markdown.markdown(response_text.strip())
 
-        return {}
+        return html_content
 
     except Exception as e:
         logger.error(f"Error generando resumen CV: {e}")
-        return {}
+        return ""
 
 
 @login_required

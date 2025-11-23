@@ -316,18 +316,14 @@ class JobSearchTool(BaseTool):
     def _rank_and_filter_jobs(self, jobs: list, query: str, location: str, sector: str) -> list:
         """Usa el LLM para rankear y filtrar las mejores ofertas con scoring ponderado."""
 
-        # Preparar contexto del perfil si está disponible
-        profile_context = ""
-        if self.user_profile:
-            work_mode_text = self.user_profile.get('work_mode_text', 'Indiferente')
-            profile_context = f"""
-Perfil del candidato:
-- Habilidades: {', '.join(self.user_profile.get('skills', [])[:15])}
-- Experiencia: {self.user_profile.get('experience', 'No especificada')}
-- Ubicación preferida: {', '.join(self.user_profile.get('preferred_locations', [location]) if self.user_profile.get('preferred_locations') else [location or 'España'])}
-- Modalidad de trabajo preferida: {work_mode_text}
-- Sectores de interés: {', '.join(self.user_profile.get('preferred_sectors', [sector]) if self.user_profile.get('preferred_sectors') else [sector or 'No especificado'])}
-"""
+        # Obtener modalidad de trabajo del usuario para el filtro
+        work_mode = self.user_profile.get('work_mode', 'any') if self.user_profile else 'any'
+        work_mode_text = {
+            'any': 'Indiferente',
+            'remote': 'Remoto',
+            'onsite': 'Presencial',
+            'hybrid': 'Híbrido'
+        }.get(work_mode, 'Indiferente')
 
         # Crear lista de ofertas para análisis
         jobs_text = ""
@@ -339,11 +335,10 @@ Perfil del candidato:
     URL: {job['url']}
 """
 
-        ranking_prompt = f"""Analiza las siguientes {len(jobs)} ofertas de empleo y selecciona las 15 MEJORES para el candidato usando el sistema de puntuación.
-
-{profile_context}
+        ranking_prompt = f"""Analiza las siguientes {len(jobs)} ofertas de empleo y selecciona las 15 MEJORES usando el sistema de puntuación.
 
 Búsqueda realizada: "{query}" en {location or 'España'}
+Modalidad de trabajo preferida: {work_mode_text}
 
 OFERTAS ENCONTRADAS:
 {jobs_text}
@@ -459,8 +454,6 @@ SELECCIÓN (15 números ordenados por puntuación):"""
                 enriched_job = job.copy()
                 if check_result.get('job_details'):
                     enriched_job['verified_details'] = check_result['job_details']
-                if check_result.get('fit_analysis'):
-                    enriched_job['fit_analysis'] = check_result['fit_analysis']
                 enriched_job['verification'] = {
                     'status': 'active',
                     'confidence': check_result.get('confidence', 'media'),
@@ -487,8 +480,6 @@ SELECCIÓN (15 números ordenados por puntuación):"""
                             enriched_backup['replaced_inactive'] = True
                             if backup_check.get('job_details'):
                                 enriched_backup['verified_details'] = backup_check['job_details']
-                            if backup_check.get('fit_analysis'):
-                                enriched_backup['fit_analysis'] = backup_check['fit_analysis']
                             enriched_backup['verification'] = {
                                 'status': 'active',
                                 'confidence': backup_check.get('confidence', 'media'),
@@ -550,17 +541,6 @@ SELECCIÓN (15 números ordenados por puntuación):"""
     def _analyze_job_page_with_llm(self, url: str, content: str) -> dict:
         """Analiza la página de la oferta con LLM para determinar si está activa."""
 
-        # Construir contexto del perfil si está disponible
-        profile_context = ""
-        if self.user_profile:
-            skills = self.user_profile.get('skills', [])
-            experience = self.user_profile.get('experience', '')
-            profile_context = f"""
-PERFIL DEL CANDIDATO:
-- Habilidades: {', '.join(skills[:15]) if isinstance(skills, list) else skills}
-- Experiencia: {experience}
-"""
-
         analysis_prompt = f"""Analiza esta página de oferta de empleo y responde en formato JSON estricto.
 
 URL: {url}
@@ -568,13 +548,10 @@ URL: {url}
 CONTENIDO DE LA PÁGINA:
 {content[:3500]}
 
-{profile_context}
-
 INSTRUCCIONES:
 Analiza el contenido y determina:
 1. Si la oferta sigue ACTIVA y acepta candidaturas
 2. Extrae los detalles clave de la oferta
-3. Si hay perfil del candidato, evalúa la compatibilidad
 
 RESPONDE ÚNICAMENTE con este JSON (sin texto adicional):
 {{
@@ -589,8 +566,7 @@ RESPONDE ÚNICAMENTE con este JSON (sin texto adicional):
         "contract_type": "tipo de contrato si se menciona o null",
         "requirements": ["requisito1", "requisito2"],
         "publish_date": "fecha de publicación si aparece o null"
-    }},
-    "fit_analysis": "análisis de 2-3 oraciones de por qué esta oferta encaja o no con el candidato, mencionando habilidades específicas que coinciden"
+    }}
 }}
 
 CRITERIOS PARA DETERMINAR SI ESTÁ ACTIVA:
@@ -619,8 +595,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
                     'is_active': analysis.get('is_active', True),
                     'reason': analysis.get('reason', ''),
                     'confidence': analysis.get('confidence', 'media'),
-                    'job_details': analysis.get('job_details', {}),
-                    'fit_analysis': analysis.get('fit_analysis', '')
+                    'job_details': analysis.get('job_details', {})
                 }
 
         except json.JSONDecodeError as e:
@@ -679,12 +654,6 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
                     recruiter_info = self._find_job_recruiter(company_name, job.get('title', ''), location)
                     if recruiter_info:
                         enriched_job['recruiter'] = recruiter_info
-
-                # Generar razonamiento profundo
-                if self.llm and self.user_profile:
-                    deep_reasoning = self._generate_deep_reasoning(job)
-                    if deep_reasoning:
-                        enriched_job['why_fits_detailed'] = deep_reasoning
 
             except Exception as e:
                 logger.warning(f"Error enriqueciendo oferta: {e}")
@@ -758,49 +727,6 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
             logger.warning(f"Error buscando reclutador para {company_name}: {e}")
 
         return None
-
-    def _generate_deep_reasoning(self, job: dict) -> str:
-        """Genera un razonamiento profundo de por qué la oferta encaja con el usuario."""
-
-        if not self.llm or not self.user_profile:
-            return ""
-
-        try:
-            # Construir contexto detallado del perfil
-            skills = self.user_profile.get('skills', [])
-            experience = self.user_profile.get('experience', '')
-            sectors = self.user_profile.get('preferred_sectors', [])
-            locations = self.user_profile.get('preferred_locations', [])
-
-            prompt = f"""Analiza por qué esta oferta encaja con el candidato. Sé ESPECÍFICO y PROFUNDO.
-
-PERFIL DEL CANDIDATO:
-- Habilidades técnicas: {', '.join(skills[:15]) if isinstance(skills, list) else skills}
-- Experiencia: {experience}
-- Sectores de interés: {', '.join(sectors) if isinstance(sectors, list) else sectors}
-- Ubicaciones preferidas: {', '.join(locations) if isinstance(locations, list) else locations}
-
-OFERTA:
-- Título: {job.get('title', '')}
-- Descripción: {job.get('description', '')}
-- Fuente: {job.get('source', '')}
-
-INSTRUCCIONES:
-Explica en 2-3 oraciones ESPECÍFICAS por qué esta oferta encaja:
-1. Menciona habilidades CONCRETAS del candidato que aplican
-2. Relaciona su experiencia con los requisitos
-3. Explica el potencial de crecimiento o beneficio
-
-NO digas cosas genéricas como "porque es de tecnología". Sé específico.
-Máximo 100 palabras."""
-
-            response = self.llm.invoke(prompt)
-            reasoning = response.content if hasattr(response, 'content') else str(response)
-            return reasoning.strip()
-
-        except Exception as e:
-            logger.warning(f"Error generando razonamiento: {e}")
-            return ""
 
     def get_schema(self) -> dict:
         return {
@@ -978,21 +904,11 @@ class SearchRecentJobsTool(BaseTool):
     def _rank_recent_jobs(self, jobs: list, query: str, location: str) -> list:
         """Rankea ofertas priorizando las más recientes."""
 
-        profile_context = ""
-        if self.user_profile:
-            profile_context = f"""
-Perfil del candidato:
-- Habilidades: {', '.join(self.user_profile.get('skills', [])[:10])}
-- Experiencia: {self.user_profile.get('experience', 'No especificada')}
-"""
-
         jobs_text = ""
         for i, job in enumerate(jobs[:40]):
             jobs_text += f"[{i+1}] {job['title']} - {job['source']}\n    {job['description'][:150]}\n"
 
         ranking_prompt = f"""Selecciona las 15 ofertas MÁS RECIENTES y relevantes.
-
-{profile_context}
 
 Búsqueda: "{query}" en {location or 'España'}
 
@@ -1000,10 +916,9 @@ OFERTAS:
 {jobs_text}
 
 CRITERIOS (prioridad):
-1. **RECENCIA (40%)**: Indicadores de publicación reciente ("hoy", "ayer", "hace X horas/días", "recién publicado")
-2. **RELEVANCIA (35%)**: Match con habilidades del candidato
-3. **UBICACIÓN (15%)**: Compatibilidad con ubicación preferida
-4. **CALIDAD (10%)**: Descripción clara, empresa reconocida
+1. **RECENCIA (50%)**: Indicadores de publicación reciente ("hoy", "ayer", "hace X horas/días", "recién publicado")
+2. **RELEVANCIA (30%)**: Match con la búsqueda realizada
+3. **CALIDAD (20%)**: Descripción clara, empresa reconocida
 
 Devuelve SOLO los 15 números de las ofertas más recientes y relevantes, ordenados.
 Formato: número,número,número...

@@ -210,47 +210,21 @@
                             <!-- Resumen del CV para búsquedas -->
                             {% if user.job_profile and user.job_profile.cv_summary %}
                             <div class="mt-3 pt-3 border-top">
-                                <h6 class="fw-bold small mb-2"><i class="bi bi-lightning text-warning"></i> Resumen para búsquedas</h6>
-                                <div class="bg-light rounded p-2 small">
-                                    {% with summary=user.job_profile.cv_summary %}
-                                    <div class="mb-2">
-                                        <strong>{{ summary.titulo_profesional|default:"" }}</strong>
-                                        {% if summary.nivel %}
-                                        <span class="badge bg-primary ms-1">{{ summary.nivel }}</span>
-                                        {% endif %}
-                                        {% if summary.años_experiencia %}
-                                        <span class="badge bg-secondary ms-1">{{ summary.años_experiencia }} años</span>
-                                        {% endif %}
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-trophy text-warning"></i> Ranking de puestos recomendados</h6>
+                                <div class="bg-white border rounded p-3 cv-summary-content" style="max-height: 500px; overflow-y: auto;">
+                                    <div class="cv-ranking-content">
+                                        {{ user.job_profile.cv_summary|safe }}
                                     </div>
-
-                                    {% if summary.skills_principales %}
-                                    <div class="mb-2">
-                                        <span class="text-muted">Skills:</span>
-                                        {% for skill in summary.skills_principales %}
-                                        <span class="badge bg-success me-1">{{ skill }}</span>
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-
-                                    {% if summary.tipos_rol %}
-                                    <div class="mb-2">
-                                        <span class="text-muted">Roles:</span>
-                                        {% for rol in summary.tipos_rol %}
-                                        <span class="badge bg-info me-1">{{ rol }}</span>
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-
-                                    {% if summary.keywords_busqueda %}
-                                    <div class="mb-1">
-                                        <span class="text-muted">Keywords:</span>
-                                        <span class="fst-italic">{{ summary.keywords_busqueda|join:", " }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% endwith %}
                                 </div>
-                                <small class="text-muted">Este resumen se usa para buscar ofertas relevantes</small>
+                                <small class="text-muted mt-2 d-block">Este ranking se usa para buscar ofertas relevantes para ti</small>
                             </div>
+                            <style>
+                                .cv-ranking-content h3 { font-size: 1rem; font-weight: bold; color: #0d6efd; margin-top: 1rem; }
+                                .cv-ranking-content strong { color: #333; }
+                                .cv-ranking-content ul { margin-bottom: 0.5rem; padding-left: 1.2rem; }
+                                .cv-ranking-content li { margin-bottom: 0.3rem; }
+                                .cv-ranking-content p { margin-bottom: 0.5rem; font-size: 0.85rem; }
+                            </style>
                             {% endif %}
                         </div>
                     </div>

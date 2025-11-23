@@ -103,8 +103,7 @@ class UserProfile(models.Model):
     )
 
     # Resumen estructurado del CV para búsquedas
-    cv_summary = models.JSONField(
-        default=dict,
+    cv_summary = models.TextField(
         blank=True,
         verbose_name='Resumen CV estructurado',
         help_text='Resumen optimizado para búsqueda de empleo'
