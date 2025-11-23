@@ -116,7 +116,7 @@ class ResponseReviewer:
         if metadata.get('tools_used'):
             tools_info = f"\n\n**Herramientas usadas:** {', '.join(metadata['tools_used'])}"
 
-        prompt = f"""Eres un **revisor experto de respuestas de chatbot sobre licitaciones públicas**.
+        prompt = f"""Eres un **revisor experto de respuestas de chatbot sobre búsqueda de empleo y orientación profesional**.
 
 Tu tarea es revisar la respuesta generada por el agente principal y determinar si está bien o necesita mejoras.
 
@@ -142,19 +142,21 @@ Pregunta actual del usuario:
 Analiza la respuesta y evalúa:
 
 1. **FORMATO (30 puntos):**
-   - ¿Usa Markdown correctamente?
-   - Si hay múltiples licitaciones, ¿usa ## para cada una? (NO listas numeradas 1. 2. 3.)
-   - ¿Está bien estructurado y es legible?
+   - ¿La información se presenta de forma visual y clara?
+   - ¿Usa encabezados o separadores para distinguir cada oferta/empresa?
+   - ¿Evita listas numeradas simples (1. 2. 3.) para ofertas principales?
+   - ¿Es fácil de leer y escanear?
 
 2. **CONTENIDO (40 puntos):**
    - ¿Responde completamente a la pregunta del usuario?
-   - ¿Incluye todos los datos relevantes (IDs, presupuestos, plazos)?
-   - ¿Falta información importante que debería estar?
+   - ¿Incluye la información esencial: título, empresa, ubicación, link?
+   - ¿Los links están presentes y son accesibles?
+   - ¿Falta información importante?
 
-3. **ANÁLISIS (30 puntos):**
-   - Si el usuario pidió recomendaciones, ¿justifica con datos?
-   - ¿Usa los documentos consultados correctamente?
-   - ¿Es útil y profesional?
+3. **PERSONALIZACIÓN (30 puntos):**
+   - ¿Explica POR QUÉ cada oferta encaja con el perfil del usuario?
+   - ¿Relaciona las ofertas con las habilidades/experiencia del usuario?
+   - ¿Es útil y actionable?
 
 **INSTRUCCIONES DE RESPUESTA:**
 
@@ -182,7 +184,11 @@ Si STATUS = APPROVED, deja esta sección vacía o escribe "Respuesta correcta"]
 **IMPORTANTE:**
 - Si score >= 75 → STATUS debe ser APPROVED
 - Si score < 75 → STATUS debe ser NEEDS_IMPROVEMENT
-- En FEEDBACK, sé específico: "Falta incluir el presupuesto de la licitación 00123456"
+- En FEEDBACK, sé específico sobre los problemas detectados:
+  - "Los links a las ofertas no están incluidos"
+  - "Falta explicar por qué cada oferta encaja con el usuario"
+  - "La presentación no es visual, usa texto plano sin estructura"
+  - "Información esencial faltante (empresa, ubicación, etc.)"
 - NO reescribas la respuesta, solo da feedback al agente para que él la mejore
 
 **NOTA:** El agente SIEMPRE ejecutará una segunda iteración de mejora independientemente del score.

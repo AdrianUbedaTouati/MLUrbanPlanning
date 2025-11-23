@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TenderAI - Plataforma de Licitaciones{% endblock %}</title>
+    <title>{% block title %}JobSearchAI - Plataforma de Búsqueda de Empleo{% endblock %}</title>
 
-    <meta name="description" content="TenderAI - Plataforma inteligente de análisis de licitaciones públicas con IA">
+    <meta name="description" content="JobSearchAI - Plataforma inteligente de búsqueda de empleo con IA">
     <meta name="theme-color" content="#007AFF">
 
     <!-- Bootstrap CSS -->
@@ -23,7 +23,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand fw-bold" href="{% url 'apps_core:home' %}">
-                <i class="bi bi-file-earmark-text"></i> TenderAI
+                <i class="bi bi-briefcase"></i> JobSearchAI
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -37,38 +37,8 @@
                     </li>
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:dashboard' %}">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:list' %}">
-                                <i class="bi bi-search"></i> Buscar
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:download_tenders' %}">
-                                <i class="bi bi-download"></i> Obtener
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:recommended' %}">
-                                <i class="bi bi-star"></i> Recomendadas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:saved' %}">
-                                <i class="bi bi-bookmark"></i> Guardadas
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'apps_chat:session_list' %}">
-                                <i class="bi bi-chat-dots"></i> Chat
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'apps_tenders:vectorization_dashboard' %}">
-                                <i class="bi bi-database"></i> Vectorización
+                                <i class="bi bi-chat-dots"></i> Chat IA
                             </a>
                         </li>
                         <li class="nav-item dropdown">
@@ -77,13 +47,8 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'apps_company:profile' %}">
-                                        <i class="bi bi-building"></i> Mi Empresa
-                                    </a>
-                                </li>
-                                <li>
                                     <a class="dropdown-item" href="{% url 'apps_core:profile' %}">
-                                        <i class="bi bi-person"></i> Mi Perfil
+                                        <i class="bi bi-gear"></i> Configuración
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>

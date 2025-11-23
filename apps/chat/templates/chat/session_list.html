@@ -284,15 +284,14 @@
     </div>
 
     {% if not can_use_chat %}
-    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert" style="border-radius: 16px; border-left: 4px solid #ff9800;">
-        <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 2rem;"></i>
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert" style="border-radius: 16px; border-left: 4px solid #0d6efd;">
+        <i class="bi bi-info-circle-fill me-3" style="font-size: 2rem;"></i>
         <div>
-            <h5 class="alert-heading mb-2"><strong>⚠️ Chat no disponible</strong></h5>
-            <p class="mb-2">No puedes usar el chat porque <strong>no hay licitaciones indexadas</strong>.</p>
+            <h5 class="alert-heading mb-2"><strong>Completa tu perfil</strong></h5>
             <p class="mb-0">
-                Para poder chatear con el asistente, primero debes indexar las licitaciones.
-                <a href="{% url 'apps_tenders:vectorization_dashboard' %}" class="alert-link fw-bold">
-                    <i class="bi bi-arrow-right-circle"></i> Ir a la página de vectorización
+                Para mejores resultados, completa tu perfil y sube tu CV.
+                <a href="{% url 'apps_company:profile' %}" class="alert-link fw-bold">
+                    <i class="bi bi-arrow-right-circle"></i> Ir a mi perfil
                 </a>
             </p>
         </div>

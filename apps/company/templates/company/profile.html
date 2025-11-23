@@ -1,11 +1,11 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Mi Empresa{% endblock %}
+{% block title %}Mi Perfil Profesional{% endblock %}
 
 {% block extra_css %}
 <style>
-    .company-profile-container {
+    .profile-container {
         max-width: 900px;
         margin: 40px auto;
         padding: 0 20px;
@@ -44,16 +44,17 @@
         font-size: 15px;
     }
 
-    .form-input {
+    .form-input, .form-select {
         width: 100%;
         padding: 12px 16px;
         border: 1px solid #d2d2d7;
         border-radius: 8px;
         font-size: 15px;
         transition: all 0.2s;
+        background: white;
     }
 
-    .form-input:focus {
+    .form-input:focus, .form-select:focus {
         outline: none;
         border-color: #007aff;
         box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
@@ -61,8 +62,8 @@
 
     textarea.form-input {
         resize: vertical;
-        min-height: 120px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 150px;
+        font-family: inherit;
     }
 
     .help-text {
@@ -71,7 +72,7 @@
         margin-top: 6px;
     }
 
-    /* Tags Input Styling */
+    /* Tags Input */
     .tags-container {
         border: 1px solid #d2d2d7;
         border-radius: 8px;
@@ -81,10 +82,8 @@
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
-        transition: all 0.2s;
         background: white;
         cursor: text;
-        position: relative;
     }
 
     .tags-container:focus-within {
@@ -93,116 +92,156 @@
     }
 
     .tag {
-        background: #f5f5f7;
-        color: #1d1d1f;
+        background: #007aff;
+        color: white;
         padding: 6px 12px;
         border-radius: 16px;
         font-size: 14px;
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-    }
-
-    .tag:hover {
-        background: #e8e8ed;
+        gap: 6px;
     }
 
     .tag-remove {
         cursor: pointer;
-        color: #86868b;
-        font-weight: 600;
         font-size: 16px;
         line-height: 1;
-        padding: 0 2px;
+        opacity: 0.8;
     }
 
     .tag-remove:hover {
-        color: #ff3b30;
+        opacity: 1;
     }
 
-    .tag-input {
+    .tags-input {
         border: none;
         outline: none;
         flex: 1;
         min-width: 120px;
-        font-size: 15px;
-        padding: 6px 4px;
+        font-size: 14px;
+        padding: 4px;
     }
 
-    .budget-range {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-
-    .btn-primary {
-        background: #007aff;
-        color: white;
-        border: none;
+    /* Buttons */
+    .btn {
         padding: 12px 24px;
         border-radius: 8px;
         font-size: 15px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s;
-        width: 100%;
+        border: none;
+    }
+
+    .btn-primary {
+        background: #007aff;
+        color: white;
     }
 
     .btn-primary:hover {
-        background: #0051d5;
+        background: #0056b3;
     }
 
     .btn-secondary {
         background: #f5f5f7;
         color: #1d1d1f;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
     }
 
     .btn-secondary:hover {
         background: #e8e8ed;
     }
 
-    .alert {
-        padding: 12px 16px;
-        border-radius: 8px;
+    .btn-success {
+        background: #34c759;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #2da44e;
+    }
+
+    /* Grid */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .status-complete {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-incomplete {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    /* CV Section */
+    .cv-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
         margin-bottom: 20px;
+    }
+
+    .cv-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    /* Analyzed data */
+    .analyzed-data {
+        background: #e8f4fd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+    }
+
+    .analyzed-data h4 {
+        color: #0056b3;
+        margin-bottom: 12px;
         font-size: 14px;
     }
 
-    .alert-success {
-        background: #d1f2e6;
-        color: #00843d;
-        border: 1px solid #34c759;
+    .skill-tag {
+        display: inline-block;
+        background: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        margin: 2px;
+        border: 1px solid #dee2e6;
     }
 
-    .alert-error {
-        background: #fde8e8;
-        color: #c41e3a;
-        border: 1px solid #ff3b30;
-    }
-
-    .extract-btn-container {
-        margin-top: 12px;
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .spinner {
+    /* Loading */
+    .loading-spinner {
         display: none;
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
         border: 2px solid #f3f3f3;
         border-top: 2px solid #007aff;
         border-radius: 50%;
         animation: spin 1s linear infinite;
+        margin-left: 8px;
     }
 
     @keyframes spin {
@@ -210,614 +249,414 @@
         100% { transform: rotate(360deg); }
     }
 
-    .spinner.active {
-        display: inline-block;
-    }
-
-    /* Autocomplete Dropdown */
-    .autocomplete-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid #d2d2d7;
+    .alert {
+        padding: 12px 16px;
         border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        max-height: 300px;
-        overflow-y: auto;
-        z-index: 1000;
-        display: none;
-        margin-top: 4px;
+        margin-bottom: 16px;
     }
 
-    .autocomplete-dropdown.active {
-        display: block;
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
     }
 
-    .autocomplete-item {
-        padding: 12px 16px;
-        cursor: pointer;
-        border-bottom: 1px solid #f5f5f7;
-        font-size: 14px;
-        transition: background 0.2s;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .autocomplete-item:last-child {
-        border-bottom: none;
-    }
-
-    .autocomplete-item:hover {
-        background: #f5f5f7;
-    }
-
-    .autocomplete-item.selected {
-        background: #e8f4fd;
-    }
-
-    .autocomplete-code {
-        font-weight: 600;
-        color: #007aff;
-        font-size: 13px;
-    }
-
-    .autocomplete-name {
-        color: #1d1d1f;
-        font-size: 14px;
-    }
-
-    .autocomplete-loading,
-    .autocomplete-no-results {
-        padding: 12px 16px;
-        text-align: center;
-        color: #86868b;
-        font-size: 13px;
-    }
-
-    .tag-code {
-        opacity: 0.7;
-        font-size: 12px;
-        margin-left: 4px;
-    }
-
-    /* Position relative for tags container to position dropdown */
-    .form-group {
-        position: relative;
-    }
-
-    /* Ensure tags container positioning for dropdown */
-    .tags-container {
-        position: relative;
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="company-profile-container">
+<div class="profile-container">
+    <!-- Header -->
     <div class="profile-card">
-        <h2>Mi Empresa</h2>
-        <p class="subtitle">Completa tu perfil para recibir recomendaciones personalizadas de licitaciones</p>
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <form method="post" id="profileForm">
-            {% csrf_token %}
-
-            <!-- Nombre de la Empresa -->
-            <div class="form-group">
-                <label class="form-label" for="id_company_name">Nombre de la empresa *</label>
-                <input
-                    type="text"
-                    class="form-input"
-                    id="id_company_name"
-                    name="company_name"
-                    value="{{ form.company_name|default:'' }}"
-                    required
-                >
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>Mi Perfil Profesional</h2>
+                <p class="subtitle">Completa tu perfil para recibir recomendaciones personalizadas de empleo</p>
             </div>
-
-            <!-- Descripción Libre -->
-            <div class="form-group">
-                <label class="form-label" for="id_company_description_text">Cuéntanos sobre tu empresa</label>
-                <textarea
-                    class="form-input"
-                    id="id_company_description_text"
-                    name="company_description_text"
-                    placeholder="Ejemplo: Somos una empresa de desarrollo de software especializada en soluciones cloud. Contamos con 15 empleados y trabajamos principalmente en Madrid y Barcelona. Ofrecemos servicios de consultoría tecnológica, desarrollo web y aplicaciones móviles..."
-                >{{ form.company_description_text|default:'' }}</textarea>
-                <p class="help-text">Describe tu empresa, qué hacéis, en qué sectores trabajáis, ubicación, etc. Esta información ayudará a encontrar las licitaciones más relevantes.</p>
-
-                <div class="extract-btn-container">
-                    <button type="button" class="btn-secondary" id="extractBtn">
-                        Autocompletar campos
-                    </button>
-                    <div class="spinner" id="extractSpinner"></div>
-                </div>
+            <div>
+                {% if profile.is_complete %}
+                <span class="status-badge status-complete">✓ Perfil completo</span>
+                {% else %}
+                <span class="status-badge status-incomplete">⚠ Perfil incompleto</span>
+                {% endif %}
             </div>
-
-            <!-- Número de Empleados -->
-            <div class="form-group">
-                <label class="form-label" for="id_employees">Número de empleados</label>
-                <input
-                    type="number"
-                    class="form-input"
-                    id="id_employees"
-                    name="employees"
-                    value="{{ form.employees|default:'' }}"
-                    min="1"
-                >
-            </div>
-
-            <!-- Códigos CPV (Tags con Autocomplete) -->
-            <div class="form-group">
-                <label class="form-label" for="cpv_input">Códigos CPV de interés (Sectores)</label>
-                <div class="tags-container" id="cpvContainer" data-field="preferred_cpv_codes">
-                    <input
-                        type="text"
-                        class="tag-input"
-                        id="cpv_input"
-                        placeholder="Buscar por código o nombre..."
-                        autocomplete="off"
-                    >
-                    <div class="autocomplete-dropdown" id="cpvDropdown"></div>
-                </div>
-                <input type="hidden" name="preferred_cpv_codes" id="preferred_cpv_codes_hidden">
-                <p class="help-text">Busca códigos CPV relacionados con tu actividad</p>
-            </div>
-
-            <!-- Regiones NUTS (Tags con Autocomplete) -->
-            <div class="form-group">
-                <label class="form-label" for="nuts_input">Regiones de interés (NUTS)</label>
-                <div class="tags-container" id="nutsContainer" data-field="preferred_nuts_regions">
-                    <input
-                        type="text"
-                        class="tag-input"
-                        id="nuts_input"
-                        placeholder="Buscar por código o nombre..."
-                        autocomplete="off"
-                    >
-                    <div class="autocomplete-dropdown" id="nutsDropdown"></div>
-                </div>
-                <input type="hidden" name="preferred_nuts_regions" id="preferred_nuts_regions_hidden">
-                <p class="help-text">Busca regiones NUTS (Ej: ES30 - Madrid, ES51 - Barcelona)</p>
-            </div>
-
-            <!-- Rango de Presupuesto -->
-            <div class="form-group">
-                <label class="form-label">Rango de presupuesto de proyectos</label>
-                <div class="budget-range">
-                    <div>
-                        <input
-                            type="number"
-                            class="form-input"
-                            id="id_budget_min"
-                            name="budget_min"
-                            placeholder="Mínimo (€)"
-                            min="0"
-                            value="{{ budget_min }}"
-                        >
-                    </div>
-                    <div>
-                        <input
-                            type="number"
-                            class="form-input"
-                            id="id_budget_max"
-                            name="budget_max"
-                            placeholder="Máximo (€)"
-                            min="0"
-                            value="{{ budget_max }}"
-                        >
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botón de Guardar -->
-            <button type="submit" class="btn-primary">
-                Guardar Perfil
-            </button>
-        </form>
+        </div>
     </div>
-</div>
 
-<script>
-// ================================================
-// AUTOCOMPLETE TAGS INPUT FUNCTIONALITY
-// ================================================
-class AutocompleteTagsInput {
-    constructor(containerId, inputId, dropdownId, hiddenInputId, apiUrl, initialTags = []) {
-        this.container = document.getElementById(containerId);
-        this.input = document.getElementById(inputId);
-        this.dropdown = document.getElementById(dropdownId);
-        this.hiddenInput = document.getElementById(hiddenInputId);
-        this.apiUrl = apiUrl;
-        this.tags = [];
-        this.selectedIndex = -1;
-        this.searchTimeout = null;
-        this.initialTagCodes = initialTags;
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
 
-        this.init();
-    }
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
 
-    async init() {
-        // Load initial tags with proper names from API
-        if (this.initialTagCodes && this.initialTagCodes.length > 0) {
-            const tagsArray = Array.isArray(this.initialTagCodes) ? this.initialTagCodes : [];
+        <!-- Información Personal -->
+        <div class="profile-card">
+            <h2>Información Personal</h2>
+            <p class="subtitle">Datos básicos de contacto</p>
 
-            // Fetch names for initial tags
-            for (const code of tagsArray) {
-                if (code) {
-                    await this.loadTagName(code);
-                }
-            }
-        }
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Nombre completo *</label>
+                    <input type="text" name="full_name" class="form-input"
+                           value="{{ profile.full_name }}" required
+                           placeholder="Tu nombre completo">
+                </div>
 
-        this.renderTags();
-        this.updateHiddenInput();
-
-        // Event listeners
-        this.input.addEventListener('input', () => this.handleInput());
-        this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
-        this.input.addEventListener('focus', () => this.handleFocus());
-
-        // Click on container focuses input
-        this.container.addEventListener('click', (e) => {
-            if (e.target === this.container) {
-                this.input.focus();
-            }
-        });
-
-        // Prevent dropdown from closing when clicking inside it
-        this.dropdown.addEventListener('mousedown', (e) => {
-            e.preventDefault(); // Prevent blur on input
-        });
-
-        // Click outside to close
-        document.addEventListener('click', (e) => {
-            if (!this.container.contains(e.target) && !this.dropdown.contains(e.target)) {
-                this.hideDropdown();
-            }
-        });
-    }
-
-    async loadTagName(code) {
-        try {
-            // Search for the code to get its name
-            const response = await fetch(`${this.apiUrl}?q=${encodeURIComponent(code)}`);
-            const data = await response.json();
-
-            if (data.results && data.results.length > 0) {
-                // Find exact match
-                const match = data.results.find(r => r.code === code);
-                if (match) {
-                    this.tags.push({ code: match.code, name: match.name });
-                } else {
-                    // Use first result if no exact match
-                    this.tags.push({ code: data.results[0].code, name: data.results[0].name });
-                }
-            } else {
-                // If no match found, add with code as name
-                this.tags.push({ code, name: code });
-            }
-        } catch (error) {
-            console.error('Error loading tag name:', error);
-            // Fallback to code as name
-            this.tags.push({ code, name: code });
-        }
-    }
-
-    handleFocus() {
-        // Show suggestions immediately on focus
-        const query = this.input.value.trim();
-        if (query.length === 0) {
-            this.showDefaultSuggestions();
-        } else if (query.length >= 2) {
-            this.handleInput();
-        }
-    }
-
-    async showDefaultSuggestions() {
-        this.dropdown.innerHTML = '<div class="autocomplete-loading">Cargando sugerencias...</div>';
-        this.dropdown.classList.add('active');
-
-        try {
-            const response = await fetch(`${this.apiUrl}?q=`);
-            const data = await response.json();
-
-            if (data.results && data.results.length > 0) {
-                this.renderDropdown(data.results);
-            } else {
-                this.dropdown.innerHTML = '<div class="autocomplete-no-results">No hay sugerencias disponibles</div>';
-            }
-        } catch (error) {
-            console.error('Error fetching suggestions:', error);
-            this.dropdown.innerHTML = '<div class="autocomplete-no-results">Error al cargar sugerencias</div>';
-        }
-    }
-
-    handleInput() {
-        const query = this.input.value.trim();
-
-        // Clear previous timeout
-        if (this.searchTimeout) {
-            clearTimeout(this.searchTimeout);
-        }
-
-        if (query.length < 2) {
-            if (query.length === 0) {
-                this.showDefaultSuggestions();
-            } else {
-                this.hideDropdown();
-            }
-            return;
-        }
-
-        // Debounce search
-        this.searchTimeout = setTimeout(() => this.search(query), 300);
-    }
-
-    async search(query) {
-        this.dropdown.innerHTML = '<div class="autocomplete-loading">Buscando...</div>';
-        this.dropdown.classList.add('active');
-
-        try {
-            const response = await fetch(`${this.apiUrl}?q=${encodeURIComponent(query)}`);
-            const data = await response.json();
-
-            if (data.results && data.results.length > 0) {
-                this.renderDropdown(data.results);
-            } else {
-                this.dropdown.innerHTML = '<div class="autocomplete-no-results">No se encontraron resultados</div>';
-            }
-        } catch (error) {
-            console.error('Error searching:', error);
-            this.dropdown.innerHTML = '<div class="autocomplete-no-results">Error en la búsqueda</div>';
-        }
-    }
-
-    renderDropdown(results) {
-        // Filter out already added tags
-        const availableResults = results.filter(r => !this.tags.some(t => t.code === r.code));
-
-        if (availableResults.length === 0) {
-            this.dropdown.innerHTML = '<div class="autocomplete-no-results">Todos los resultados ya están agregados</div>';
-            this.dropdown.classList.add('active');
-            return;
-        }
-
-        this.dropdown.innerHTML = availableResults.map((result, index) => `
-            <div class="autocomplete-item" data-index="${index}" data-code="${result.code}" data-name="${result.name}">
-                <span class="autocomplete-code">${result.code}</span>
-                <span class="autocomplete-name">${result.name}</span>
+                <div class="form-group">
+                    <label class="form-label">Teléfono</label>
+                    <input type="tel" name="phone" class="form-input"
+                           value="{{ profile.phone }}"
+                           placeholder="+34 600 000 000">
+                </div>
             </div>
-        `).join('');
 
-        // Add click listeners
-        this.dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const code = item.dataset.code;
-                const name = item.dataset.name;
-                this.addTag(code, name);
-                this.input.value = '';
-                // Keep dropdown open by showing default suggestions again
-                this.showDefaultSuggestions();
-                this.input.focus();
-            });
-        });
+            <div class="form-group">
+                <label class="form-label">Ciudad / Provincia</label>
+                <input type="text" name="location" class="form-input"
+                       value="{{ profile.location }}"
+                       placeholder="Ej: Alicante, Madrid, Barcelona">
+                <p class="help-text">Tu ubicación actual</p>
+            </div>
+        </div>
 
-        this.dropdown.classList.add('active');
-        this.selectedIndex = -1;
+        <!-- Curriculum Vitae -->
+        <div class="profile-card">
+            <h2>Curriculum Vitae</h2>
+            <p class="subtitle">Sube tu CV y la IA extraerá la información automáticamente</p>
+
+            <div class="cv-section">
+                {% if profile.cv_analyzed and profile.curriculum_text %}
+                <div class="analyzed-data" style="margin-bottom: 20px;">
+                    <h4>✓ CV Analizado</h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.9em;">{{ profile.curriculum_text }}</pre>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label class="form-label">{% if profile.cv_analyzed %}Actualizar CV{% else %}Subir CV{% endif %} (PDF o imagen)</label>
+                    <input type="file" name="cv_file" id="cv_file_input" class="form-input" accept="image/*,.pdf">
+                {% if profile.curriculum_file %}
+                <p class="help-text">Archivo actual: {{ profile.curriculum_file.name }}</p>
+                {% endif %}
+                <p class="help-text">Sube un PDF y pulsa "Analizar CV con IA" para extraer y analizar automáticamente</p>
+            </div>
+        </div>
+
+        <!-- Preferencias de Búsqueda -->
+        <div class="profile-card">
+            <h2>Preferencias de Búsqueda</h2>
+            <p class="subtitle">¿Qué tipo de trabajo estás buscando?</p>
+
+            <div class="form-group">
+                <label class="form-label">Ubicaciones preferidas</label>
+                <div class="tags-container" id="locations_container">
+                    <input type="text" class="tags-input" id="locations_input"
+                           placeholder="Escribe y pulsa Enter...">
+                </div>
+                <input type="hidden" name="preferred_locations" id="preferred_locations"
+                       value='{{ preferred_locations_json|default:"[]" }}'>
+                <p class="help-text">Ciudades donde te gustaría trabajar (ej: Alicante, Remoto, Madrid)</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Sectores de interés</label>
+                <div class="tags-container" id="sectors_container">
+                    <input type="text" class="tags-input" id="sectors_input"
+                           placeholder="Escribe y pulsa Enter...">
+                </div>
+                <input type="hidden" name="preferred_sectors" id="preferred_sectors"
+                       value='{{ preferred_sectors_json|default:"[]" }}'>
+                <p class="help-text">Sectores donde quieres trabajar (ej: Informática/IT, Marketing)</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Tipo de trabajo</label>
+                    <div class="tags-container" id="job_types_container">
+                        <input type="text" class="tags-input" id="job_types_input"
+                               placeholder="Remoto, Presencial, Híbrido...">
+                    </div>
+                    <input type="hidden" name="job_types" id="job_types"
+                           value='{{ job_types_json|default:"[]" }}'>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tipo de contrato</label>
+                    <div class="tags-container" id="contract_types_container">
+                        <input type="text" class="tags-input" id="contract_types_input"
+                               placeholder="Indefinido, Temporal...">
+                    </div>
+                    <input type="hidden" name="contract_types" id="contract_types"
+                           value='{{ contract_types_json|default:"[]" }}'>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Salario mínimo (€/año)</label>
+                    <input type="number" name="salary_min" class="form-input"
+                           value="{{ profile.salary_min|default:'' }}"
+                           placeholder="20000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Salario máximo (€/año)</label>
+                    <input type="number" name="salary_max" class="form-input"
+                           value="{{ profile.salary_max|default:'' }}"
+                           placeholder="50000">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Disponibilidad</label>
+                <select name="availability" class="form-select">
+                    <option value="">Selecciona...</option>
+                    <option value="Inmediata" {% if profile.availability == 'Inmediata' %}selected{% endif %}>Inmediata</option>
+                    <option value="15 días" {% if profile.availability == '15 días' %}selected{% endif %}>15 días</option>
+                    <option value="1 mes" {% if profile.availability == '1 mes' %}selected{% endif %}>1 mes</option>
+                    <option value="2 meses" {% if profile.availability == '2 meses' %}selected{% endif %}>2 meses o más</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Redes Profesionales -->
+        <div class="profile-card">
+            <h2>Redes Profesionales</h2>
+            <p class="subtitle">Tus perfiles online</p>
+
+            <div class="form-group">
+                <label class="form-label">LinkedIn</label>
+                <input type="url" name="linkedin_url" class="form-input"
+                       value="{{ profile.linkedin_url }}"
+                       placeholder="https://www.linkedin.com/in/tu-perfil">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">GitHub</label>
+                    <input type="url" name="github_url" class="form-input"
+                           value="{{ profile.github_url }}"
+                           placeholder="https://github.com/tu-usuario">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Portfolio / Web</label>
+                    <input type="url" name="portfolio_url" class="form-input"
+                           value="{{ profile.portfolio_url }}"
+                           placeholder="https://tu-portfolio.com">
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div style="text-align: center; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary" style="min-width: 200px;">
+                💾 Guardar Perfil
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Tags functionality
+function initTags(containerId, inputId, hiddenId) {
+    const container = document.getElementById(containerId);
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+
+    let tags = [];
+    try {
+        tags = JSON.parse(hidden.value) || [];
+    } catch (e) {
+        tags = [];
     }
 
-    handleKeydown(e) {
-        const items = this.dropdown.querySelectorAll('.autocomplete-item');
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
-            this.updateSelection(items);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
-            this.updateSelection(items);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
-                items[this.selectedIndex].click();
-            } else if (this.input.value.trim()) {
-                // Allow custom input
-                const customCode = this.input.value.trim();
-                this.addTag(customCode, customCode);
-                this.input.value = '';
-                // Keep dropdown open with default suggestions
-                this.showDefaultSuggestions();
-            }
-        } else if (e.key === 'Escape') {
-            this.hideDropdown();
-        } else if (e.key === 'Backspace' && this.input.value === '' && this.tags.length > 0) {
-            // Remove last tag on backspace when input is empty
-            this.removeTag(this.tags[this.tags.length - 1].code);
-        }
-    }
-
-    updateSelection() {
-        const items = this.dropdown.querySelectorAll('.autocomplete-item');
-        items.forEach((item, index) => {
-            if (index === this.selectedIndex) {
-                item.classList.add('selected');
-                item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('selected');
-            }
-        });
-    }
-
-    addTag(code, name) {
-        // Check if tag already exists
-        if (this.tags.some(tag => tag.code === code)) {
-            return;
-        }
-
-        this.tags.push({ code, name });
-        this.renderTags();
-        this.updateHiddenInput();
-    }
-
-    removeTag(code) {
-        this.tags = this.tags.filter(tag => tag.code !== code);
-        this.renderTags();
-        this.updateHiddenInput();
-    }
-
-    renderTags() {
+    function renderTags() {
         // Remove existing tags
-        this.container.querySelectorAll('.tag').forEach(tag => tag.remove());
+        container.querySelectorAll('.tag').forEach(t => t.remove());
 
-        // Add new tags before input
-        this.tags.forEach(tag => {
-            const tagEl = document.createElement('div');
+        // Add tags before input
+        tags.forEach((tag, index) => {
+            const tagEl = document.createElement('span');
             tagEl.className = 'tag';
-            tagEl.innerHTML = `
-                <span>${tag.code} - ${tag.name}</span>
-                <span class="tag-remove" data-code="${tag.code}">×</span>
-            `;
-
-            tagEl.querySelector('.tag-remove').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.removeTag(tag.code);
-            });
-
-            this.container.insertBefore(tagEl, this.input);
+            tagEl.innerHTML = `${tag}<span class="tag-remove" data-index="${index}">&times;</span>`;
+            container.insertBefore(tagEl, input);
         });
+
+        // Update hidden input
+        hidden.value = JSON.stringify(tags);
     }
 
-    updateHiddenInput() {
-        // Store as JSON array of codes for compatibility
-        this.hiddenInput.value = JSON.stringify(this.tags.map(tag => tag.code));
-    }
-
-    hideDropdown() {
-        this.dropdown.classList.remove('active');
-        this.selectedIndex = -1;
-    }
-
-    setTags(codes) {
-        // Clear existing tags
-        this.tags = [];
-
-        // Load new tags
-        if (codes && codes.length > 0) {
-            codes.forEach(async (code) => {
-                await this.loadTagName(code);
-                this.renderTags();
-                this.updateHiddenInput();
-            });
-        } else {
-            this.renderTags();
-            this.updateHiddenInput();
+    function addTag(value) {
+        value = value.trim();
+        if (value && !tags.includes(value)) {
+            tags.push(value);
+            renderTags();
         }
     }
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addTag(this.value);
+            this.value = '';
+        }
+    });
+
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('tag-remove')) {
+            const index = parseInt(e.target.dataset.index);
+            tags.splice(index, 1);
+            renderTags();
+        } else {
+            input.focus();
+        }
+    });
+
+    renderTags();
 }
 
-// Initialize autocomplete tags inputs
-const cpvInput = new AutocompleteTagsInput(
-    'cpvContainer',
-    'cpv_input',
-    'cpvDropdown',
-    'preferred_cpv_codes_hidden',
-    '/empresa/api/autocomplete/cpv/',
-    {{ cpv_codes_json|safe }}
-);
+// Initialize all tag inputs
+document.addEventListener('DOMContentLoaded', function() {
+    initTags('locations_container', 'locations_input', 'preferred_locations');
+    initTags('sectors_container', 'sectors_input', 'preferred_sectors');
+    initTags('job_types_container', 'job_types_input', 'job_types');
+    initTags('contract_types_container', 'contract_types_input', 'contract_types');
+});
 
-const nutsInput = new AutocompleteTagsInput(
-    'nutsContainer',
-    'nuts_input',
-    'nutsDropdown',
-    'preferred_nuts_regions_hidden',
-    '/empresa/api/autocomplete/nuts/',
-    {{ nuts_regions_json|safe }}
-);
+// CV Analysis - handles both text and PDF
+document.getElementById('analyze_cv_btn').addEventListener('click', function() {
+    const cvText = document.getElementById('cv_text').value.trim();
+    const fileInput = document.getElementById('cv_file_input');
+    const file = fileInput.files[0];
 
-// ================================================
-// AUTO-EXTRACT FUNCTIONALITY
-// ================================================
-document.getElementById('extractBtn').addEventListener('click', async function() {
-    const text = document.getElementById('id_company_description_text').value.trim();
+    // Check if we have PDF or text
+    const hasPdf = file && file.name.toLowerCase().endsWith('.pdf');
+    const hasText = cvText && cvText.length >= 50;
 
-    if (!text) {
-        alert('Por favor, escribe una descripción de tu empresa primero.');
+    if (!hasPdf && !hasText) {
+        alert('Por favor, sube un PDF o escribe al menos 50 caracteres sobre tu experiencia profesional.');
         return;
     }
 
     const btn = this;
-    const spinner = document.getElementById('extractSpinner');
+    const spinner = document.getElementById('cv_spinner');
+    const resultDiv = document.getElementById('cv_analysis_result');
+    const cvTextArea = document.getElementById('cv_text');
+
     btn.disabled = true;
-    spinner.classList.add('active');
-    btn.textContent = 'Procesando...';
+    spinner.style.display = 'inline-block';
+    resultDiv.innerHTML = '<p>Analizando tu CV...</p>';
 
-    try {
+    // If PDF, first extract text then analyze
+    if (hasPdf) {
+        resultDiv.innerHTML = '<p>Extrayendo texto del PDF...</p>';
+
         const formData = new FormData();
-        formData.append('company_text', text);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('pdf_file', file);
 
-        const response = await fetch('{% url "apps_company:extract_info" %}', {
+        fetch('{% url "apps_company:extract_pdf" %}', {
             method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Put extracted text in textarea
+                cvTextArea.value = data.text;
+                resultDiv.innerHTML = '<p>Analizando CV con IA...</p>';
+                // Now analyze the extracted text
+                return analyzeText(data.text);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .then(analysisData => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            showAnalysisResult(analysisData, resultDiv);
+        })
+        .catch(error => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
         });
-
-        const data = await response.json();
-
-        if (data.success) {
-            // Fill company name
-            if (data.data.company_name) {
-                document.getElementById('id_company_name').value = data.data.company_name;
-            }
-
-            // Fill employees
-            if (data.data.employees) {
-                document.getElementById('id_employees').value = data.data.employees;
-            }
-
-            // Fill CPV codes
-            if (data.data.preferred_cpv_codes && data.data.preferred_cpv_codes.length > 0) {
-                cpvInput.setTags(data.data.preferred_cpv_codes);
-            }
-
-            // Fill NUTS regions
-            if (data.data.preferred_nuts_regions && data.data.preferred_nuts_regions.length > 0) {
-                nutsInput.setTags(data.data.preferred_nuts_regions);
-            }
-
-            // Fill budget
-            if (data.data.budget_min) {
-                document.getElementById('id_budget_min').value = data.data.budget_min;
-            }
-            if (data.data.budget_max) {
-                document.getElementById('id_budget_max').value = data.data.budget_max;
-            }
-
-            alert('Información extraída correctamente. Revisa y ajusta los campos si es necesario.');
-        } else {
-            alert('Error: ' + (data.message || 'No se pudo extraer la información'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al procesar la solicitud. Por favor, intenta de nuevo.');
-    } finally {
-        btn.disabled = false;
-        spinner.classList.remove('active');
-        btn.textContent = 'Autocompletar campos';
+    } else {
+        // Just analyze the text
+        analyzeText(cvText)
+        .then(data => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            showAnalysisResult(data, resultDiv);
+        })
+        .catch(error => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+        });
     }
 });
+
+function analyzeText(text) {
+    return fetch('{% url "apps_company:analyze_cv" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'cv_text=' + encodeURIComponent(text)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        return data;
+    });
+}
+
+function showAnalysisResult(data, resultDiv) {
+    let html = '<div class="analyzed-data"><h4>✓ CV Analizado correctamente</h4>';
+
+    if (data.data.skills && data.data.skills.length > 0) {
+        html += '<p><strong>Habilidades detectadas:</strong></p><div>';
+        data.data.skills.forEach(skill => {
+            html += `<span class="skill-tag">${skill}</span>`;
+        });
+        html += '</div>';
+    }
+
+    if (data.data.professional_summary) {
+        html += `<p style="margin-top: 12px;"><strong>Resumen:</strong> ${data.data.professional_summary}</p>`;
+    }
+
+    if (data.data.suggested_job_titles && data.data.suggested_job_titles.length > 0) {
+        html += `<p style="margin-top: 12px;"><strong>Puestos sugeridos:</strong> ${data.data.suggested_job_titles.join(', ')}</p>`;
+    }
+
+    html += '<p style="margin-top: 12px; color: #28a745;"><strong>Tu perfil ha sido actualizado. Guarda los cambios.</strong></p>';
+    html += '</div>';
+
+    resultDiv.innerHTML = html;
+}
 </script>
 {% endblock %}

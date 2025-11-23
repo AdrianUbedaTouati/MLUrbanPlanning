@@ -4,13 +4,16 @@ from . import views
 app_name = 'apps_company'
 
 urlpatterns = [
-    # Perfil de empresa (edición y visualización)
-    path('perfil/', views.CompanyProfileView.as_view(), name='profile'),
+    # Perfil del usuario/candidato
+    path('', views.UserProfileView.as_view(), name='profile'),
 
-    # Extracción de información con IA (AJAX)
-    path('perfil/extraer-info/', views.ExtractCompanyInfoView.as_view(), name='extract_info'),
+    # Análisis de CV con IA (AJAX)
+    path('analizar-cv/', views.AnalyzeCVView.as_view(), name='analyze_cv'),
+
+    # Extracción de texto de PDF (AJAX)
+    path('extraer-pdf/', views.ExtractPDFTextView.as_view(), name='extract_pdf'),
 
     # Autocompletado API
-    path('api/autocomplete/nuts/', views.AutocompleteNUTSView.as_view(), name='autocomplete_nuts'),
-    path('api/autocomplete/cpv/', views.AutocompleteCPVView.as_view(), name='autocomplete_cpv'),
+    path('api/autocomplete/locations/', views.AutocompleteLocationsView.as_view(), name='autocomplete_locations'),
+    path('api/autocomplete/sectors/', views.AutocompleteSectorsView.as_view(), name='autocomplete_sectors'),
 ]

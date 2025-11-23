@@ -1,0 +1,140 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+local_settings.py
+# db.sqlite3 ahora se sube al repositorio (proyecto personal)
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment
+# .env ahora se sube al repositorio (proyecto personal)
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ChromaDB
+chroma_db/
+*.chroma
+
+# Agent_IA specific
+agent_ia_core/__pycache__/
+agent_ia_core/*.pyc
+
+# Static files collected
+staticfiles/
+static_collected/
+
+# User uploaded files
+avatars/
+
+# Cache
+__pycache__/
+*.pyc
+.cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Test outputs and logs
+tests/*.log
+tests/*.txt
+tests/__pycache__/
+
+# ------------------------------------------------
+# Ollama Models (NO SUBIR - Son muy grandes)
+# ------------------------------------------------
+# Directorio de modelos locales de Ollama
+ollama_models/
+*.gguf
+*.bin
+*.safetensors
+
+# Modelos específicos (por nombre)
+models/qwen*
+models/llama*
+models/mistral*
+models/deepseek*
+models/nomic*
+models/mxbai*
+
+# ------------------------------------------------
+# ChromaDB Vector Index (puede ser grande)
+# ------------------------------------------------
+data/index/chroma/
+data/index/*.chroma
+
+# ------------------------------------------------
+# Licitaciones XML (mantener estructura, no archivos)
+# ------------------------------------------------
+data/xml/*.xml
+data/records/*.json
+!data/xml/.gitkeep
+!data/records/.gitkeep
+
+# ------------------------------------------------
+# Archivos de instalación
+# ------------------------------------------------
+*.exe
+OllamaSetup.exe
+
+# ------------------------------------------------
+# Windows específicos
+# ------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+# Logs directory - archivos de logs locales
+logs/
+*.log

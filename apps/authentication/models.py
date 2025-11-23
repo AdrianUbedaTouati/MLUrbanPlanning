@@ -22,6 +22,21 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
 
+    # Job search preferences
+    work_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('any', 'Indiferente'),
+            ('remote', 'Remoto'),
+            ('onsite', 'Presencial'),
+            ('hybrid', 'Híbrido'),
+        ],
+        default='any',
+        blank=True,
+        verbose_name='Modalidad de trabajo',
+        help_text='Tu preferencia de modalidad de trabajo'
+    )
+
     # API Key for LLM (Google Gemini, OpenAI, NVIDIA, Ollama)
     llm_provider = models.CharField(
         max_length=20,

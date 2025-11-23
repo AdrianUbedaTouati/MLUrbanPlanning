@@ -15,148 +15,6 @@
             {{ msg.created_at|date:"d/m/Y H:i" }}
         </div>
         {% if msg.role == 'assistant' and msg.metadata %}
-            {% if msg.metadata.documents_used %}
-            <div class="message-metadata-documents" style="
-                margin-top: 12px;
-                padding: 12px;
-                background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-                border-radius: 10px;
-                border: 1px solid rgba(102, 126, 234, 0.15);
-                cursor: pointer;
-                transition: all 0.3s ease;
-            "
-            onclick="this.querySelector('.document-details').classList.toggle('d-none'); this.querySelector('.toggle-icon').classList.toggle('bi-chevron-down'); this.querySelector('.toggle-icon').classList.toggle('bi-chevron-right');"
-            onmouseover="this.style.background='linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%)'; this.style.borderColor='rgba(102, 126, 234, 0.25)';"
-            onmouseout="this.style.background='linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)'; this.style.borderColor='rgba(102, 126, 234, 0.15)';">
-
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="
-                        width: 28px;
-                        height: 28px;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 11px;
-                        font-weight: bold;
-                        color: white;
-                        flex-shrink: 0;
-                    ">
-                        {{ msg.metadata.documents_used|length }}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 12px; color: #667eea;">
-                            <i class="bi bi-files"></i>
-                            {% if msg.metadata.documents_used|length == 1 %}
-                                1 documento consultado
-                            {% else %}
-                                {{ msg.metadata.documents_used|length }} documentos consultados
-                            {% endif %}
-                        </div>
-                        <div style="font-size: 10px; opacity: 0.7; margin-top: 2px;">
-                            Click para ver detalles
-                        </div>
-                    </div>
-                    <i class="bi bi-chevron-right toggle-icon" style="font-size: 14px; color: #667eea; transition: transform 0.3s ease;"></i>
-                </div>
-
-                <div class="document-details d-none" style="
-                    margin-top: 12px;
-                    padding-top: 12px;
-                    border-top: 1px solid rgba(102, 126, 234, 0.15);
-                    animation: slideDown 0.3s ease;
-                " onclick="event.stopPropagation();">
-                    {% for doc in msg.metadata.documents_used %}
-                    <div style="
-                        margin-bottom: 10px;
-                        padding: 12px;
-                        background: rgba(255, 255, 255, 0.6);
-                        border-radius: 8px;
-                        border-left: 3px solid #667eea;
-                        transition: all 0.2s ease;
-                    "
-                    onmouseover="this.style.background='rgba(255, 255, 255, 0.8)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.15)';"
-                    onmouseout="this.style.background='rgba(255, 255, 255, 0.6)'; this.style.boxShadow='none';">
-
-                        <div style="margin-bottom: 8px;">
-                            <a href="{% url 'apps_tenders:detail' doc.id %}?highlight={{ doc.section }}"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               style="
-                                   color: #667eea;
-                                   text-decoration: none;
-                                   font-weight: 600;
-                                   font-size: 12px;
-                                   display: inline-flex;
-                                   align-items: center;
-                                   gap: 6px;
-                                   transition: all 0.2s ease;
-                               "
-                               onmouseover="this.style.color='#764ba2'; this.style.textDecoration='underline';"
-                               onmouseout="this.style.color='#667eea'; this.style.textDecoration='none';">
-                                <i class="bi bi-file-earmark-text-fill"></i>
-                                {{ doc.title|truncatewords:20|default:"Licitación"|default:doc.id }}
-                                <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i>
-                            </a>
-                        </div>
-
-                        {% if doc.content_preview %}
-                        <div style="
-                            margin-bottom: 8px;
-                            padding: 8px;
-                            background: rgba(102, 126, 234, 0.05);
-                            border-radius: 4px;
-                            font-size: 11px;
-                            line-height: 1.5;
-                            color: #4a5568;
-                        ">
-                            {{ doc.content_preview|truncatewords:30 }}
-                        </div>
-                        {% endif %}
-
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 10px;">
-                            {% if doc.id %}
-                            <span style="
-                                background: rgba(102, 126, 234, 0.1);
-                                padding: 3px 8px;
-                                border-radius: 12px;
-                                color: #667eea;
-                                font-weight: 500;
-                            ">
-                                <i class="bi bi-tag-fill"></i> {{ doc.id }}
-                            </span>
-                            {% endif %}
-                            {% if doc.section %}
-                            <span style="
-                                background: rgba(118, 75, 162, 0.1);
-                                padding: 3px 8px;
-                                border-radius: 12px;
-                                color: #764ba2;
-                                font-weight: 500;
-                            ">
-                                <i class="bi bi-bookmark-fill"></i> {{ doc.section }}
-                            </span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <style>
-                @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            </style>
-            {% endif %}
             {% if msg.metadata.tools_used %}
             <div class="message-metadata mt-1">
                 <i class="bi bi-tools"></i>
@@ -175,34 +33,14 @@
             {% endif %}
             <!-- Token and Cost Info -->
             {% if msg.metadata.total_tokens and msg.metadata.cost_eur >= 0.0001 %}
-            <!-- Mostrar panel completo para proveedores de pago (costo >= €0.0001) -->
-            <div class="message-cost-info" style="margin-top: 8px; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; font-size: 12px;">
-                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <i class="bi bi-coin" style="font-size: 14px;"></i>
-                        <span><strong>Tokens:</strong> {{ msg.metadata.input_tokens|default:0 }} entrada + {{ msg.metadata.output_tokens|default:0 }} salida = {{ msg.metadata.total_tokens }}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <i class="bi bi-cash" style="font-size: 14px;"></i>
-                        <span><strong>Coste:</strong>
-                            {% if msg.metadata.cost_eur < 0.01 %}
-                                €{{ msg.metadata.cost_eur|stringformat:".4f" }}
-                            {% elif msg.metadata.cost_eur < 1 %}
-                                €{{ msg.metadata.cost_eur|stringformat:".3f" }}
-                            {% else %}
-                                €{{ msg.metadata.cost_eur|stringformat:".2f" }}
-                            {% endif %}
-                            <small style="opacity: 0.8;">(aprox.)</small>
-                        </span>
-                    </div>
-                </div>
+            <div class="message-cost-info">
+                <i class="bi bi-coin"></i> {{ msg.metadata.total_tokens }} tokens
+                &nbsp;•&nbsp;
+                <i class="bi bi-cash"></i> {% if msg.metadata.cost_eur < 0.01 %}€{{ msg.metadata.cost_eur|stringformat:".4f" }}{% elif msg.metadata.cost_eur < 1 %}€{{ msg.metadata.cost_eur|stringformat:".3f" }}{% else %}€{{ msg.metadata.cost_eur|stringformat:".2f" }}{% endif %}
             </div>
             {% elif msg.metadata.total_tokens and msg.metadata.provider == 'ollama' %}
-            <!-- Ollama: Mostrar solo tokens sin costos (solo cuando provider es Ollama) -->
-            <div class="message-metadata" style="margin-top: 8px; padding: 8px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 6px; color: white; font-size: 12px;">
-                <i class="bi bi-check-circle-fill" style="margin-right: 6px;"></i>
-                <span><strong>{{ msg.metadata.total_tokens }}</strong> tokens procesados</span>
-                <span style="opacity: 0.9; margin-left: 8px;">• 100% GRATIS con Ollama</span>
+            <div class="message-cost-info" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <i class="bi bi-check-circle-fill"></i> {{ msg.metadata.total_tokens }} tokens • Gratis
             </div>
             {% endif %}
         {% endif %}

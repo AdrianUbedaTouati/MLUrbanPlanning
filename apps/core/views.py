@@ -6,9 +6,16 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.http import JsonResponse
-from .forms import EditProfileForm
+from .forms import EditProfileForm, CVImageUploadForm
 from .ollama_checker import OllamaHealthChecker
+from apps.company.models import UserProfile
 import uuid
+import json
+import os
+import base64
+from openai import OpenAI
+from pdf2image import convert_from_bytes
+from io import BytesIO
 
 
 def home_view(request):
@@ -50,8 +57,9 @@ def dashboard_view(request):
 
 @login_required
 def profile_view(request):
-    """Vista del perfil del usuario"""
-    return render(request, 'core/profile.html', {'user': request.user})
+    """Vista del perfil del usuario con formulario de edición integrado"""
+    form = EditProfileForm(instance=request.user)
+    return render(request, 'core/profile.html', {'user': request.user, 'form': form})
 
 
 @login_required
@@ -98,7 +106,15 @@ def edit_profile_view(request):
     else:
         form = EditProfileForm(instance=request.user)
 
-    return render(request, 'core/edit_profile.html', {'form': form})
+    # Obtener datos de preferencias del perfil
+    profile = getattr(request.user, 'job_profile', None)
+    context = {
+        'form': form,
+        'preferred_locations_json': json.dumps(profile.preferred_locations if profile and profile.preferred_locations else []),
+        'preferred_sectors_json': json.dumps(profile.preferred_sectors if profile and profile.preferred_sectors else []),
+        'job_types_json': json.dumps(profile.job_types if profile and profile.job_types else []),
+    }
+    return render(request, 'core/edit_profile.html', context)
 
 
 @login_required
@@ -215,3 +231,380 @@ def ollama_models_api(request):
             'embedding_models': [],
             'message': f'Error obteniendo modelos: {str(e)}'
         })
+
+
+@login_required
+def analyze_cv_image_view(request):
+    """
+    Vista para analizar una imagen del CV usando GPT-4 Vision.
+    Extrae información y genera un resumen del curriculum.
+    """
+    if request.method == 'POST':
+        form = CVImageUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Verificar que el usuario tiene API key de OpenAI configurada
+            if not request.user.llm_api_key or request.user.llm_provider != 'openai':
+                messages.error(request, 'Debes configurar tu API key de OpenAI en tu perfil para usar esta función.')
+                return redirect('apps_core:profile')
+
+            # Obtener o crear el perfil del usuario
+            profile, created = UserProfile.objects.get_or_create(
+                user=request.user,
+                defaults={'full_name': request.user.get_full_name() or request.user.username}
+            )
+
+            # Procesar el archivo (imagen o PDF)
+            cv_file = form.cleaned_data['cv_file']
+            file_ext = cv_file.name.lower().split('.')[-1]
+
+            # Preparar la imagen para GPT-4 Vision
+            if file_ext == 'pdf':
+                # Convertir PDF a imagen
+                try:
+                    pdf_bytes = cv_file.read()
+                    images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1)
+                    if images:
+                        img_buffer = BytesIO()
+                        images[0].save(img_buffer, format='PNG')
+                        img_buffer.seek(0)
+                        image_data = base64.b64encode(img_buffer.read()).decode('utf-8')
+                        media_type = "image/png"
+                    else:
+                        messages.error(request, 'No se pudo procesar el PDF.')
+                        return redirect('apps_core:profile')
+                except Exception as e:
+                    messages.error(request, f'Error al procesar PDF: {str(e)}')
+                    return redirect('apps_core:profile')
+            else:
+                # Es una imagen - codificar en base64
+                image_data = base64.b64encode(cv_file.read()).decode('utf-8')
+                # Determinar tipo de imagen
+                if file_ext in ['jpg', 'jpeg']:
+                    media_type = "image/jpeg"
+                elif file_ext == 'png':
+                    media_type = "image/png"
+                elif file_ext == 'gif':
+                    media_type = "image/gif"
+                elif file_ext == 'webp':
+                    media_type = "image/webp"
+                else:
+                    media_type = "image/png"
+
+            # Crear contenido de imagen en base64
+            image_content = {
+                "type": "image_url",
+                "image_url": {"url": f"data:{media_type};base64,{image_data}"}
+            }
+
+            try:
+                # Inicializar cliente OpenAI
+                client = OpenAI(api_key=request.user.llm_api_key)
+
+                # Prompt único para extraer el texto completo del CV
+                extraction_prompt = """Analiza esta imagen de un curriculum vitae y extrae TODO el texto que aparece en el documento.
+
+Transcribe el contenido completo del CV de forma clara y organizada, manteniendo la estructura original:
+- Datos personales (nombre, teléfono, email, ubicación)
+- Resumen profesional o perfil
+- Experiencia laboral (empresa, puesto, fechas, responsabilidades)
+- Formación académica
+- Habilidades técnicas y blandas
+- Idiomas y niveles
+- Certificaciones
+- Cualquier otra información relevante
+
+Devuelve el texto de forma legible y bien estructurada, NO en formato JSON. El objetivo es tener una transcripción completa del CV."""
+
+                # Única llamada a GPT-4 Vision para extracción
+                extraction_response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": extraction_prompt},
+                                image_content
+                            ]
+                        }
+                    ],
+                    max_tokens=4000
+                )
+
+                # Guardar el texto completo del CV
+                cv_text = extraction_response.choices[0].message.content
+                profile.curriculum_text = cv_text
+                profile.cv_analyzed = True
+                profile.save()
+
+                messages.success(request, 'CV analizado correctamente. El texto ha sido extraído.')
+
+            except Exception as e:
+                messages.error(request, f'Error al analizar el CV: {str(e)}')
+
+            return redirect('apps_core:profile')
+    else:
+        form = CVImageUploadForm()
+
+    return render(request, 'core/analyze_cv.html', {'form': form})
+
+
+@login_required
+def analyze_cv_ajax_view(request):
+    """
+    Endpoint AJAX para analizar CV con GPT-4 Vision.
+    Devuelve JSON con el resultado.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    form = CVImageUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
+        errors = ', '.join([f"{k}: {v[0]}" for k, v in form.errors.items()])
+        return JsonResponse({'success': False, 'error': errors})
+
+    # Verificar API key de OpenAI
+    if not request.user.llm_api_key or request.user.llm_provider != 'openai':
+        return JsonResponse({
+            'success': False,
+            'error': 'Debes configurar tu API key de OpenAI en tu perfil para usar esta función.'
+        })
+
+    # Obtener o crear el perfil del usuario
+    profile, created = UserProfile.objects.get_or_create(
+        user=request.user,
+        defaults={'full_name': request.user.get_full_name() or request.user.username}
+    )
+
+    # Procesar el archivo (imagen o PDF)
+    cv_file = form.cleaned_data['cv_file']
+    file_ext = cv_file.name.lower().split('.')[-1]
+
+    try:
+        # Preparar la imagen para GPT-4 Vision
+        if file_ext == 'pdf':
+            # Convertir PDF a imagen y guardarla
+            pdf_bytes = cv_file.read()
+            images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1)
+            if images:
+                img_buffer = BytesIO()
+                images[0].save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+
+                from django.core.files.base import ContentFile
+                img_name = cv_file.name.rsplit('.', 1)[0] + '.png'
+                profile.cv_image.save(img_name, ContentFile(img_buffer.read()), save=True)
+
+                image_url = request.build_absolute_uri(profile.cv_image.url)
+            else:
+                return JsonResponse({'success': False, 'error': 'No se pudo procesar el PDF.'})
+        else:
+            # Es una imagen - guardarla y usar URL
+            profile.cv_image = cv_file
+            profile.save()
+            image_url = request.build_absolute_uri(profile.cv_image.url)
+
+        # Inicializar cliente OpenAI
+        client = OpenAI(api_key=request.user.llm_api_key)
+
+        # Prompt para extraer información del CV
+        extraction_prompt = """Analiza esta imagen de un curriculum vitae y extrae toda la información importante en formato JSON.
+
+Devuelve SOLO un JSON válido con esta estructura exacta:
+{
+    "full_name": "nombre completo de la persona",
+    "phone": "teléfono si aparece",
+    "email": "email si aparece",
+    "location": "ciudad/ubicación si aparece",
+    "skills": ["lista", "de", "habilidades", "técnicas", "y", "blandas"],
+    "experience": [
+        {
+            "company": "nombre empresa",
+            "position": "puesto",
+            "duration": "periodo (ej: 2020-2023)",
+            "description": "responsabilidades principales"
+        }
+    ],
+    "education": [
+        {
+            "institution": "universidad/centro",
+            "degree": "título obtenido",
+            "year": "año de finalización"
+        }
+    ],
+    "languages": [
+        {
+            "language": "idioma",
+            "level": "nivel (nativo, avanzado, intermedio, básico)"
+        }
+    ],
+    "certifications": ["certificaciones", "si", "las", "hay"]
+}
+
+Si algún campo no está disponible en la imagen, usa un string vacío o lista vacía según corresponda."""
+
+        # Llamada a GPT-4 Vision para extracción
+        extraction_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": extraction_prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": image_url}
+                        }
+                    ]
+                }
+            ],
+            max_tokens=2000
+        )
+
+        # Parsear la respuesta JSON
+        extracted_text = extraction_response.choices[0].message.content
+        if "```json" in extracted_text:
+            extracted_text = extracted_text.split("```json")[1].split("```")[0]
+        elif "```" in extracted_text:
+            extracted_text = extracted_text.split("```")[1].split("```")[0]
+
+        extracted_data = json.loads(extracted_text.strip())
+
+        # Actualizar el perfil con los datos extraídos
+        if extracted_data.get('full_name'):
+            profile.full_name = extracted_data['full_name']
+        if extracted_data.get('phone'):
+            profile.phone = extracted_data['phone']
+        if extracted_data.get('location'):
+            profile.location = extracted_data['location']
+        if extracted_data.get('skills'):
+            profile.skills = extracted_data['skills']
+        if extracted_data.get('experience'):
+            profile.experience = extracted_data['experience']
+        if extracted_data.get('education'):
+            profile.education = extracted_data['education']
+        if extracted_data.get('languages'):
+            profile.languages = extracted_data['languages']
+
+        # Generar resumen con otra llamada
+        summary_prompt = f"""Basándote en estos datos extraídos de un CV, genera un resumen profesional conciso (máximo 3-4 oraciones) que destaque los puntos más fuertes del candidato:
+
+{json.dumps(extracted_data, ensure_ascii=False, indent=2)}
+
+El resumen debe ser en primera persona y profesional, adecuado para presentarse a empleadores."""
+
+        summary_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": summary_prompt}
+            ],
+            max_tokens=500
+        )
+
+        profile.professional_summary = summary_response.choices[0].message.content
+        profile.cv_analyzed = True
+        profile.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'CV analizado correctamente',
+            'data': extracted_data
+        })
+
+    except json.JSONDecodeError as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al procesar la respuesta de la IA: {str(e)}'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al analizar el CV: {str(e)}'
+        })
+
+
+@login_required
+def save_cv_text_view(request):
+    """
+    Vista para guardar el CV en texto directamente.
+    """
+    if request.method == 'POST':
+        curriculum_text = request.POST.get('curriculum_text', '').strip()
+
+        if not curriculum_text:
+            messages.error(request, 'El texto del CV no puede estar vacío.')
+            return redirect('apps_core:profile')
+
+        # Obtener o crear el perfil del usuario
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'full_name': request.user.get_full_name() or request.user.username}
+        )
+
+        # Guardar el texto del CV
+        profile.curriculum_text = curriculum_text
+        profile.cv_analyzed = True
+        profile.save()
+
+        messages.success(request, 'CV guardado correctamente.')
+        return redirect('apps_core:profile')
+
+    return redirect('apps_core:profile')
+
+
+@login_required
+def save_preferences_view(request):
+    """
+    Vista para guardar las preferencias de búsqueda de empleo.
+    """
+    if request.method == 'POST':
+        # Obtener o crear el perfil del usuario
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'full_name': request.user.get_full_name() or request.user.username}
+        )
+
+        # Parsear datos JSON de los tags
+        try:
+            profile.preferred_locations = json.loads(request.POST.get('preferred_locations', '[]'))
+            profile.preferred_sectors = json.loads(request.POST.get('preferred_sectors', '[]'))
+            profile.job_types = json.loads(request.POST.get('job_types', '[]'))
+        except json.JSONDecodeError:
+            pass
+
+        # Otros campos
+        salary_min = request.POST.get('salary_min', '').strip()
+        if salary_min:
+            profile.salary_min = int(salary_min)
+
+        availability = request.POST.get('availability', '').strip()
+        if availability:
+            profile.availability = availability
+
+        profile.save()
+        messages.success(request, 'Preferencias guardadas correctamente.')
+        return redirect('apps_core:profile')
+
+    return redirect('apps_core:profile')
+
+
+@login_required
+def save_social_view(request):
+    """
+    Vista para guardar las redes sociales/profesionales.
+    """
+    if request.method == 'POST':
+        # Obtener o crear el perfil del usuario
+        profile, created = UserProfile.objects.get_or_create(
+            user=request.user,
+            defaults={'full_name': request.user.get_full_name() or request.user.username}
+        )
+
+        profile.linkedin_url = request.POST.get('linkedin_url', '').strip()
+        profile.github_url = request.POST.get('github_url', '').strip()
+        profile.portfolio_url = request.POST.get('portfolio_url', '').strip()
+
+        profile.save()
+        messages.success(request, 'Redes profesionales guardadas correctamente.')
+        return redirect('apps_core:profile')
+
+    return redirect('apps_core:profile')

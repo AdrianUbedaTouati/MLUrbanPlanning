@@ -1,0 +1,1467 @@
+﻿{% extends 'core/base.html' %}
+
+{% block title %}{{ tender.title }} - TenderAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Título y Acciones -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h1>{{ tender.title }}</h1>
+                <form method="post" action="{% url 'apps_tenders:save' tender.ojs_notice_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn {% if is_saved %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                        <i class="bi bi-bookmark{% if is_saved %}-fill{% endif %}"></i>
+                        {% if is_saved %}Guardada{% else %}Guardar{% endif %}
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info Básica -->
+            <div class="card mb-4" id="basic-info">
+                <div class="card-body">
+                    <p class="text-muted mb-2">
+                        <strong>ID:</strong> {{ tender.ojs_notice_id }}
+                        <a href="https://ted.europa.eu/udl?uri=TED:NOTICE:{{ tender.ojs_notice_id }}:DATA:ES:HTML" target="_blank" class="ms-2 badge bg-primary text-decoration-none" title="Ver en TED Europa">
+                            <i class="bi bi-box-arrow-up-right"></i> Ver en TED
+                        </a>
+                    </p>
+                    <p class="text-muted mb-2">
+                        <strong>Organismo:</strong> {{ tender.buyer_name }}
+                        {% if tender.buyer_type %}({{ tender.buyer_type }}){% endif %}
+                    </p>
+                    <p class="mb-2">
+                        <span class="badge bg-info">{{ tender.get_contract_type_display }}</span>
+                        <span class="badge bg-secondary">{{ tender.get_procedure_type_display }}</span>
+                    </p>
+                    {% if tender.deadline %}
+                    <p class="mb-2" id="deadline-info">
+                        <strong class="text-danger"><i class="bi bi-alarm"></i> Fecha Límite:</strong>
+                        {{ tender.deadline|date:"d/m/Y H:i" }}
+                    </p>
+                    {% endif %}
+                    {% if tender.publication_date %}
+                    <p class="mb-2">
+                        <strong>Publicado:</strong> {{ tender.publication_date|date:"d/m/Y" }}
+                    </p>
+                    {% endif %}
+                    {% if tender.budget_amount %}
+                    <p class="mb-0" id="budget-info">
+                        <strong>Presupuesto:</strong>
+                        <span class="text-primary fs-5 fw-bold">{{ tender.budget_amount|floatformat:2 }} {{ tender.currency }}</span>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="card mb-4" id="description-section">
+                <div class="card-header">
+                    <h5 class="mb-0">Descripción</h5>
+                </div>
+                <div class="card-body">
+                    <p style="white-space: pre-wrap;">{{ tender.description }}</p>
+                </div>
+            </div>
+
+            <!-- Códigos CPV -->
+            {% if tender.cpv_codes %}
+            <div class="card mb-4" id="cpv-section">
+                <div class="card-header">
+                    <h5 class="mb-0">Códigos CPV</h5>
+                </div>
+                <div class="card-body">
+                    {% for cpv in tender.cpv_codes %}
+                    <span class="badge bg-light text-dark border me-1 mb-1">{{ cpv }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Regiones NUTS -->
+            {% if tender.nuts_regions %}
+            <div class="card mb-4" id="nuts-section">
+                <div class="card-header">
+                    <h5 class="mb-0">Regiones NUTS</h5>
+                </div>
+                <div class="card-body">
+                    {% for nuts in tender.nuts_regions %}
+                    <span class="badge bg-light text-dark border me-1 mb-1">{{ nuts }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Información de Contacto -->
+            {% if tender.contact_email or tender.contact_phone or tender.contact_url %}
+            <div class="card mb-4" id="contact-section">
+                <div class="card-header">
+                    <h5 class="mb-0">Información de Contacto</h5>
+                </div>
+                <div class="card-body">
+                    {% if tender.contact_email %}
+                    <p class="mb-2">
+                        <i class="bi bi-envelope"></i> <a href="mailto:{{ tender.contact_email }}">{{ tender.contact_email }}</a>
+                    </p>
+                    {% endif %}
+                    {% if tender.contact_phone %}
+                    <p class="mb-2">
+                        <i class="bi bi-telephone"></i> {{ tender.contact_phone }}
+                    </p>
+                    {% endif %}
+                    {% if tender.contact_url %}
+                    <p class="mb-0">
+                        <i class="bi bi-link-45deg"></i> <a href="{{ tender.contact_url }}" target="_blank">{{ tender.contact_url }}</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Información Detallada (XML Procesado) -->
+            {% if tender.parsed_summary %}
+            <div class="card mb-4" id="xml-section">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-code"></i> Información Detallada (XML Procesado)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs" id="xmlTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="required-tab" data-bs-toggle="tab"
+                                    data-bs-target="#required" type="button" role="tab">
+                                <i class="bi bi-check-circle"></i> Campos Requeridos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="optional-tab" data-bs-toggle="tab"
+                                    data-bs-target="#optional" type="button" role="tab">
+                                <i class="bi bi-plus-circle"></i> Campos Opcionales
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="document-tab" data-bs-toggle="tab"
+                                    data-bs-target="#document-view" type="button" role="tab">
+                                <i class="bi bi-file-earmark-text"></i> 📄 Documento Completo
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab content -->
+                    <div class="tab-content mt-3" id="xmlTabsContent">
+                        <!-- Tab 1: REQUIRED -->
+                        <div class="tab-pane fade show active" id="required" role="tabpanel">
+                            {% if tender.parsed_summary.REQUIRED %}
+                            <dl class="row mb-0">
+                                {% for key, value in tender.parsed_summary.REQUIRED.items %}
+                                <dt class="col-sm-4 text-muted">{{ key|title }}</dt>
+                                <dd class="col-sm-8">{{ value|default:"N/A" }}</dd>
+                                {% endfor %}
+                            </dl>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay campos requeridos disponibles.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tab 2: OPTIONAL -->
+                        <div class="tab-pane fade" id="optional" role="tabpanel">
+                            {% if tender.parsed_summary.OPTIONAL %}
+                            <dl class="row mb-0">
+                                {% for key, value in tender.parsed_summary.OPTIONAL.items %}
+                                <dt class="col-sm-4 text-muted">{{ key|title }}</dt>
+                                <dd class="col-sm-8">
+                                    {% if value is list %}
+                                        {% if value %}
+                                        <ul class="mb-0">
+                                        {% for item in value %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        <span class="text-muted">Lista vacía</span>
+                                        {% endif %}
+                                    {% elif value is dict %}
+                                        <pre class="bg-light p-2 rounded mb-0" style="font-size: 0.85rem;">{{ value|safe }}</pre>
+                                    {% else %}
+                                        {{ value|default:"N/A" }}
+                                    {% endif %}
+                                </dd>
+                                {% endfor %}
+                            </dl>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay campos opcionales disponibles.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tab 3: Documento Completo -->
+                        <div class="tab-pane fade" id="document-view" role="tabpanel">
+                            <div class="word-document-container">
+                                <!-- ENCABEZADO DEL DOCUMENTO -->
+                                <div class="word-header">
+                                    <div class="word-logo">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div class="word-header-content">
+                                        <h1 class="word-title">DOCUMENTO DE LICITACIÓN PÚBLICA</h1>
+                                        <p class="word-subtitle">Tenders Electronic Daily (TED) - Unión Europea</p>
+                                    </div>
+                                    <div class="word-actions">
+                                        <button class="word-btn" onclick="window.print()" title="Imprimir documento">
+                                            <i class="bi bi-printer"></i> Imprimir
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- CONTENIDO DEL DOCUMENTO -->
+                                <div class="word-content">
+                                    <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-info-circle-fill"></i>
+                                            1. INFORMACIÓN GENERAL
+                                        </h2>
+                                        <table class="word-table">
+                                            <tr>
+                                                <td class="word-label">Título de la Licitación:</td>
+                                                <td class="word-value"><strong>{{ tender.title }}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="word-label">Número de Aviso (OJS ID):</td>
+                                                <td class="word-value">
+                                                    {{ tender.ojs_notice_id }}
+                                                    <a href="https://ted.europa.eu/udl?uri=TED:NOTICE:{{ tender.ojs_notice_id }}:DATA:ES:HTML" target="_blank" class="ms-2" style="color: #3498db;">
+                                                        <i class="bi bi-box-arrow-up-right"></i> Ver en TED
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="word-label">Organismo Contratante:</td>
+                                                <td class="word-value">{{ tender.buyer_name }}</td>
+                                            </tr>
+                                            {% if tender.buyer_type %}
+                                            <tr>
+                                                <td class="word-label">Tipo de Organismo:</td>
+                                                <td class="word-value">{{ tender.buyer_type }}</td>
+                                            </tr>
+                                            {% endif %}
+                                            <tr>
+                                                <td class="word-label">Fecha de Publicación:</td>
+                                                <td class="word-value">{{ tender.publication_date|date:"d/m/Y" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="word-label">Tipo de Contrato:</td>
+                                                <td class="word-value">{{ tender.get_contract_type_display }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="word-label">Tipo de Procedimiento:</td>
+                                                <td class="word-value">{{ tender.get_procedure_type_display }}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- SECCIÓN 2: DESCRIPCIÓN DEL CONTRATO -->
+                                    {% if tender.description %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-file-text-fill"></i>
+                                            2. DESCRIPCIÓN DEL CONTRATO
+                                        </h2>
+                                        <div class="word-text-content">
+                                            {{ tender.description }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 3: INFORMACIÓN FINANCIERA -->
+                                    {% if tender.budget_amount %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-cash-coin"></i>
+                                            3. INFORMACIÓN FINANCIERA
+                                        </h2>
+                                        <div class="word-highlight-box budget-box">
+                                            <div class="highlight-label">PRESUPUESTO ESTIMADO</div>
+                                            <div class="highlight-value">{{ tender.budget_amount|floatformat:2 }} {{ tender.currency }}</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 4: PLAZOS Y FECHAS LÍMITE -->
+                                    {% if tender.deadline %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-alarm-fill"></i>
+                                            4. PLAZOS Y FECHAS LÍMITE
+                                        </h2>
+                                        <div class="word-highlight-box deadline-box">
+                                            <div class="highlight-label">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> FECHA LÍMITE DE PRESENTACIÓN
+                                            </div>
+                                            <div class="highlight-value">{{ tender.deadline|date:"d/m/Y" }} a las {{ tender.deadline|date:"H:i" }} horas</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 5: CLASIFICACIÓN -->
+                                    {% if tender.cpv_codes or tender.nuts_regions %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-tags-fill"></i>
+                                            5. CLASIFICACIÓN
+                                        </h2>
+                                        <table class="word-table">
+                                            {% if tender.cpv_codes %}
+                                            <tr>
+                                                <td class="word-label">Códigos CPV:</td>
+                                                <td class="word-value">
+                                                    {% for cpv in tender.cpv_codes %}
+                                                    <span class="word-badge">{{ cpv }}</span>{% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if tender.nuts_regions %}
+                                            <tr>
+                                                <td class="word-label">Regiones NUTS:</td>
+                                                <td class="word-value">
+                                                    {% for nuts in tender.nuts_regions %}
+                                                    <span class="word-badge">{{ nuts }}</span>{% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                        </table>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 6: LOTES (desde parsed_summary) -->
+                                    {% if tender.parsed_summary.OPTIONAL.lots %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-layers-fill"></i>
+                                            6. LOTES DEL CONTRATO
+                                        </h2>
+                                        {% for lot in tender.parsed_summary.OPTIONAL.lots %}
+                                        <div class="word-lot-box">
+                                            <div class="lot-header">
+                                                <strong>{{ lot.lot_id|default:"Lote "|add:forloop.counter }}</strong>
+                                                {% if lot.name %} - {{ lot.name }}{% endif %}
+                                            </div>
+                                            {% if lot.description %}
+                                            <div class="lot-description">{{ lot.description }}</div>
+                                            {% endif %}
+                                            {% if lot.budget_eur %}
+                                            <div class="lot-budget">
+                                                <i class="bi bi-currency-euro"></i>
+                                                Presupuesto: <strong>{{ lot.budget_eur|floatformat:2 }} EUR</strong>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 7: CRITERIOS DE ADJUDICACIÓN -->
+                                    {% if tender.parsed_summary.OPTIONAL.award_criteria %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-trophy-fill"></i>
+                                            {% if tender.parsed_summary.OPTIONAL.lots %}7{% else %}6{% endif %}. CRITERIOS DE ADJUDICACIÓN
+                                        </h2>
+                                        <table class="word-criteria-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Criterio</th>
+                                                    <th>Tipo</th>
+                                                    <th class="text-center">Peso</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for criterion in tender.parsed_summary.OPTIONAL.award_criteria %}
+                                                <tr>
+                                                    <td>{{ criterion.name }}</td>
+                                                    <td><span class="word-badge">{{ criterion.type|default:"N/A" }}</span></td>
+                                                    <td class="text-center"><strong>{{ criterion.weight|default:"N/A" }}{% if criterion.weight %}%{% endif %}</strong></td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 8: REQUISITOS DE ELEGIBILIDAD -->
+                                    {% if tender.parsed_summary.OPTIONAL.eligibility_requirements %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-check2-square"></i>
+                                            {% if tender.parsed_summary.OPTIONAL.lots %}8{% elif tender.parsed_summary.OPTIONAL.award_criteria %}7{% else %}6{% endif %}. REQUISITOS DE ELEGIBILIDAD
+                                        </h2>
+                                        <div class="word-requirements-box">
+                                            {{ tender.parsed_summary.OPTIONAL.eligibility_requirements }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 9: DOCUMENTOS ADJUNTOS -->
+                                    {% if tender.parsed_summary.OPTIONAL.attachments %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-paperclip"></i>
+                                            9. DOCUMENTOS ADJUNTOS
+                                        </h2>
+                                        <ul class="word-attachment-list">
+                                            {% for attachment in tender.parsed_summary.OPTIONAL.attachments %}
+                                            <li>
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                <a href="{{ attachment.uri }}" target="_blank" rel="noopener">
+                                                    {{ attachment.name }}
+                                                </a>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 10: REFERENCIAS EXTERNAS -->
+                                    {% if tender.parsed_summary.OPTIONAL.external_references %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-link-45deg"></i>
+                                            10. REFERENCIAS EXTERNAS
+                                        </h2>
+                                        <ul class="word-link-list">
+                                            {% for ref_url in tender.parsed_summary.OPTIONAL.external_references %}
+                                            <li>
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                                <a href="{{ ref_url }}" target="_blank" rel="noopener">{{ ref_url }}</a>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- SECCIÓN 11: INFORMACIÓN DE CONTACTO -->
+                                    {% if tender.contact_email or tender.contact_phone or tender.contact_url or tender.contact_fax %}
+                                    <div class="word-section">
+                                        <h2 class="word-section-title">
+                                            <i class="bi bi-envelope-fill"></i>
+                                            11. INFORMACIÓN DE CONTACTO
+                                        </h2>
+                                        <table class="word-table">
+                                            {% if tender.contact_email %}
+                                            <tr>
+                                                <td class="word-label"><i class="bi bi-envelope"></i> Email:</td>
+                                                <td class="word-value"><a href="mailto:{{ tender.contact_email }}">{{ tender.contact_email }}</a></td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if tender.contact_phone %}
+                                            <tr>
+                                                <td class="word-label"><i class="bi bi-telephone"></i> Teléfono:</td>
+                                                <td class="word-value">{{ tender.contact_phone }}</td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if tender.contact_url %}
+                                            <tr>
+                                                <td class="word-label"><i class="bi bi-globe"></i> Sitio Web:</td>
+                                                <td class="word-value"><a href="{{ tender.contact_url }}" target="_blank">{{ tender.contact_url }}</a></td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if tender.contact_fax %}
+                                            <tr>
+                                                <td class="word-label"><i class="bi bi-printer"></i> Fax:</td>
+                                                <td class="word-value">{{ tender.contact_fax }}</td>
+                                            </tr>
+                                            {% endif %}
+                                        </table>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- PIE DEL DOCUMENTO -->
+                                <div class="word-footer">
+                                    <div class="footer-left">
+                                        <p><strong>Documento generado:</strong> {{ tender.created_at|date:"d/m/Y H:i" }}</p>
+                                        <p><strong>Fuente:</strong> TED (Tenders Electronic Daily) - Unión Europea</p>
+                                    </div>
+                                    <div class="footer-right">
+                                        {% if tender.xml_content %}
+                                        <button class="word-btn-secondary" onclick="toggleXMLTechnical()">
+                                            <i class="bi bi-code-square"></i> Ver XML Técnico
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- VISTA TÉCNICA XML (COLAPSABLE) -->
+                                {% if tender.xml_content %}
+                                <div id="xml-technical-section" class="xml-technical-collapsed">
+                                    <div class="xml-tech-header">
+                                        <h3><i class="bi bi-code-slash"></i> Vista Técnica XML</h3>
+                                        <button class="xml-close-btn" onclick="toggleXMLTechnical()">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <div class="xml-tech-content">
+                                        <pre><code class="language-xml">{{ tender.xml_content }}</code></pre>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Recomendación -->
+            {% if recommendation %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-star-fill"></i> Recomendación IA</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="display-4 mb-0">{{ recommendation.score_total|floatformat:0 }}</h2>
+                        <p class="text-muted mb-0">Score Total</p>
+                        <span class="badge
+                            {% if recommendation.recommendation_level == 'alta' %}bg-success
+                            {% elif recommendation.recommendation_level == 'media' %}bg-warning
+                            {% else %}bg-secondary{% endif %} fs-6">
+                            Nivel: {{ recommendation.get_recommendation_level_display }}
+                        </span>
+                    </div>
+
+                    <h6>Desglose de Puntuación</h6>
+                    <div class="mb-2">
+                        <small>Técnico</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" style="width: {{ recommendation.score_technical }}%">
+                                {{ recommendation.score_technical|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Presupuesto</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" style="width: {{ recommendation.score_budget }}%">
+                                {{ recommendation.score_budget|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Geográfico</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-info" style="width: {{ recommendation.score_geographic }}%">
+                                {{ recommendation.score_geographic|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Experiencia</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ recommendation.score_experience }}%">
+                                {{ recommendation.score_experience|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <small>Competencia</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-danger" style="width: {{ recommendation.score_competition }}%">
+                                {{ recommendation.score_competition|floatformat:0 }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Probabilidad de Éxito</h6>
+                    <div class="alert alert-info mb-3">
+                        <strong>{{ recommendation.probability_success|floatformat:1 }}%</strong>
+                    </div>
+
+                    {% if recommendation.match_reasons %}
+                    <h6>Razones de Compatibilidad</h6>
+                    <ul class="small">
+                        {% for reason in recommendation.match_reasons %}
+                        <li>{{ reason }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% if recommendation.warning_factors %}
+                    <h6 class="text-danger">Factores de Advertencia</h6>
+                    <ul class="small text-danger">
+                        {% for warning in recommendation.warning_factors %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Estado (si está guardada) -->
+            {% if is_saved %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Estado</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'apps_tenders:update_status' tender.ojs_notice_id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Estado</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="interested">Interesado</option>
+                                <option value="applied">Oferta Presentada</option>
+                                <option value="won">Ganada</option>
+                                <option value="lost">Perdida</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notas</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Actualizar Estado</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Acciones -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Acciones</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'apps_chat:session_create' %}" class="btn btn-success w-100 mb-2" onclick="event.preventDefault(); fetch('{% url 'apps_chat:session_create' %}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}}).then(r => r.json()).then(d => window.location.href = d.redirect_url + '?tender_id={{ tender.ojs_notice_id }}');">
+                        <i class="bi bi-chat-dots"></i> Consultar con IA
+                    </a>
+                    <a href="{% url 'apps_tenders:list' %}" class="btn btn-secondary w-100">
+                        <i class="bi bi-arrow-left"></i> Volver al Listado
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Prism.js para syntax highlighting de XML -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<script>
+// ==============================
+// FUNCIONES PARA DOCUMENTO WORD
+// ==============================
+
+// Toggle XML technical view
+function toggleXMLTechnical() {
+    const xmlSection = document.getElementById('xml-technical-section');
+    if (xmlSection) {
+        if (xmlSection.classList.contains('xml-technical-collapsed')) {
+            xmlSection.classList.remove('xml-technical-collapsed');
+            xmlSection.classList.add('xml-technical-expanded');
+            // Apply syntax highlighting
+            setTimeout(() => {
+                if (typeof Prism !== 'undefined') {
+                    Prism.highlightAll();
+                }
+            }, 100);
+        } else {
+            xmlSection.classList.remove('xml-technical-expanded');
+            xmlSection.classList.add('xml-technical-collapsed');
+        }
+    }
+}
+
+// Highlighting y scroll automático cuando se viene desde el chat
+document.addEventListener('DOMContentLoaded', function() {
+    // Aplicar syntax highlighting de Prism
+    Prism.highlightAll();
+
+    // Obtener parámetro highlight de URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightSection = urlParams.get('highlight');
+
+    if (highlightSection) {
+        // Mapeo de secciones a IDs de elementos
+        const sectionMap = {
+            // Secciones principales
+            'description': 'description-section',
+            'budget': 'budget-info',
+            'budget_search': 'budget-info',
+            'deadline': 'deadline-info',
+            'deadline_search': 'deadline-info',
+            'cpv': 'cpv-section',
+            'cpv_search': 'cpv-section',
+            'nuts': 'nuts-section',
+            'location_search': 'nuts-section',
+            'contact': 'contact-section',
+            'xml': 'xml-section',
+            'details': 'xml-section',
+            'general': 'description-section',
+            'comparison': 'basic-info'
+        };
+
+        const targetId = sectionMap[highlightSection];
+        if (targetId) {
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                // Esperar a que la página cargue completamente
+                setTimeout(() => {
+                    // Scroll suave al elemento
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+
+                    // Añadir clase de highlight
+                    targetElement.classList.add('highlight-section');
+
+                    // Remover highlight después de 3 segundos
+                    setTimeout(() => {
+                        targetElement.classList.remove('highlight-section');
+                    }, 3000);
+                }, 300);
+            }
+        }
+    }
+});
+</script>
+
+<style>
+/* Animación de highlighting para secciones */
+.highlight-section {
+    animation: highlight-pulse 2s ease-in-out;
+    background: linear-gradient(90deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%) !important;
+    border-left: 4px solid #007AFF !important;
+    padding-left: 12px !important;
+    transition: all 0.3s ease;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.85;
+        transform: scale(1.01);
+    }
+}
+
+/* Mejorar apariencia del XML */
+#raw-xml pre {
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+#raw-xml code {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Mejorar tabs */
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active {
+    color: #007AFF;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0056b3;
+}
+
+/* ========================================
+   ESTILOS PARA VISTA DOCUMENTO COMPLETO
+   ======================================== */
+
+/* Contenedor principal del documento */
+.document-container {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Encabezado del documento */
+.document-header {
+    border-bottom: 3px solid #007AFF;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.document-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #007AFF;
+    margin: 10px 0;
+    letter-spacing: 0.5px;
+}
+
+.document-id {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #555;
+    margin: 10px 0;
+}
+
+.document-status {
+    margin-top: 10px;
+}
+
+/* Secciones del documento */
+.document-section {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+}
+
+.section-title {
+    color: #007AFF;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-content {
+    padding-left: 10px;
+}
+
+/* Filas de información */
+.info-row {
+    display: flex;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    align-items: flex-start;
+}
+
+.info-row .label {
+    font-weight: 600;
+    color: #666;
+    min-width: 200px;
+    flex-shrink: 0;
+}
+
+.info-row .value {
+    color: #333;
+    flex: 1;
+}
+
+/* Destacar presupuesto */
+.highlight-budget {
+    background: linear-gradient(90deg, #e3f2fd 0%, #f5f5f5 100%);
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007AFF;
+}
+
+.budget-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #007AFF;
+}
+
+/* Alerta de deadline */
+.deadline-alert {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.deadline-value {
+    font-weight: 700;
+    color: #d32f2f;
+    font-size: 1.1rem;
+}
+
+/* Descripción del contrato */
+.description-text {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 3px solid #007AFF;
+}
+
+/* Criterios numerados */
+.criteria-list {
+    counter-reset: criteria;
+    list-style: none;
+    padding: 0;
+}
+
+.criteria-list li {
+    counter-increment: criteria;
+    padding: 12px;
+    margin: 8px 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #28a745;
+}
+
+.criteria-list li:before {
+    content: counter(criteria) ". ";
+    font-weight: bold;
+    color: #28a745;
+    font-size: 1.1rem;
+    margin-right: 8px;
+}
+
+/* Footer del documento */
+.document-footer {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    margin-top: 40px;
+}
+
+/* XML Técnico Colapsable */
+#xml-technical-view.collapse:not(.show) {
+    display: none;
+}
+
+#xml-technical-view.collapse.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .document-container {
+        padding: 20px;
+    }
+
+    .info-row {
+        flex-direction: column;
+    }
+
+    .info-row .label {
+        min-width: auto;
+        margin-bottom: 5px;
+    }
+
+    .document-title {
+        font-size: 1.2rem;
+    }
+}
+
+/* ========================================
+   ESTILOS PARA DOCUMENTO WORD
+   ======================================== */
+
+/* Contenedor principal del documento Word */
+.word-document-container {
+    background: #ffffff;
+    max-width: 1000px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: #333;
+}
+
+/* Encabezado del documento */
+.word-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: white;
+    padding: 30px 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 5px solid #2980b9;
+}
+
+.word-logo {
+    font-size: 3.5rem;
+    opacity: 0.9;
+}
+
+.word-header-content {
+    flex: 1;
+}
+
+.word-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.word-subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+    font-family: 'Arial', sans-serif;
+}
+
+.word-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.word-btn {
+    background: white;
+    color: #2c3e50;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.word-btn:hover {
+    background: #ecf0f1;
+    transform: translateY(-2px);
+}
+
+.word-btn-secondary {
+    background: transparent;
+    color: #2c3e50;
+    border: 2px solid #bdc3c7;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.word-btn-secondary:hover {
+    background: #ecf0f1;
+    border-color: #95a5a6;
+}
+
+/* Contenido del documento */
+.word-content {
+    padding: 40px 50px;
+    line-height: 1.8;
+}
+
+/* Secciones del documento */
+.word-section {
+    margin-bottom: 35px;
+    page-break-inside: avoid;
+}
+
+.word-section-title {
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 700;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.word-section-title i {
+    color: #3498db;
+}
+
+/* Tablas de información */
+.word-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.word-table tr {
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.word-table td {
+    padding: 12px 15px;
+    vertical-align: top;
+}
+
+.word-label {
+    width: 30%;
+    font-weight: 600;
+    color: #555;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.95rem;
+}
+
+.word-value {
+    width: 70%;
+    color: #333;
+}
+
+/* Contenido de texto */
+.word-text-content {
+    padding: 15px;
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+    line-height: 1.8;
+    text-align: justify;
+}
+
+/* Cajas destacadas */
+.word-highlight-box {
+    padding: 25px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.budget-box {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 2px solid #2196f3;
+}
+
+.deadline-box {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+    border: 2px solid #ffc107;
+}
+
+.highlight-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Arial', sans-serif;
+}
+
+.highlight-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* Badges */
+.word-badge {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'Arial', sans-serif;
+    border: 1px solid #90caf9;
+}
+
+/* Lotes */
+.word-lot-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid #3498db;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+}
+
+.lot-header {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-family: 'Arial', sans-serif;
+}
+
+.lot-description {
+    color: #555;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.lot-budget {
+    color: #2980b9;
+    font-weight: 600;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Tabla de criterios */
+.word-criteria-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    border: 1px solid #dee2e6;
+}
+
+.word-criteria-table thead {
+    background: #2c3e50;
+    color: white;
+}
+
+.word-criteria-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    font-family: 'Arial', sans-serif;
+}
+
+.word-criteria-table tbody tr {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.word-criteria-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.word-criteria-table td {
+    padding: 12px 15px;
+}
+
+/* Checklist de requisitos */
+.word-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.word-checklist li {
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-left: 3px solid #3498db;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.word-checklist i {
+    color: #3498db;
+    font-size: 1.2rem;
+}
+
+/* Caja de requisitos (alternativa a checklist) */
+.word-requirements-box {
+    padding: 20px;
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+    border-radius: 6px;
+    margin: 15px 0;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Listas de adjuntos y links */
+.word-attachment-list,
+.word-link-list {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.word-attachment-list li,
+.word-link-list li {
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.word-attachment-list i,
+.word-link-list i {
+    color: #e74c3c;
+    font-size: 1.2rem;
+}
+
+.word-attachment-list a,
+.word-link-list a {
+    color: #2980b9;
+    text-decoration: none;
+    font-family: 'Arial', sans-serif;
+}
+
+.word-attachment-list a:hover,
+.word-link-list a:hover {
+    text-decoration: underline;
+}
+
+/* Pie del documento */
+.word-footer {
+    background: #ecf0f1;
+    padding: 25px 40px;
+    border-top: 3px solid #bdc3c7;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.9rem;
+}
+
+.footer-left p {
+    margin: 5px 0;
+    color: #555;
+}
+
+/* Vista técnica XML (colapsable) */
+.xml-technical-collapsed {
+    display: none;
+}
+
+.xml-technical-expanded {
+    display: block;
+    background: #1e1e1e;
+    margin-top: 20px;
+    border-top: 5px solid #3498db;
+}
+
+.xml-tech-header {
+    background: #2c3e50;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.xml-tech-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: 'Arial', sans-serif;
+}
+
+.xml-close-btn {
+    background: transparent;
+    border: 2px solid white;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.xml-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.xml-tech-content {
+    max-height: 500px;
+    overflow-y: auto;
+    background: #1e1e1e;
+    padding: 20px;
+}
+
+.xml-tech-content pre {
+    margin: 0;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.xml-tech-content code {
+    background: transparent;
+    color: #d4d4d4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .word-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .word-content {
+        padding: 20px;
+    }
+
+    .word-footer {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .word-label {
+        width: 40%;
+    }
+
+    .word-value {
+        width: 60%;
+    }
+}
+
+/* Print styles */
+@media print {
+    .word-document-container {
+        box-shadow: none;
+        max-width: 100%;
+    }
+
+    .word-header {
+        background: #2c3e50 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .word-btn,
+    .word-btn-secondary {
+        display: none;
+    }
+
+    .xml-technical-collapsed,
+    .xml-technical-expanded {
+        display: none !important;
+    }
+
+    .nav-tabs {
+        display: none;
+    }
+
+    .tab-content {
+        display: block !important;
+    }
+
+    .word-section {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}

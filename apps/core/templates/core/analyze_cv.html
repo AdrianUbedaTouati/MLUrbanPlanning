@@ -1,0 +1,239 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Analizar CV - BasePage{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">
+                        <i class="bi bi-file-earmark-person"></i> Analizar CV con IA Vision
+                    </h2>
+
+                    <!-- Formulario de subida -->
+                    <div id="upload-section">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Cómo funciona:</strong>
+                            <ol class="mb-0 mt-2">
+                                <li>Sube una imagen (JPG, PNG) o PDF de tu CV</li>
+                                <li>GPT-4 Vision analizará el documento y extraerá tu información</li>
+                                <li>Se generará un resumen profesional automáticamente</li>
+                            </ol>
+                        </div>
+
+                        <form id="cv-form" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="mb-4">
+                                <label for="id_cv_file" class="form-label">
+                                    <strong>{{ form.cv_file.label }}</strong>
+                                </label>
+                                {{ form.cv_file }}
+                                {% if form.cv_file.help_text %}
+                                    <small class="form-text text-muted">{{ form.cv_file.help_text }}</small>
+                                {% endif %}
+                                {% if form.cv_file.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.cv_file.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Nota:</strong> La imagen se subirá al servidor para que GPT-4 Vision pueda analizarla.
+                                Asegúrate de que la imagen sea legible y contenga toda la información de tu CV.
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                                    <i class="bi bi-cpu"></i> Analizar CV
+                                </button>
+                                <a href="{% url 'apps_core:profile' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Volver al Perfil
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Sección de progreso -->
+                    <div id="progress-section" style="display: none;">
+                        <div class="text-center mb-4">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Procesando...</span>
+                            </div>
+                        </div>
+
+                        <h4 class="text-center mb-4" id="progress-title">Procesando tu CV...</h4>
+
+                        <!-- Pasos del proceso -->
+                        <div class="list-group mb-4">
+                            <div class="list-group-item d-flex align-items-center" id="step-1">
+                                <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
+                                <i class="bi bi-circle me-3 step-pending"></i>
+                                <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
+                                <span>Subiendo archivo...</span>
+                            </div>
+                            <div class="list-group-item d-flex align-items-center" id="step-2">
+                                <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
+                                <i class="bi bi-circle me-3 step-pending"></i>
+                                <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
+                                <span>Procesando imagen...</span>
+                            </div>
+                            <div class="list-group-item d-flex align-items-center" id="step-3">
+                                <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
+                                <i class="bi bi-circle me-3 step-pending"></i>
+                                <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
+                                <span>GPT-4 Vision extrayendo información...</span>
+                            </div>
+                            <div class="list-group-item d-flex align-items-center" id="step-4">
+                                <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
+                                <i class="bi bi-circle me-3 step-pending"></i>
+                                <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
+                                <span>Generando resumen profesional...</span>
+                            </div>
+                        </div>
+
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                 style="width: 0%;" id="progress-bar">0%</div>
+                        </div>
+
+                        <p class="text-muted text-center" id="progress-message">
+                            Este proceso puede tardar unos segundos...
+                        </p>
+                    </div>
+
+                    <!-- Sección de error -->
+                    <div id="error-section" style="display: none;">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Error al analizar el CV</strong>
+                            <p class="mb-0 mt-2" id="error-message"></p>
+                        </div>
+                        <div class="d-grid">
+                            <button class="btn btn-primary" onclick="location.reload()">
+                                <i class="bi bi-arrow-repeat"></i> Intentar de nuevo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('cv-form');
+    const uploadSection = document.getElementById('upload-section');
+    const progressSection = document.getElementById('progress-section');
+    const errorSection = document.getElementById('error-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressTitle = document.getElementById('progress-title');
+    const progressMessage = document.getElementById('progress-message');
+    const errorMessage = document.getElementById('error-message');
+
+    function setStep(stepNum) {
+        // Marcar pasos anteriores como completados
+        for (let i = 1; i < stepNum; i++) {
+            const step = document.getElementById('step-' + i);
+            step.querySelector('.step-spinner').style.display = 'none';
+            step.querySelector('.step-pending').style.display = 'none';
+            step.querySelector('.step-done').style.display = 'inline';
+        }
+
+        // Marcar paso actual como en progreso
+        const currentStep = document.getElementById('step-' + stepNum);
+        if (currentStep) {
+            currentStep.querySelector('.step-spinner').style.display = 'inline-block';
+            currentStep.querySelector('.step-pending').style.display = 'none';
+        }
+
+        // Actualizar barra de progreso
+        const progress = (stepNum - 1) * 25;
+        progressBar.style.width = progress + '%';
+        progressBar.textContent = progress + '%';
+    }
+
+    function completeAllSteps() {
+        for (let i = 1; i <= 4; i++) {
+            const step = document.getElementById('step-' + i);
+            step.querySelector('.step-spinner').style.display = 'none';
+            step.querySelector('.step-pending').style.display = 'none';
+            step.querySelector('.step-done').style.display = 'inline';
+        }
+        progressBar.style.width = '100%';
+        progressBar.textContent = '100%';
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-success');
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Mostrar sección de progreso
+        uploadSection.style.display = 'none';
+        progressSection.style.display = 'block';
+
+        // Iniciar paso 1
+        setStep(1);
+        progressMessage.textContent = 'Subiendo tu archivo al servidor...';
+
+        const formData = new FormData(form);
+
+        // Simular progreso mientras se envía
+        setTimeout(() => {
+            setStep(2);
+            progressMessage.textContent = 'Procesando y preparando la imagen...';
+        }, 1000);
+
+        setTimeout(() => {
+            setStep(3);
+            progressMessage.textContent = 'GPT-4 Vision está analizando tu CV...';
+        }, 2500);
+
+        setTimeout(() => {
+            setStep(4);
+            progressMessage.textContent = 'Generando tu resumen profesional...';
+        }, 5000);
+
+        // Enviar formulario via AJAX
+        fetch('{% url "apps_core:analyze_cv_ajax" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                completeAllSteps();
+                progressTitle.textContent = '¡Análisis completado!';
+                progressMessage.textContent = 'Redirigiendo a tu perfil...';
+
+                setTimeout(() => {
+                    window.location.href = '{% url "apps_core:profile" %}';
+                }, 1500);
+            } else {
+                progressSection.style.display = 'none';
+                errorSection.style.display = 'block';
+                errorMessage.textContent = data.error || 'Error desconocido al procesar el CV.';
+            }
+        })
+        .catch(error => {
+            progressSection.style.display = 'none';
+            errorSection.style.display = 'block';
+            errorMessage.textContent = 'Error de conexión. Por favor, inténtalo de nuevo.';
+            console.error('Error:', error);
+        });
+    });
+});
+</script>
+{% endblock %}

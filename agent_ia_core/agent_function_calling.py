@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Agente con Function Calling para Ollama, OpenAI y Google Gemini.
-Versión 2.0 del sistema RAG con tools dinámicas.
+Agente con Function Calling para búsqueda de empleo.
+Soporta Ollama, OpenAI y Google Gemini.
 """
 
 from typing import List, Dict, Any, Optional
@@ -10,7 +10,6 @@ import sys
 import logging
 import json
 
-# Importar tools
 sys.path.append(str(Path(__file__).parent))
 from tools.registry import ToolRegistry
 
@@ -30,25 +29,13 @@ try:
 except ImportError:
     ChatGoogleGenerativeAI = None
 
-# Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class FunctionCallingAgent:
     """
-    Agente que usa Function Calling para decidir qué tools usar.
-
-    Flujo:
-    1. Usuario hace una pregunta
-    2. LLM decide qué tools necesita (0, 1 o múltiples)
-    3. Sistema ejecuta las tools
-    4. LLM genera respuesta final usando resultados
-
-    Soporta:
-    - Ollama (qwen2.5:7b y otros con function calling)
-    - OpenAI (GPT-4, GPT-3.5)
-    - Google Gemini
+    Agente que usa Function Calling para búsqueda de empleo.
     """
 
     def __init__(
@@ -56,28 +43,20 @@ class FunctionCallingAgent:
         llm_provider: str,
         llm_model: str,
         llm_api_key: Optional[str],
-        retriever,
-        db_session=None,
         user=None,
-        max_iterations: int = 5,
+        max_iterations: int = 15,
         temperature: float = 0.3,
-        company_context: str = "",
-        tenders_summary: str = ""
     ):
         """
-        Inicializa el agente con function calling.
+        Inicializa el agente.
 
         Args:
             llm_provider: Proveedor ("ollama", "openai", "google")
             llm_model: Modelo específico
             llm_api_key: API key (no necesaria para Ollama)
-            retriever: Retriever de ChromaDB
-            db_session: Sesión de base de datos Django
-            user: Usuario de Django para tools de contexto
+            user: Usuario de Django
             max_iterations: Máximo de iteraciones del loop
             temperature: Temperatura del LLM
-            company_context: (DEPRECATED) Ahora se usa get_company_info tool
-            tenders_summary: (DEPRECATED) Ahora se usa get_tenders_summary tool
         """
         self.llm_provider = llm_provider.lower()
         self.llm_model = llm_model
@@ -85,13 +64,10 @@ class FunctionCallingAgent:
         self.max_iterations = max_iterations
         self.temperature = temperature
         self.user = user
-        # Mantener por compatibilidad pero ya no se usan
-        self.company_context = company_context
-        self.tenders_summary = tenders_summary
 
         # Validaciones
         if self.llm_provider not in ['ollama', 'openai', 'google']:
-            raise ValueError(f"Proveedor '{llm_provider}' no soportado. Use: ollama, openai, google")
+            raise ValueError(f"Proveedor '{llm_provider}' no soportado")
 
         if self.llm_provider != 'ollama' and not llm_api_key:
             raise ValueError(f"API key requerida para {llm_provider}")
@@ -100,13 +76,9 @@ class FunctionCallingAgent:
         logger.info(f"[AGENT] Inicializando {llm_provider} - {llm_model}")
         self.llm = self._create_llm()
 
-        # Inicializar tool registry con usuario
+        # Inicializar tool registry
         logger.info(f"[AGENT] Inicializando tool registry...")
-        self.tool_registry = ToolRegistry(retriever, db_session, user=user)
-
-        # Inicializar grading tool con el LLM (si el usuario la activó)
-        if user and getattr(user, 'use_grading', False):
-            self.tool_registry.initialize_grading_tool(self.llm)
+        self.tool_registry = ToolRegistry(user=user, llm=self.llm)
 
         logger.info(f"[AGENT] Agente inicializado con {len(self.tool_registry.tools)} tools")
 
@@ -114,7 +86,7 @@ class FunctionCallingAgent:
         """Crea la instancia del LLM según el proveedor."""
         if self.llm_provider == 'ollama':
             if not ChatOllama:
-                raise ImportError("langchain-ollama no instalado. Ejecuta: pip install langchain-ollama")
+                raise ImportError("langchain-ollama no instalado")
 
             return ChatOllama(
                 model=self.llm_model,
@@ -124,7 +96,7 @@ class FunctionCallingAgent:
 
         elif self.llm_provider == 'openai':
             if not ChatOpenAI:
-                raise ImportError("langchain-openai no instalado. Ejecuta: pip install langchain-openai")
+                raise ImportError("langchain-openai no instalado")
 
             return ChatOpenAI(
                 model=self.llm_model,
@@ -134,9 +106,8 @@ class FunctionCallingAgent:
 
         elif self.llm_provider == 'google':
             if not ChatGoogleGenerativeAI:
-                raise ImportError("langchain-google-genai no instalado. Ejecuta: pip install langchain-google-genai")
+                raise ImportError("langchain-google-genai no instalado")
 
-            # Remover prefijo "models/" si existe
             model_name = self.llm_model.replace("models/", "")
 
             return ChatGoogleGenerativeAI(
@@ -156,23 +127,13 @@ class FunctionCallingAgent:
         Args:
             question: Pregunta del usuario
             conversation_history: Historial de conversación previo
-                [{'role': 'user'/'assistant', 'content': '...'}, ...]
 
         Returns:
-            Dict con:
-                - answer: Respuesta final
-                - tools_used: Lista de tools usadas
-                - iterations: Número de iteraciones
-                - metadata: Info adicional
+            Dict con answer, tools_used, iterations, metadata
         """
         logger.info(f"\n{'='*80}")
         logger.info(f"[QUERY] {question}")
-        if conversation_history:
-            logger.info(f"[QUERY] Historial: {len(conversation_history)} mensajes")
         logger.info(f"{'='*80}\n")
-
-        # Determinar si es el primer mensaje
-        is_first_message = not conversation_history or len(conversation_history) == 0
 
         # Preparar mensajes
         messages = self._prepare_messages(question, conversation_history)
@@ -182,32 +143,33 @@ class FunctionCallingAgent:
         tools_used = []
         tool_results_history = []
 
-        # En el primer mensaje, llamar automáticamente a get_tenders_summary
-        if is_first_message and self.user and 'get_tenders_summary' in self.tool_registry.tools:
-            logger.info("[QUERY] Primer mensaje - Llamando automáticamente a get_tenders_summary...")
-            summary_result = self.tool_registry.execute_tool('get_tenders_summary', limit=20)
+        # Determinar si es el primer mensaje
+        is_first_message = not conversation_history or len(conversation_history) == 0
 
-            if summary_result.get('success'):
-                tools_used.append('get_tenders_summary')
+        # En el primer mensaje, cargar automáticamente el perfil del usuario
+        if is_first_message and self.user and 'get_user_profile' in self.tool_registry.tools:
+            logger.info("[QUERY] Primer mensaje - Cargando automáticamente perfil del usuario...")
+            profile_result = self.tool_registry.execute_tool('get_user_profile')
+
+            if profile_result.get('success'):
+                tools_used.append('get_user_profile')
                 tool_results_history.append({
-                    'tool': 'get_tenders_summary',
-                    'arguments': {'limit': 20},
-                    'result': summary_result
+                    'tool': 'get_user_profile',
+                    'arguments': {},
+                    'result': profile_result
                 })
 
-                # Añadir el resultado al contexto de mensajes
-                summary_data = summary_result.get('data', {})
-                formatted_summary = summary_data.get('formatted_summary', '')
-
-                if formatted_summary:
-                    logger.info(f"[QUERY] ✓ Resumen de licitaciones cargado ({summary_data.get('total_count', 0)} licitaciones)")
-                    # Añadir como mensaje del sistema
+                # Añadir el perfil al contexto de mensajes
+                profile_data = profile_result.get('data', {})
+                if profile_data:
+                    profile_summary = self._format_profile_summary(profile_data)
+                    logger.info(f"[QUERY] ✓ Perfil del usuario cargado")
                     messages.append({
                         'role': 'system',
-                        'content': f"CONTEXTO AUTOMÁTICO (resumen de licitaciones disponibles):\n\n{formatted_summary}"
+                        'content': f"CONTEXTO AUTOMÁTICO (perfil del usuario):\n\n{profile_summary}"
                     })
             else:
-                logger.warning(f"[QUERY] ⚠️ Error al cargar resumen automático: {summary_result.get('error')}")
+                logger.warning(f"[QUERY] ⚠️ Error al cargar perfil automático: {profile_result.get('error')}")
 
         while iteration < self.max_iterations:
             iteration += 1
@@ -220,25 +182,18 @@ class FunctionCallingAgent:
             tool_calls = response.get('tool_calls', [])
 
             if not tool_calls:
-                # No hay tool calls, tenemos la respuesta final
+                # Respuesta final
                 final_answer = response.get('content', '')
                 logger.info(f"[ANSWER] Respuesta final generada")
-
-                # Extraer documentos usados de los tool results (para compatibilidad con Django)
-                documents = self._extract_documents_from_tool_results(tool_results_history)
 
                 return {
                     'answer': final_answer,
                     'tools_used': tools_used,
                     'tool_results': tool_results_history,
                     'iterations': iteration,
-                    'documents': documents,  # Para compatibilidad con ChatAgentService
-                    'route': 'function_calling',  # Para compatibilidad con ChatAgentService
-                    'verified_fields': [],  # Para compatibilidad con ChatAgentService
                     'metadata': {
                         'provider': self.llm_provider,
                         'model': self.llm_model,
-                        'max_iterations': self.max_iterations
                     }
                 }
 
@@ -253,28 +208,19 @@ class FunctionCallingAgent:
                     tools_used.append(tool_name)
                 tool_results_history.append(result)
 
-            # Añadir tool results al historial de mensajes
+            # Añadir tool results al historial
             messages = self._add_tool_results_to_messages(
-                messages,
-                response,
-                tool_calls,
-                results
+                messages, response, tool_calls, results
             )
 
         # Max iterations alcanzado
-        logger.warning(f"[AGENT] Máximo de iteraciones ({self.max_iterations}) alcanzado")
-
-        # Extraer documentos usados de los tool results (para compatibilidad con Django)
-        documents = self._extract_documents_from_tool_results(tool_results_history)
+        logger.warning(f"[AGENT] Máximo de iteraciones alcanzado")
 
         return {
-            'answer': 'Lo siento, no pude completar la tarea en el número de pasos permitidos. Intenta hacer la pregunta de otra manera o más específica.',
+            'answer': 'Lo siento, no pude completar la búsqueda. Intenta ser más específico.',
             'tools_used': tools_used,
             'tool_results': tool_results_history,
             'iterations': iteration,
-            'documents': documents,  # Para compatibilidad con ChatAgentService
-            'route': 'function_calling',  # Para compatibilidad con ChatAgentService
-            'verified_fields': [],  # Para compatibilidad con ChatAgentService
             'metadata': {
                 'provider': self.llm_provider,
                 'model': self.llm_model,
@@ -290,64 +236,64 @@ class FunctionCallingAgent:
         """Prepara los mensajes para el LLM."""
         messages = []
 
-        # Determinar si es el primer mensaje (sin historial)
-        is_first_message = not conversation_history or len(conversation_history) == 0
-
-        # System prompt base (siempre presente)
+        # System prompt para búsqueda de empleo
         system_prompt_parts = [
-            "Eres un asistente experto en licitaciones públicas europeas. Tienes acceso a herramientas especializadas para consultar información sobre licitaciones.",
-            ""
+            "Eres un asistente experto en búsqueda de empleo y orientación profesional.",
+            "Tu objetivo es ayudar a los usuarios a encontrar ofertas de trabajo, empresas y contactos de reclutadores.",
+            "",
+            "HERRAMIENTAS DISPONIBLES:",
+            "- get_user_profile: Obtener el perfil profesional del usuario",
+            "- search_jobs: Buscar ofertas de empleo (analiza muchas y devuelve las 10 mejores)",
+            "- recommend_companies: Recomendar empresas con contactos de reclutadores y estrategia de acceso",
         ]
 
-        # Instrucción para usar tools de contexto
-        if self.user:
-            system_prompt_parts.extend([
-                "INFORMACIÓN IMPORTANTE:",
-                "- Tienes acceso a la herramienta 'get_company_info' para obtener información sobre la empresa del usuario.",
-                "- Tienes acceso a la herramienta 'get_tenders_summary' para obtener un resumen de las licitaciones disponibles.",
-                "- Usa 'get_company_info' cuando el usuario pregunte sobre su empresa o necesites información para recomendaciones personalizadas.",
-                "- Usa 'get_tenders_summary' al inicio de la conversación o cuando el usuario pregunte qué licitaciones hay disponibles.",
-                ""
-            ])
-
-        # Instrucciones (siempre presentes)
-        system_prompt_parts.extend([
-            "IMPORTANTE: Debes SIEMPRE usar las herramientas disponibles para responder preguntas. NO inventes información.",
-            "",
-            "Herramientas disponibles:",
-            "- search_tenders: Búsqueda general por contenido/tema",
-            "- find_by_budget: Filtrar por presupuesto (úsala para \"más cara\", \"mayor presupuesto\", etc.)",
-            "- find_by_deadline: Filtrar por fecha límite",
-            "- find_by_cpv: Filtrar por código CPV",
-            "- find_by_location: Filtrar por ubicación geográfica",
-            "- get_tender_details: Obtener detalles completos de una licitación específica",
-            "- get_statistics: Obtener estadísticas (úsala para \"¿cuál es la más cara?\", \"promedio\", etc.)",
-            "- compare_tenders: Comparar múltiples licitaciones",
-            "- get_tender_xml: Obtener XML original de una licitación",
-        ])
-
-        # Añadir web_search y browse_webpage si están disponibles
+        # Si hay web search disponible
         if 'web_search' in self.tool_registry.tools:
             system_prompt_parts.extend([
-                "- web_search: Buscar información en internet (clima, noticias, precios, datos actuales)",
-                "- browse_webpage: Navegar a una URL específica para extraer contenido detallado",
+                "- web_search: Buscar información actualizada en internet",
+                "- browse_webpage: Navegar a una URL para extraer contenido",
             ])
 
         system_prompt_parts.extend([
             "",
-            "Cuando el usuario pregunte por licitaciones, DEBES usar las herramientas apropiadas. Por ejemplo:",
-            "- \"¿Cuál es la licitación más cara?\" → USA get_statistics",
-            "- \"Licitaciones de software\" → USA search_tenders",
-            "- \"Licitaciones entre 50k y 100k\" → USA find_by_budget",
+            "INSTRUCCIONES IMPORTANTES:",
+            "1. El perfil del usuario se carga automáticamente al inicio del chat",
+            "2. Usa search_jobs para buscar las mejores ofertas de empleo",
+            "3. Usa search_recent_jobs para buscar ofertas publicadas recientemente (últimas 24-48h)",
+            "4. Usa recommend_companies para recomendar empresas con reclutadores",
+            "5. Proporciona información práctica y actionable",
+            "6. IMPORTANTE: Después de mostrar las 15 mejores ofertas con search_jobs, SIEMPRE pregunta al usuario si quiere ver las 15 ofertas más recientes",
+            "",
+            "FORMATO DE RESPUESTA:",
+            "Presenta la información de forma visual y clara. Tienes libertad para elegir el formato que mejor se adapte:",
+            "- Usa encabezados (## o ###) para separar secciones principales",
+            "- Evita listas numeradas simples (1. 2. 3.) para las ofertas principales",
+            "- Incluye SIEMPRE el link a cada oferta",
+            "- Explica brevemente por qué cada oferta/empresa encaja con el usuario",
+            "- Sé creativo con la presentación pero mantén la información esencial",
+            "",
+            "INFORMACIÓN ESENCIAL POR OFERTA:",
+            "- Título/nombre del puesto (usa 'verified_details.title' si está disponible)",
+            "- Empresa (usa 'verified_details.company' si está disponible)",
+            "- Ubicación (usa 'verified_details.location' si está disponible)",
+            "- Salario (usa 'verified_details.salary' si está disponible)",
+            "- Por qué encaja con el perfil (usa 'fit_analysis' - debe ser ESPECÍFICO mencionando habilidades concretas)",
+            "- Link directo a la oferta",
+            "- Contacto del reclutador (si está disponible en 'recruiter': nombre y LinkedIn)",
+            "- Estado de verificación (usa 'verification.confidence' para indicar si está verificada)",
+            "",
+            "EJEMPLOS DE USO:",
+            '- "Busco trabajo en Alicante" → search_jobs(query="empleo", location="Alicante")',
+            '- "Ofertas recientes de Python" → search_recent_jobs(query="Python")',
+            '- "Recomiéndame empresas de tecnología" → recommend_companies(sector="Tecnología")',
+            '- "Empresas que encajen conmigo en Madrid" → recommend_companies(location="Madrid")',
+            "",
+            "FLUJO RECOMENDADO:",
+            "Cuando el usuario pida ofertas de empleo:",
+            "1. Usa search_jobs para mostrar las 15 mejores ofertas",
+            "2. Al final de la respuesta, pregunta: '¿Te gustaría ver las 15 ofertas más recientes publicadas en las últimas 24-48 horas?'",
+            "3. Si acepta, usa search_recent_jobs con los mismos parámetros",
         ])
-
-        # Instrucciones para web_search
-        if 'web_search' in self.tool_registry.tools:
-            system_prompt_parts.extend([
-                "- \"¿Qué tiempo hace en París?\" → USA web_search",
-                "- \"Precio del Bitcoin\" → USA web_search",
-                "- \"Noticias recientes sobre...\" → USA web_search",
-            ])
 
         system_prompt = "\n".join(system_prompt_parts)
 
@@ -373,12 +319,7 @@ class FunctionCallingAgent:
         return messages
 
     def _call_llm_with_tools(self, messages: List[Dict]) -> Dict[str, Any]:
-        """
-        Llama al LLM con las tools disponibles.
-
-        Returns:
-            Dict con 'content' y 'tool_calls'
-        """
+        """Llama al LLM con las tools disponibles."""
         if self.llm_provider == 'ollama':
             return self._call_ollama_with_tools(messages)
         elif self.llm_provider == 'openai':
@@ -387,7 +328,7 @@ class FunctionCallingAgent:
             return self._call_gemini_with_tools(messages)
 
     def _call_ollama_with_tools(self, messages: List[Dict]) -> Dict[str, Any]:
-        """Llama a Ollama con function calling nativo."""
+        """Llama a Ollama con function calling."""
         import ollama
 
         try:
@@ -407,7 +348,7 @@ class FunctionCallingAgent:
         except Exception as e:
             logger.error(f"[OLLAMA] Error: {e}", exc_info=True)
             return {
-                'content': f'Error al comunicar con Ollama: {str(e)}',
+                'content': f'Error con Ollama: {str(e)}',
                 'tool_calls': []
             }
 
@@ -416,24 +357,21 @@ class FunctionCallingAgent:
         from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 
         try:
-            # Convertir mensajes al formato LangChain
             lc_messages = []
             for msg in messages:
                 role = msg.get('role')
                 content = msg.get('content', '')
 
-                if role == 'user':
+                if role == 'system':
+                    lc_messages.append(SystemMessage(content=content))
+                elif role == 'user':
                     lc_messages.append(HumanMessage(content=content))
                 elif role == 'assistant':
-                    # Si tiene tool_calls, incluirlos
                     tool_calls = msg.get('tool_calls', [])
                     if tool_calls:
-                        # OpenAI espera tool_calls en formato específico
                         formatted_tool_calls = []
                         for tc in tool_calls:
-                            import json
                             func = tc.get('function', {})
-                            # Usar el ID que ya viene en el tool_call, no generar uno nuevo
                             tc_id = tc.get('id', f"call_{func.get('name')}_{id(tc)}")
                             formatted_tool_calls.append({
                                 "name": func.get('name'),
@@ -444,25 +382,18 @@ class FunctionCallingAgent:
                     else:
                         lc_messages.append(AIMessage(content=content))
                 elif role == 'tool':
-                    # Resultado de tool
                     tool_call_id = msg.get('tool_call_id', 'default')
                     lc_messages.append(ToolMessage(content=content, tool_call_id=tool_call_id))
 
-            # Obtener tools en formato OpenAI
             tools = self.tool_registry.get_openai_tools()
-
-            # Bind tools al LLM
             llm_with_tools = self.llm.bind_tools(tools)
-
-            # Llamar al LLM
             response = llm_with_tools.invoke(lc_messages)
 
-            # Extraer tool calls si existen
             tool_calls = []
             if hasattr(response, 'tool_calls') and response.tool_calls:
                 for tc in response.tool_calls:
                     tool_calls.append({
-                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),  # Guardar ID del tool call
+                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),
                         'function': {
                             'name': tc.get('name'),
                             'arguments': tc.get('args', {})
@@ -477,7 +408,7 @@ class FunctionCallingAgent:
         except Exception as e:
             logger.error(f"[OPENAI] Error: {e}", exc_info=True)
             return {
-                'content': f'Error al comunicar con OpenAI: {str(e)}',
+                'content': f'Error con OpenAI: {str(e)}',
                 'tool_calls': []
             }
 
@@ -486,23 +417,21 @@ class FunctionCallingAgent:
         from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 
         try:
-            # Convertir mensajes al formato LangChain
             lc_messages = []
             for msg in messages:
                 role = msg.get('role')
                 content = msg.get('content', '')
 
-                if role == 'user':
+                if role == 'system':
+                    lc_messages.append(SystemMessage(content=content))
+                elif role == 'user':
                     lc_messages.append(HumanMessage(content=content))
                 elif role == 'assistant':
-                    # Si tiene tool_calls, incluirlos
                     tool_calls = msg.get('tool_calls', [])
                     if tool_calls:
-                        # Gemini espera tool_calls en formato específico
                         formatted_tool_calls = []
                         for tc in tool_calls:
                             func = tc.get('function', {})
-                            # Usar el ID que ya viene en el tool_call, no generar uno nuevo
                             tc_id = tc.get('id', f"call_{func.get('name')}_{id(tc)}")
                             formatted_tool_calls.append({
                                 "name": func.get('name'),
@@ -513,25 +442,18 @@ class FunctionCallingAgent:
                     else:
                         lc_messages.append(AIMessage(content=content))
                 elif role == 'tool':
-                    # Resultado de tool
                     tool_call_id = msg.get('tool_call_id', 'default')
                     lc_messages.append(ToolMessage(content=content, tool_call_id=tool_call_id))
 
-            # Obtener tools en formato Gemini
             tools = self.tool_registry.get_gemini_tools()
-
-            # Bind tools al LLM
             llm_with_tools = self.llm.bind_tools(tools)
-
-            # Llamar al LLM
             response = llm_with_tools.invoke(lc_messages)
 
-            # Extraer tool calls si existen
             tool_calls = []
             if hasattr(response, 'tool_calls') and response.tool_calls:
                 for tc in response.tool_calls:
                     tool_calls.append({
-                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),  # Guardar ID del tool call
+                        'id': tc.get('id', f"call_{tc.get('name')}_{id(tc)}"),
                         'function': {
                             'name': tc.get('name'),
                             'arguments': tc.get('args', {})
@@ -546,7 +468,7 @@ class FunctionCallingAgent:
         except Exception as e:
             logger.error(f"[GEMINI] Error: {e}", exc_info=True)
             return {
-                'content': f'Error al comunicar con Gemini: {str(e)}',
+                'content': f'Error con Gemini: {str(e)}',
                 'tool_calls': []
             }
 
@@ -557,18 +479,15 @@ class FunctionCallingAgent:
         tool_calls: List[Dict],
         tool_results: List[Dict]
     ) -> List[Dict]:
-        """Añade los resultados de las tools al historial de mensajes."""
+        """Añade los resultados de las tools al historial."""
 
-        # Añadir mensaje del asistente con tool_calls
         messages.append({
             'role': 'assistant',
             'content': llm_response.get('content', ''),
             'tool_calls': tool_calls
         })
 
-        # Añadir resultados de tools con tool_call_id
         for idx, result in enumerate(tool_results):
-            # Obtener tool_call_id del tool_call correspondiente
             tool_call_id = "default"
             if idx < len(tool_calls):
                 tool_call_id = tool_calls[idx].get('id', f"call_{result.get('tool', 'unknown')}_{idx}")
@@ -576,103 +495,66 @@ class FunctionCallingAgent:
             messages.append({
                 'role': 'tool',
                 'content': json.dumps(result, ensure_ascii=False),
-                'tool_call_id': tool_call_id  # Añadir ID real del tool call
+                'tool_call_id': tool_call_id
             })
 
         return messages
 
-    def _extract_documents_from_tool_results(self, tool_results_history: List[Dict]) -> List[Dict]:
+    def _format_profile_summary(self, profile_data: Dict[str, Any]) -> str:
         """
-        Extrae información de documentos de los resultados de tools para compatibilidad con Django.
+        Formatea el perfil del usuario para el contexto.
 
         Args:
-            tool_results_history: Lista de resultados de tool calls
+            profile_data: Datos del perfil del usuario
 
         Returns:
-            Lista de diccionarios con formato compatible con ChatAgentService:
-            [{'ojs_notice_id': '...', 'section': '...', 'content': '...'}, ...]
+            Resumen formateado del perfil
         """
-        documents = []
+        parts = []
 
-        for tool_result in tool_results_history:
-            tool_name = tool_result.get('tool', '')
-            result_data = tool_result.get('result', {})
+        if profile_data.get('full_name'):
+            parts.append(f"Nombre: {profile_data['full_name']}")
 
-            # Si fue search_tenders, extraer documentos de los resultados
-            if tool_name == 'search_tenders' and result_data.get('success'):
-                for tender in result_data.get('results', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': tender.get('section', 'unknown'),
-                        'content': tender.get('preview', '')
-                    })
+        if profile_data.get('title'):
+            parts.append(f"Título profesional: {profile_data['title']}")
 
-            # Si fue get_tender_details, extraer el tender completo
-            elif tool_name == 'get_tender_details' and result_data.get('success'):
-                tender = result_data.get('tender', {})
-                documents.append({
-                    'ojs_notice_id': tender.get('id', 'unknown'),
-                    'section': 'details',
-                    'content': f"{tender.get('title', '')} - {tender.get('description', '')[:200]}"
-                })
+        if profile_data.get('location'):
+            parts.append(f"Ubicación: {profile_data['location']}")
 
-            # find_by_budget también devuelve licitaciones
-            elif tool_name == 'find_by_budget' and result_data.get('success'):
-                for tender in result_data.get('results', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': 'budget_search',
-                        'content': f"{tender.get('title', '')} - Budget: {tender.get('budget', 'N/A')}"
-                    })
+        if profile_data.get('preferred_location'):
+            parts.append(f"Ubicación preferida para trabajo: {profile_data['preferred_location']}")
 
-            # find_by_deadline también devuelve licitaciones
-            elif tool_name == 'find_by_deadline' and result_data.get('success'):
-                for tender in result_data.get('results', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': 'deadline_search',
-                        'content': f"{tender.get('title', '')} - Deadline: {tender.get('deadline_date', 'N/A')}"
-                    })
+        if profile_data.get('skills'):
+            skills = profile_data['skills']
+            if isinstance(skills, list):
+                parts.append(f"Habilidades: {', '.join(skills)}")
+            else:
+                parts.append(f"Habilidades: {skills}")
 
-            # find_by_cpv también devuelve licitaciones
-            elif tool_name == 'find_by_cpv' and result_data.get('success'):
-                for tender in result_data.get('results', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': tender.get('section', 'cpv_search'),
-                        'content': tender.get('preview', '')
-                    })
+        if profile_data.get('experience'):
+            parts.append(f"Experiencia: {profile_data['experience']}")
 
-            # get_tender_xml devuelve XML
-            elif tool_name == 'get_tender_xml' and result_data.get('success'):
-                documents.append({
-                    'ojs_notice_id': result_data.get('tender_id', 'unknown'),
-                    'section': 'xml',
-                    'content': f"XML content ({result_data.get('xml_length', 0)} chars)"
-                })
+        if profile_data.get('education'):
+            parts.append(f"Educación: {profile_data['education']}")
 
-            # find_by_location también devuelve licitaciones
-            elif tool_name == 'find_by_location' and result_data.get('success'):
-                for tender in result_data.get('results', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': tender.get('section', 'location_search'),
-                        'content': tender.get('preview', '')
-                    })
+        if profile_data.get('preferred_sectors'):
+            sectors = profile_data['preferred_sectors']
+            if isinstance(sectors, list):
+                parts.append(f"Sectores de interés: {', '.join(sectors)}")
+            else:
+                parts.append(f"Sectores de interés: {sectors}")
 
-            # compare_tenders devuelve comparación
-            elif tool_name == 'compare_tenders' and result_data.get('success'):
-                comparison = result_data.get('comparison', {})
-                for tender in comparison.get('tenders', []):
-                    documents.append({
-                        'ojs_notice_id': tender.get('id', 'unknown'),
-                        'section': 'comparison',
-                        'content': f"{tender.get('title', '')} - {tender.get('buyer', '')}"
-                    })
+        if profile_data.get('job_type'):
+            parts.append(f"Tipo de trabajo buscado: {profile_data['job_type']}")
 
-            # get_statistics no devuelve documentos específicos, solo estadísticas
+        if profile_data.get('salary_expectation'):
+            parts.append(f"Expectativa salarial: {profile_data['salary_expectation']}")
 
-        return documents
+        # Incluir curriculum completo si está disponible
+        if profile_data.get('curriculum_text'):
+            parts.append(f"\nCURRICULUM/CV:\n{profile_data['curriculum_text']}")
 
-    def __repr__(self):
-        return f"<FunctionCallingAgent(provider='{self.llm_provider}', model='{self.llm_model}', tools={len(self.tool_registry.tools)})>"
+        if not parts:
+            return "Perfil del usuario no completado. Sugiere que complete su perfil para mejores recomendaciones."
+
+        return "\n".join(parts)

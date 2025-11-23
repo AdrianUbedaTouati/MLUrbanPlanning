@@ -1,699 +1,489 @@
-﻿{% extends 'core/base.html' %}
+{% extends 'core/base.html' %}
 
-{% block title %}Editar Perfil - BasePage{% endblock %}
+{% block title %}Mi Perfil - BasePage{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-body p-5">
-                    <h2 class="text-center mb-4">Editar Perfil</h2>
+<div class="container py-4">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h2 class="fw-bold"><i class="bi bi-person-gear text-primary"></i> Mi Perfil</h2>
+        <p class="text-muted">Configura tu cuenta, CV y preferencias de búsqueda</p>
+    </div>
 
+    {% if messages %}
+    <div class="row justify-content-center mb-3">
+        <div class="col-lg-10">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección 1: Configuración de Cuenta e IA -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear-fill"></i> Configuración</h5>
+                </div>
+                <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
 
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
+                            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
                         {% endif %}
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.username.id_for_label }}" class="form-label">
-                                    {{ form.username.label }} <span class="text-danger">*</span>
-                                </label>
-                                {{ form.username }}
-                                {% if form.username.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.username.errors }}
+                            <!-- Datos Personales -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle"></i> Datos Personales</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.first_name.label }}</label>
+                                        {{ form.first_name }}
                                     </div>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">
-                                    {{ form.email.label }} <span class="text-danger">*</span>
-                                </label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.email.errors }}
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.last_name.label }}</label>
+                                        {{ form.last_name }}
                                     </div>
-                                {% endif %}
-                                {% if EMAIL_VERIFICATION_REQUIRED %}
-                                    <small class="text-muted">
-                                        <i class="bi bi-info-circle"></i> Si cambias tu email, deberás confirmarlo nuevamente
-                                    </small>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                                    {{ form.first_name.label }}
-                                </label>
-                                {{ form.first_name }}
-                                {% if form.first_name.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.first_name.errors }}
+                                    <div class="col-12">
+                                        <label class="form-label small">{{ form.email.label }} <span class="text-danger">*</span></label>
+                                        {{ form.email }}
                                     </div>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                                    {{ form.last_name.label }}
-                                </label>
-                                {{ form.last_name }}
-                                {% if form.last_name.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.last_name.errors }}
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.username.label }}</label>
+                                        {{ form.username }}
                                     </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.phone.id_for_label }}" class="form-label">
-                                {{ form.phone.label }}
-                            </label>
-                            {{ form.phone }}
-                            {% if form.phone.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.phone.errors }}
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.phone.label }}</label>
+                                        {{ form.phone }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.city.label }}</label>
+                                        {{ form.city }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small">{{ form.work_mode.label }}</label>
+                                        {{ form.work_mode }}
+                                    </div>
                                 </div>
-                            {% endif %}
-                        </div>
+                            </div>
 
-                        <hr class="my-4">
+                            <!-- Configuración IA -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-robot"></i> Inteligencia Artificial</h6>
+                                <div class="bg-light rounded p-3">
+                                    <div class="mb-2">
+                                        <label class="form-label small">Proveedor</label>
+                                        {{ form.llm_provider }}
+                                    </div>
 
-                        <!-- Sección de Configuración de IA -->
-                        <div class="card border-primary mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                            <div class="card-body">
-                                <h5 class="card-title mb-3 text-white">
-                                    <i class="bi bi-robot"></i> Configuración de IA
-                                </h5>
+                                    <div class="mb-2" id="api_key_section">
+                                        <label class="form-label small">API Key</label>
+                                        {{ form.llm_api_key }}
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label for="{{ form.llm_provider.id_for_label }}" class="form-label fw-bold text-white">
-                                        <i class="bi bi-cloud-fill"></i> Proveedor de IA
-                                    </label>
-                                    {{ form.llm_provider }}
-                                    <small class="form-text text-white-50 d-block mt-1">
-                                        Selecciona el proveedor de IA que prefieras utilizar
-                                    </small>
-                                    {% if form.llm_provider.errors %}
-                                        <div class="text-warning small mt-1">
-                                            {{ form.llm_provider.errors }}
+                                    <div class="mb-2" id="openai_model_section" style="display:none;">
+                                        <label class="form-label small">Modelo</label>
+                                        {{ form.openai_model }}
+                                    </div>
+
+                                    <div id="ollama_models_section" style="display:none;">
+                                        <div class="mb-2">
+                                            <label class="form-label small">Modelo Chat</label>
+                                            <select name="ollama_model" class="form-select form-select-sm" id="ollama_chat_select">
+                                                <option value="">Cargando...</option>
+                                            </select>
                                         </div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Campo API Key (oculto para Ollama) -->
-                                <div class="mb-3" id="api_key_section">
-                                    <label for="{{ form.llm_api_key.id_for_label }}" class="form-label fw-bold text-white">
-                                        <i class="bi bi-key-fill"></i> API Key
-                                    </label>
-                                    {{ form.llm_api_key }}
-                                    <small class="form-text text-white-50 d-block mt-1" id="api_key_help">
-                                        Ingresa tu API key del proveedor seleccionado
-                                    </small>
-                                    {% if form.llm_api_key.errors %}
-                                        <div class="text-warning small mt-1">
-                                            {{ form.llm_api_key.errors }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Sección de modelo OpenAI -->
-                                <div class="mb-3" id="openai_model_section" style="display:none;">
-                                    <label for="{{ form.openai_model.id_for_label }}" class="form-label fw-bold text-white">
-                                        <i class="bi bi-robot"></i> Modelo OpenAI
-                                    </label>
-                                    {{ form.openai_model }}
-                                    <small class="form-text text-white-50 d-block mt-1">
-                                        <strong>gpt-4o-mini</strong> es recomendado - Excelente balance calidad/precio (~€0.0006/conversación)
-                                    </small>
-                                    {% if form.openai_model.errors %}
-                                        <div class="text-warning small mt-1">
-                                            {{ form.openai_model.errors }}
-                                        </div>
-                                    {% endif %}
-
-                                    <!-- Info de precios -->
-                                    <div class="alert alert-info mt-2 mb-0">
-                                        <small>
-                                            <strong>Comparación de modelos:</strong><br>
-                                            • <strong>gpt-4o-mini</strong>: Balance perfecto - €0.0006/conv ⭐<br>
-                                            • <strong>gpt-4o</strong>: Más potente - €0.0024/conv (4x más caro)<br>
-                                            • <strong>gpt-3.5-turbo</strong>: Económico - €0.0003/conv (menos capaz)
-                                        </small>
-                                    </div>
-                                </div>
-
-                                <!-- Sección de modelos Ollama -->
-                                <div class="mb-3" id="ollama_models_section" style="display:none;">
-                                    <!-- Mensaje de recomendación -->
-                                    <div class="alert alert-success mb-3">
-                                        <h6 class="alert-heading">
-                                            <i class="bi bi-star-fill"></i> Modelo Recomendado
-                                        </h6>
-                                        <p class="mb-0">
-                                            <strong>qwen2.5:72b</strong> es el mejor modelo para análisis de licitaciones.
-                                            Ofrece calidad comparable a GPT-4 con 100% privacidad y sin costes.
-                                        </p>
-                                    </div>
-
-                                    <label for="ollama_chat_select" class="form-label fw-bold text-white">
-                                        <i class="bi bi-cpu"></i> Modelo de Chat
-                                    </label>
-                                    <select name="ollama_model" class="form-select" id="ollama_chat_select">
-                                        <option value="">Cargando modelos...</option>
-                                    </select>
-                                    <small class="form-text text-white-50 d-block mt-1" id="chat_model_info">
-                                        Selecciona un modelo instalado o instala uno nuevo con: ollama pull qwen2.5:72b
-                                    </small>
-
-                                    <label for="ollama_embed_select" class="form-label fw-bold text-white mt-3">
-                                        <i class="bi bi-diagram-3"></i> Modelo de Embeddings
-                                    </label>
-                                    <select name="ollama_embedding_model" class="form-select" id="ollama_embed_select">
-                                        <option value="">Cargando modelos...</option>
-                                    </select>
-                                    <small class="form-text text-white-50 d-block mt-1" id="embed_model_info">
-                                        Modelo para vectorización. Recomendado: nomic-embed-text
-                                    </small>
-
-                                    <!-- Botón de verificación -->
-                                    <div class="mt-3">
-                                        <a href="{% url 'apps_core:ollama_check' %}" target="_blank" class="btn btn-light btn-sm w-100">
-                                            <i class="bi bi-check-circle"></i> Verificar Configuración de Ollama
-                                        </a>
-                                        <small class="form-text text-white-50 d-block mt-2">
-                                            <i class="bi bi-info-circle"></i> Asegúrate de que Ollama esté instalado y corriendo antes de usar
-                                        </small>
-                                    </div>
-                                </div>
-
-                                <!-- Info sobre APIs cloud -->
-                                <div class="alert alert-light mb-0" id="cloud_provider_info">
-                                    <h6 class="alert-heading">
-                                        <i class="bi bi-info-circle"></i> ¿Para qué necesitas una API Key?
-                                    </h6>
-                                    <p class="mb-2">La API Key es necesaria para usar las siguientes funciones:</p>
-                                    <ul class="mb-2">
-                                        <li><strong>Chat IA con RAG</strong>: Pregunta sobre tus licitaciones indexadas</li>
-                                        <li><strong>Vectorización</strong>: Indexa tus licitaciones en ChromaDB para búsquedas semánticas</li>
-                                        <li><strong>Recomendaciones IA</strong>: Obtén sugerencias personalizadas de licitaciones</li>
-                                    </ul>
-
-                                    <div class="mt-3">
-                                        <h6 class="fw-bold">Obtén tu API Key:</h6>
-                                        <div class="d-flex flex-column gap-2">
-                                            <a href="https://aistudio.google.com/apikey" target="_blank" class="btn btn-sm btn-success" id="gemini_link">
-                                                <i class="bi bi-google"></i> Google Gemini (Gratis)
-                                            </a>
-                                            <a href="https://platform.openai.com/api-keys" target="_blank" class="btn btn-sm btn-primary" id="openai_link" style="display:none;">
-                                                <i class="bi bi-lightning-fill"></i> OpenAI Platform
-                                            </a>
-                                            <a href="https://build.nvidia.com/settings/api-keys" target="_blank" class="btn btn-sm btn-dark" id="nvidia_link" style="display:none;">
-                                                <i class="bi bi-gpu-card"></i> NVIDIA NIM
-                                            </a>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Embeddings</label>
+                                            <select name="ollama_embedding_model" class="form-select form-select-sm" id="ollama_embed_select">
+                                                <option value="">Cargando...</option>
+                                            </select>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- Info sobre Ollama local -->
-                                <div class="alert alert-light mb-0" id="ollama_info" style="display:none;">
-                                    <h6 class="alert-heading">
-                                        <i class="bi bi-laptop"></i> Ollama - IA Local
-                                    </h6>
-                                    <p class="mb-2"><strong>Ventajas de usar Ollama:</strong></p>
-                                    <ul class="mb-0">
-                                        <li><strong>100% Privado</strong>: Tus datos nunca salen de tu ordenador</li>
-                                        <li><strong>Sin costes</strong>: No necesitas pagar por API calls</li>
-                                        <li><strong>Sin límites</strong>: Usa la IA tanto como quieras</li>
-                                        <li><strong>Offline</strong>: Funciona sin conexión a internet</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Chat Agent Settings -->
-                        <div class="card border-secondary mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title mb-3">
-                                    <i class="bi bi-gear"></i> Configuración del Agente de Chat
-                                </h5>
-                                <p class="text-muted small">
-                                    Personaliza el comportamiento del agente RAG (Retrieval-Augmented Generation)
-                                </p>
-
-                                <div class="form-check mb-3">
-                                    {{ form.use_grading }}
-                                    <label class="form-check-label" for="{{ form.use_grading.id_for_label }}">
-                                        <strong>{{ form.use_grading.label }}</strong>
-                                        <small class="text-muted d-block">
-                                            {{ form.use_grading.help_text }}
-                                        </small>
-                                    </label>
-                                </div>
-
-                                <div class="form-check mb-3">
-                                    {{ form.use_verification }}
-                                    <label class="form-check-label" for="{{ form.use_verification.id_for_label }}">
-                                        <strong>{{ form.use_verification.label }}</strong>
-                                        <small class="text-muted d-block">
-                                            {{ form.use_verification.help_text }}
-                                        </small>
-                                    </label>
-                                </div>
-
-                                <div class="alert alert-info mb-0">
-                                    <i class="bi bi-info-circle"></i>
-                                    <small>
-                                        <strong>Nota:</strong> Estas opciones están desactivadas por defecto para obtener respuestas más rápidas.
-                                        Actívalas si necesitas mayor precisión y relevancia, aunque las respuestas tardarán un poco más.
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Web Search Configuration -->
-                        <div class="card border-info mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title mb-3">
-                                    <i class="bi bi-globe"></i> Configuración de Búsqueda Web
-                                </h5>
-                                <p class="text-muted small">
-                                    Permite al agente buscar información actualizada en internet mediante Google Custom Search API
-                                </p>
-
-                                <div class="form-check mb-3">
-                                    {{ form.use_web_search }}
-                                    <label class="form-check-label" for="{{ form.use_web_search.id_for_label }}">
-                                        <strong>{{ form.use_web_search.label }}</strong>
-                                        <small class="text-muted d-block">
-                                            {{ form.use_web_search.help_text }}
-                                        </small>
-                                    </label>
-                                </div>
-
-                                <div id="google_search_credentials" style="display: none;">
-                                    <div class="mb-3">
-                                        <label for="{{ form.google_search_api_key.id_for_label }}" class="form-label fw-bold">
-                                            <i class="bi bi-key-fill"></i> {{ form.google_search_api_key.label }}
-                                        </label>
-                                        {{ form.google_search_api_key }}
-                                        <small class="form-text text-muted d-block mt-1">
-                                            {{ form.google_search_api_key.help_text }}
-                                        </small>
-                                        {% if form.google_search_api_key.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ form.google_search_api_key.errors }}
+                                    <!-- Búsqueda Web -->
+                                    <div class="border-top pt-2 mt-2">
+                                        <div class="form-check">
+                                            {{ form.use_web_search }}
+                                            <label class="form-check-label small" for="use_web_search_checkbox">
+                                                <i class="bi bi-globe text-info"></i> Búsqueda Web
+                                            </label>
+                                        </div>
+                                        <div id="google_search_credentials" style="display: none;" class="mt-2">
+                                            <div class="mb-2">
+                                                <label class="form-label small">Google API Key</label>
+                                                {{ form.google_search_api_key }}
                                             </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="{{ form.google_search_engine_id.id_for_label }}" class="form-label fw-bold">
-                                            <i class="bi bi-search"></i> {{ form.google_search_engine_id.label }}
-                                        </label>
-                                        {{ form.google_search_engine_id }}
-                                        <small class="form-text text-muted d-block mt-1">
-                                            {{ form.google_search_engine_id.help_text }}
-                                        </small>
-                                        {% if form.google_search_engine_id.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ form.google_search_engine_id.errors }}
+                                            <div>
+                                                <label class="form-label small">Search Engine ID</label>
+                                                {{ form.google_search_engine_id }}
                                             </div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="{{ form.browse_max_chars.id_for_label }}" class="form-label fw-bold">
-                                            <i class="bi bi-file-earmark-text"></i> {{ form.browse_max_chars.label }}
-                                        </label>
-                                        {{ form.browse_max_chars }}
-                                        <small class="form-text text-muted d-block mt-1">
-                                            {{ form.browse_max_chars.help_text }}
-                                        </small>
-                                        {% if form.browse_max_chars.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ form.browse_max_chars.errors }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="mt-2">
-                                            <small class="text-info d-block">
-                                                <i class="bi bi-calculator"></i> <strong>Ejemplos de consumo:</strong>
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • 2,000 caracteres ≈ 500 tokens (extracto rápido)
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • 10,000 caracteres ≈ 2,500 tokens (balance - recomendado)
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • 50,000 caracteres ≈ 12,500 tokens (análisis profundo)
-                                            </small>
                                         </div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label for="{{ form.browse_chunk_size.id_for_label }}" class="form-label fw-bold">
-                                            <i class="bi bi-puzzle"></i> {{ form.browse_chunk_size.label }}
-                                        </label>
-                                        {{ form.browse_chunk_size }}
-                                        <small class="form-text text-muted d-block mt-1">
-                                            {{ form.browse_chunk_size.help_text }}
-                                        </small>
-                                        {% if form.browse_chunk_size.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ form.browse_chunk_size.errors }}
-                                            </div>
-                                        {% endif %}
-                                        <div class="mt-2">
-                                            <small class="text-info d-block">
-                                                <i class="bi bi-lightbulb"></i> <strong>¿Cómo funciona?</strong>
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • Fragmentos pequeños (500-1,000 chars) = Mayor precisión pero más verificaciones
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • Fragmentos medianos (1,250 chars) = Balance óptimo (recomendado)
-                                            </small>
-                                            <small class="text-muted d-block">
-                                                • Fragmentos grandes (2,500+ chars) = Menos verificaciones pero puede perder detalles
-                                            </small>
-                                        </div>
-                                    </div>
-
-                                    <div class="alert alert-info">
-                                        <h6 class="alert-heading">
-                                            <i class="bi bi-info-circle"></i> ¿Cómo obtener las credenciales?
-                                        </h6>
-                                        <ol class="mb-2 small">
-                                            <li><strong>Google Cloud Console:</strong> Habilita "Custom Search API" y crea una API Key</li>
-                                            <li><strong>Programmable Search Engine:</strong> Crea un motor de búsqueda personalizado y obtén el ID (cx)</li>
-                                        </ol>
-                                        <div class="d-flex gap-2 flex-wrap">
-                                            <a href="https://console.cloud.google.com/apis/library/customsearch.googleapis.com" target="_blank" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-cloud"></i> Google Cloud Console
-                                            </a>
-                                            <a href="https://programmablesearchengine.google.com/" target="_blank" class="btn btn-sm btn-success">
-                                                <i class="bi bi-search"></i> Programmable Search Engine
-                                            </a>
-                                        </div>
-                                        <small class="d-block mt-2 text-muted">
-                                            <i class="bi bi-gift-fill"></i> <strong>Cuota gratis:</strong> 100 búsquedas/día. Después: $5 USD por cada 1,000 búsquedas adicionales
-                                        </small>
-                                    </div>
-                                </div>
-
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    <small>
-                                        <strong>Nota sobre Frugalidad:</strong> La búsqueda web en tiempo real incrementa el consumo de tokens y la huella de carbono.
-                        Úsala solo cuando necesites información actualizada que no esté en tu base de datos de licitaciones.
-                                    </small>
                                 </div>
                             </div>
                         </div>
 
-                        <script>
-                            // Cambiar la UI según el proveedor seleccionado
-                            document.addEventListener('DOMContentLoaded', function() {
-                                const providerSelect = document.getElementById('llm_provider_select');
-                                const chatSelect = document.getElementById('ollama_chat_select');
-                                const embedSelect = document.getElementById('ollama_embed_select');
-
-                                // Guardar valores actuales del usuario
-                                const currentChatModel = '{{ user.ollama_model|default:"qwen2.5:72b" }}';
-                                const currentEmbedModel = '{{ user.ollama_embedding_model|default:"nomic-embed-text" }}';
-
-                                // Función para cargar modelos de Ollama desde la API
-                                async function loadOllamaModels() {
-                                    try {
-                                        const response = await fetch('{% url "apps_core:ollama_models" %}');
-                                        const data = await response.json();
-
-                                        if (data.success) {
-                                            // Poblar select de modelos de chat
-                                            chatSelect.innerHTML = '';
-                                            if (data.chat_models.length > 0) {
-                                                data.chat_models.forEach(model => {
-                                                    const option = document.createElement('option');
-                                                    option.value = model.name;
-                                                    option.textContent = `${model.name} (${model.size})`;
-                                                    if (model.name === data.recommended_chat) {
-                                                        option.textContent += ' ⭐ Recomendado';
-                                                    }
-                                                    if (model.name === currentChatModel) {
-                                                        option.selected = true;
-                                                    }
-                                                    chatSelect.appendChild(option);
-                                                });
-                                            } else {
-                                                const option = document.createElement('option');
-                                                option.value = '';
-                                                option.textContent = 'No hay modelos de chat instalados';
-                                                chatSelect.appendChild(option);
-                                            }
-
-                                            // Poblar select de modelos de embeddings
-                                            embedSelect.innerHTML = '';
-                                            if (data.embedding_models.length > 0) {
-                                                data.embedding_models.forEach(model => {
-                                                    const option = document.createElement('option');
-                                                    option.value = model.name;
-                                                    option.textContent = `${model.name} (${model.size})`;
-                                                    if (model.name === data.recommended_embedding) {
-                                                        option.textContent += ' ⭐ Recomendado';
-                                                    }
-                                                    if (model.name === currentEmbedModel) {
-                                                        option.selected = true;
-                                                    }
-                                                    embedSelect.appendChild(option);
-                                                });
-                                            } else {
-                                                const option = document.createElement('option');
-                                                option.value = '';
-                                                option.textContent = 'No hay modelos de embeddings instalados';
-                                                embedSelect.appendChild(option);
-                                            }
-                                        } else {
-                                            // Error cargando modelos - mostrar mensaje amigable
-                                            const errorMsg = data.message || 'Error desconocido';
-                                            chatSelect.innerHTML = '<option value="">⚠️ ' + errorMsg + '</option>';
-                                            embedSelect.innerHTML = '<option value="">⚠️ ' + errorMsg + '</option>';
-
-                                            // Actualizar el info text con instrucciones
-                                            const chatModelInfo = document.getElementById('chat_model_info');
-                                            const embedModelInfo = document.getElementById('embed_model_info');
-
-                                            if (errorMsg.includes('no está corriendo') || errorMsg.includes('not running')) {
-                                                chatModelInfo.innerHTML = '⚠️ <strong>Ollama no está corriendo.</strong> Inícialo desde el menú de Windows o ejecuta "ollama serve" en terminal.';
-                                                chatModelInfo.className = 'form-text text-warning d-block mt-1 fw-bold';
-                                                embedModelInfo.style.display = 'none';
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('Error loading Ollama models:', error);
-                                        chatSelect.innerHTML = '<option value="">⚠️ Error conectando con Ollama</option>';
-                                        embedSelect.innerHTML = '<option value="">⚠️ Error conectando con Ollama</option>';
-
-                                        const chatModelInfo = document.getElementById('chat_model_info');
-                                        chatModelInfo.innerHTML = '⚠️ <strong>No se pudo conectar con Ollama.</strong> Asegúrate de que esté instalado y corriendo.';
-                                        chatModelInfo.className = 'form-text text-warning d-block mt-1 fw-bold';
-                                    }
-                                }
-
-                                function updateProviderInfo() {
-                                    const provider = providerSelect.value;
-                                    const geminiLink = document.getElementById('gemini_link');
-                                    const openaiLink = document.getElementById('openai_link');
-                                    const nvidiaLink = document.getElementById('nvidia_link');
-                                    const apiKeyInput = document.getElementById('llm_api_key_input');
-                                    const helpText = document.getElementById('api_key_help');
-
-                                    // Secciones a mostrar/ocultar
-                                    const apiKeySection = document.getElementById('api_key_section');
-                                    const openaiModelSection = document.getElementById('openai_model_section');
-                                    const ollamaModelsSection = document.getElementById('ollama_models_section');
-                                    const cloudProviderInfo = document.getElementById('cloud_provider_info');
-                                    const ollamaInfo = document.getElementById('ollama_info');
-
-                                    // Ocultar todos los enlaces
-                                    geminiLink.style.display = 'none';
-                                    openaiLink.style.display = 'none';
-                                    nvidiaLink.style.display = 'none';
-
-                                    // Ocultar todas las secciones específicas de proveedor
-                                    openaiModelSection.style.display = 'none';
-                                    ollamaModelsSection.style.display = 'none';
-
-                                    // Mostrar/ocultar secciones según el proveedor
-                                    if (provider === 'ollama') {
-                                        // Ollama: ocultar API key, mostrar modelos locales
-                                        apiKeySection.style.display = 'none';
-                                        ollamaModelsSection.style.display = 'block';
-                                        cloudProviderInfo.style.display = 'none';
-                                        ollamaInfo.style.display = 'block';
-
-                                        // Cargar modelos de Ollama
-                                        loadOllamaModels();
-                                    } else {
-                                        // Proveedores cloud: mostrar API key, ocultar modelos Ollama
-                                        apiKeySection.style.display = 'block';
-                                        cloudProviderInfo.style.display = 'block';
-                                        ollamaInfo.style.display = 'none';
-
-                                        // Actualizar placeholder según proveedor
-                                        if (provider === 'gemini') {
-                                            geminiLink.style.display = 'block';
-                                            apiKeyInput.placeholder = 'AIza...';
-                                            helpText.textContent = 'Comienza con AIza (ej: AIzaSyA...)';
-                                        } else if (provider === 'openai') {
-                                            openaiLink.style.display = 'block';
-                                            openaiModelSection.style.display = 'block';  // Mostrar selector de modelo OpenAI
-                                            apiKeyInput.placeholder = 'sk-...';
-                                            helpText.textContent = 'Comienza con sk- o sk-proj- (ej: sk-proj-...)';
-                                        } else if (provider === 'nvidia') {
-                                            nvidiaLink.style.display = 'block';
-                                            apiKeyInput.placeholder = 'nvapi-...';
-                                            helpText.textContent = 'Comienza con nvapi- (ej: nvapi-...)';
-                                        }
-                                    }
-                                }
-
-                                if (providerSelect) {
-                                    providerSelect.addEventListener('change', updateProviderInfo);
-                                    updateProviderInfo(); // Ejecutar al cargar
-                                }
-
-                                // Control de visibilidad para Web Search
-                                const webSearchCheckbox = document.getElementById('use_web_search_checkbox');
-                                const googleSearchCredentials = document.getElementById('google_search_credentials');
-
-                                function toggleWebSearchCredentials() {
-                                    if (webSearchCheckbox && googleSearchCredentials) {
-                                        googleSearchCredentials.style.display = webSearchCheckbox.checked ? 'block' : 'none';
-                                    }
-                                }
-
-                                if (webSearchCheckbox) {
-                                    webSearchCheckbox.addEventListener('change', toggleWebSearchCredentials);
-                                    toggleWebSearchCredentials(); // Ejecutar al cargar
-                                }
-                            });
-                        </script>
-
-                        <hr class="my-4">
-                        <h5>Dirección de Envío</h5>
-
-                        <div class="mb-3">
-                            <label for="{{ form.address_line1.id_for_label }}" class="form-label">
-                                {{ form.address_line1.label }}
-                            </label>
-                            {{ form.address_line1 }}
-                            {% if form.address_line1.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.address_line1.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.address_line2.id_for_label }}" class="form-label">
-                                {{ form.address_line2.label }}
-                            </label>
-                            {{ form.address_line2 }}
-                            {% if form.address_line2.errors %}
-                                <div class="text-danger small mt-1">
-                                    {{ form.address_line2.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.city.id_for_label }}" class="form-label">
-                                    {{ form.city.label }}
-                                </label>
-                                {{ form.city }}
-                                {% if form.city.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.city.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.state_province.id_for_label }}" class="form-label">
-                                    {{ form.state_province.label }}
-                                </label>
-                                {{ form.state_province }}
-                                {% if form.state_province.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.state_province.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="{{ form.postal_code.id_for_label }}" class="form-label">
-                                    {{ form.postal_code.label }}
-                                </label>
-                                {{ form.postal_code }}
-                                {% if form.postal_code.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.postal_code.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-8 mb-3">
-                                <label for="{{ form.country.id_for_label }}" class="form-label">
-                                    {{ form.country.label }}
-                                </label>
-                                {{ form.country }}
-                                {% if form.country.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {{ form.country.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-
-                        <hr class="my-4">
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'apps_core:profile' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancelar
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'apps_authentication:password_reset_request' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-key"></i> Cambiar Contraseña
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i> Guardar Cambios
+                                <i class="bi bi-check-lg"></i> Guardar Configuración
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <hr class="my-4">
+    <!-- Sección 2: CV y Preferencias -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="row g-4">
+                <!-- CV -->
+                <div class="col-md-7">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-file-earmark-person"></i> Mi Curriculum</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Subir CV -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-upload text-success"></i> Subir CV</h6>
+                                {% if user.llm_provider == 'openai' and user.llm_api_key %}
+                                <form method="post" action="{% url 'apps_core:analyze_cv' %}" enctype="multipart/form-data" id="cv_form">
+                                    {% csrf_token %}
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="file" name="cv_file" class="form-control" accept="image/*,.pdf" required>
+                                        <button type="submit" class="btn btn-success" id="cv_submit_btn">
+                                            <i class="bi bi-cpu"></i> Analizar
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">PDF o imagen - La IA leerá tu CV y lo transcribirá abajo</small>
+                                </form>
+                                {% else %}
+                                <div class="alert alert-warning small py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Configura <strong>OpenAI</strong> como proveedor de IA para analizar tu CV.
+                                </div>
+                                {% endif %}
+                            </div>
 
-                    <div class="text-center">
-                        <p class="text-muted mb-2">¿Quieres cambiar tu contraseña?</p>
-                        <a href="{% url 'apps_authentication:password_reset_request' %}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-key"></i> Cambiar Contraseña
-                        </a>
+                            <!-- Mi CV en texto -->
+                            <div>
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-file-text text-primary"></i> Mi CV</h6>
+                                <p class="text-muted small mb-2">
+                                    Este texto es tu curriculum. Puedes escribirlo directamente o dejar que la IA lo extraiga al subir un archivo.
+                                </p>
+                                <form method="post" action="{% url 'apps_core:save_cv_text' %}">
+                                    {% csrf_token %}
+                                    <textarea name="curriculum_text" class="form-control form-control-sm mb-2" rows="8" placeholder="Escribe tu experiencia profesional:
+
+• Datos personales
+• Experiencia laboral
+• Formación académica
+• Habilidades técnicas
+• Idiomas
+• Qué tipo de trabajo buscas...">{{ user.job_profile.curriculum_text|default:'' }}</textarea>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        {% if user.job_profile and user.job_profile.cv_analyzed %}
+                                        <small class="text-success"><i class="bi bi-check-circle"></i> Guardado {{ user.job_profile.updated_at|date:"d/m/Y" }}</small>
+                                        {% else %}
+                                        <small class="text-muted">Sin guardar</small>
+                                        {% endif %}
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bi bi-save"></i> Guardar CV
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferencias y Redes -->
+                <div class="col-md-5">
+                    <!-- Preferencias de Búsqueda -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-info text-white py-2">
+                            <h6 class="mb-0"><i class="bi bi-search-heart"></i> Preferencias</h6>
+                        </div>
+                        <div class="card-body py-3">
+                            <form method="post" action="{% url 'apps_core:save_preferences' %}" id="preferences_form">
+                                {% csrf_token %}
+
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1">Ubicaciones</label>
+                                    <div class="tags-container" id="locations_container">
+                                        <input type="text" class="tags-input" id="locations_input" placeholder="Enter para añadir...">
+                                    </div>
+                                    <input type="hidden" name="preferred_locations" id="preferred_locations" value='{{ preferred_locations_json|default:"[]" }}'>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1">Sectores</label>
+                                    <div class="tags-container" id="sectors_container">
+                                        <input type="text" class="tags-input" id="sectors_input" placeholder="Enter para añadir...">
+                                    </div>
+                                    <input type="hidden" name="preferred_sectors" id="preferred_sectors" value='{{ preferred_sectors_json|default:"[]" }}'>
+                                </div>
+
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1">Tipo trabajo</label>
+                                        <div class="tags-container" id="job_types_container">
+                                            <input type="text" class="tags-input" id="job_types_input" placeholder="Remoto...">
+                                        </div>
+                                        <input type="hidden" name="job_types" id="job_types" value='{{ job_types_json|default:"[]" }}'>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1">Salario mín €</label>
+                                        <input type="number" name="salary_min" class="form-control form-control-sm" value="{{ user.job_profile.salary_min|default:'' }}" placeholder="20000">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-info btn-sm w-100">
+                                    <i class="bi bi-save"></i> Guardar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Redes Profesionales -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white py-2">
+                            <h6 class="mb-0"><i class="bi bi-share"></i> Redes</h6>
+                        </div>
+                        <div class="card-body py-3">
+                            <form method="post" action="{% url 'apps_core:save_social' %}" id="social_form">
+                                {% csrf_token %}
+
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1"><i class="bi bi-linkedin text-primary"></i> LinkedIn</label>
+                                    <input type="url" name="linkedin_url" class="form-control form-control-sm" value="{{ user.job_profile.linkedin_url|default:'' }}" placeholder="https://linkedin.com/in/...">
+                                </div>
+
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1"><i class="bi bi-github"></i> GitHub</label>
+                                        <input type="url" name="github_url" class="form-control form-control-sm" value="{{ user.job_profile.github_url|default:'' }}" placeholder="github.com/...">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1"><i class="bi bi-globe2"></i> Web</label>
+                                        <input type="url" name="portfolio_url" class="form-control form-control-sm" value="{{ user.job_profile.portfolio_url|default:'' }}" placeholder="tu-web.com">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-dark btn-sm w-100">
+                                    <i class="bi bi-save"></i> Guardar
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    cursor: text;
+}
+.tags-container:focus-within {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+.tag {
+    background: #0d6efd;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.tag-remove {
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.8;
+    line-height: 1;
+}
+.tag-remove:hover { opacity: 1; }
+.tags-input {
+    border: none;
+    outline: none;
+    flex: 1;
+    min-width: 80px;
+    font-size: 12px;
+    padding: 2px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Provider toggle
+    const providerSelect = document.getElementById('llm_provider_select');
+    const chatSelect = document.getElementById('ollama_chat_select');
+    const embedSelect = document.getElementById('ollama_embed_select');
+    const currentChatModel = '{{ user.ollama_model|default:"qwen2.5:72b" }}';
+    const currentEmbedModel = '{{ user.ollama_embedding_model|default:"nomic-embed-text" }}';
+
+    async function loadOllamaModels() {
+        try {
+            const response = await fetch('{% url "apps_core:ollama_models" %}');
+            const data = await response.json();
+            if (data.success) {
+                chatSelect.innerHTML = '';
+                data.chat_models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.name;
+                    option.textContent = model.name;
+                    if (model.name === currentChatModel) option.selected = true;
+                    chatSelect.appendChild(option);
+                });
+                embedSelect.innerHTML = '';
+                data.embedding_models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.name;
+                    option.textContent = model.name;
+                    if (model.name === currentEmbedModel) option.selected = true;
+                    embedSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            chatSelect.innerHTML = '<option value="">Error</option>';
+            embedSelect.innerHTML = '<option value="">Error</option>';
+        }
+    }
+
+    function updateProviderInfo() {
+        const provider = providerSelect.value;
+        const apiKeySection = document.getElementById('api_key_section');
+        const openaiModelSection = document.getElementById('openai_model_section');
+        const ollamaModelsSection = document.getElementById('ollama_models_section');
+
+        openaiModelSection.style.display = 'none';
+        ollamaModelsSection.style.display = 'none';
+
+        if (provider === 'ollama') {
+            apiKeySection.style.display = 'none';
+            ollamaModelsSection.style.display = 'block';
+            loadOllamaModels();
+        } else {
+            apiKeySection.style.display = 'block';
+            if (provider === 'openai') {
+                openaiModelSection.style.display = 'block';
+            }
+        }
+    }
+
+    if (providerSelect) {
+        providerSelect.addEventListener('change', updateProviderInfo);
+        updateProviderInfo();
+    }
+
+    // Web search toggle
+    const webSearchCheckbox = document.getElementById('use_web_search_checkbox');
+    const googleSearchCredentials = document.getElementById('google_search_credentials');
+    function toggleWebSearch() {
+        if (webSearchCheckbox && googleSearchCredentials) {
+            googleSearchCredentials.style.display = webSearchCheckbox.checked ? 'block' : 'none';
+        }
+    }
+    if (webSearchCheckbox) {
+        webSearchCheckbox.addEventListener('change', toggleWebSearch);
+        toggleWebSearch();
+    }
+
+    // CV form spinner with processing indicator
+    const cvForm = document.getElementById('cv_form');
+    const cvBtn = document.getElementById('cv_submit_btn');
+    if (cvForm && cvBtn) {
+        cvForm.addEventListener('submit', function() {
+            cvBtn.disabled = true;
+            cvBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
+
+            // Show processing message
+            const processingAlert = document.createElement('div');
+            processingAlert.id = 'cv_processing_alert';
+            processingAlert.className = 'alert alert-info mt-2 py-2 small';
+            processingAlert.innerHTML = '<i class="bi bi-hourglass-split"></i> <strong>Procesando CV...</strong> La IA está extrayendo el texto. Esto puede tardar hasta 1 minuto.';
+            cvForm.parentNode.appendChild(processingAlert);
+        });
+    }
+
+    // Tags functionality
+    function initTags(containerId, inputId, hiddenId) {
+        const container = document.getElementById(containerId);
+        const input = document.getElementById(inputId);
+        const hidden = document.getElementById(hiddenId);
+        if (!container || !input || !hidden) return;
+
+        let tags = [];
+        try {
+            tags = JSON.parse(hidden.value) || [];
+        } catch (e) {
+            tags = [];
+        }
+
+        function renderTags() {
+            container.querySelectorAll('.tag').forEach(t => t.remove());
+            tags.forEach((tag, index) => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'tag';
+                tagEl.innerHTML = `${tag}<span class="tag-remove" data-index="${index}">&times;</span>`;
+                container.insertBefore(tagEl, input);
+            });
+            hidden.value = JSON.stringify(tags);
+        }
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = this.value.trim();
+                if (value && !tags.includes(value)) {
+                    tags.push(value);
+                    renderTags();
+                }
+                this.value = '';
+            }
+        });
+
+        container.addEventListener('click', function(e) {
+            if (e.target.classList.contains('tag-remove')) {
+                tags.splice(parseInt(e.target.dataset.index), 1);
+                renderTags();
+            } else {
+                input.focus();
+            }
+        });
+
+        renderTags();
+    }
+
+    initTags('locations_container', 'locations_input', 'preferred_locations');
+    initTags('sectors_container', 'sectors_input', 'preferred_sectors');
+    initTags('job_types_container', 'job_types_input', 'job_types');
+});
+</script>
 {% endblock %}

@@ -1,7 +1,7 @@
 # ================================================
-# TENDERAI PLATFORM - DEPENDENCIAS
-# Actualizado: Enero 2025
-# Version: 3.1.0 (Function Calling + Ollama Integration)
+# JOBSEARCHAI PLATFORM - DEPENDENCIAS
+# Actualizado: Noviembre 2025
+# Version: 4.0.0 (Busqueda de Empleo con IA)
 # ================================================
 
 # ------------------------------------------------
@@ -28,22 +28,15 @@ argon2-cffi==23.1.0      # Strong password hashing
 
 # ------------------------------------------------
 # Agent_IA Core - LangChain
-# IMPORTANTE: Versiones compatibles con Ollama
 # ------------------------------------------------
-# LangChain Core - Version compatible con todos los providers
-langchain-core>=0.3.72,<1.0.0      # Compatible con langchain 0.3.x
+langchain-core>=0.3.72,<1.0.0
 langchain>=0.3.27,<0.4.0
 langchain-community>=0.3.0,<0.4.0
-langchain-text-splitters>=0.3.0
 
 # LangChain Providers
 langchain-openai>=0.3.35           # OpenAI GPT-4
 langchain-google-genai>=2.0.10     # Google Gemini
-langchain-nvidia-ai-endpoints>=0.3.18  # NVIDIA NIM
-langchain-ollama>=0.2.0,<1.0.0     # Ollama (Local) - Version compatible
-
-# Vector Store (IMPORTANTE: Version <0.2.0 compatible con ChromaDB 0.5.23)
-langchain-chroma>=0.1.0,<0.2.0
+langchain-ollama>=0.2.0,<1.0.0     # Ollama (Local)
 
 # ------------------------------------------------
 # LLM APIs
@@ -55,11 +48,15 @@ httpx>=0.28.0           # Required by Ollama
 ollama>=0.6.0           # Ollama Python SDK
 
 # ------------------------------------------------
-# Vector Database
+# Google Custom Search API
 # ------------------------------------------------
-chromadb==0.5.23
-hnswlib==0.8.0          # Fast ANN search (used by ChromaDB)
-sentence-transformers>=3.3.1  # For embeddings
+google-api-python-client>=2.100.0
+
+# ------------------------------------------------
+# PDF Processing
+# ------------------------------------------------
+PyPDF2>=3.0.0           # Extract text from PDF CVs
+# pdfminer.six>=20221105  # Alternative PDF library
 
 # ------------------------------------------------
 # XML Processing & Data Validation
@@ -71,24 +68,9 @@ pydantic-settings==2.7.0
 python-dateutil==2.9.0.post0
 
 # ------------------------------------------------
-# Async Tasks & Background Jobs
-# ------------------------------------------------
-celery==5.4.0
-redis==5.0.8
-django-celery-beat==2.7.0
-django-celery-results==2.5.1
-
-# ------------------------------------------------
 # Media & File Processing
 # ------------------------------------------------
 Pillow==11.3.0
-
-# ------------------------------------------------
-# API & WebSockets
-# ------------------------------------------------
-channels==4.1.0
-channels-redis==4.2.0
-daphne==4.1.2
 
 # ------------------------------------------------
 # Utilities
@@ -96,8 +78,8 @@ daphne==4.1.2
 python-dotenv==1.0.1
 tqdm==4.67.1
 PyYAML==6.0.2
-markdown>=3.4.1         # Markdown to HTML conversion for chat
-Pygments>=2.19.0        # Syntax highlighting for markdown code blocks
+markdown>=3.4.1         # Markdown to HTML for chat
+Pygments>=2.19.0        # Syntax highlighting
 
 # ------------------------------------------------
 # Monitoring & Logging
@@ -120,7 +102,6 @@ faker==33.1.0
 black==24.10.0
 isort==5.13.2
 flake8==7.1.1
-mypy==1.13.0
 
 # ------------------------------------------------
 # Production
@@ -131,18 +112,10 @@ boto3==1.35.77           # AWS SDK
 # ------------------------------------------------
 # Additional Dependencies
 # ------------------------------------------------
-# JSON handling
 orjson==3.11.3
-
-# HTTP client
 httpcore==1.0.9
-
-# Type checking
 typing-extensions==4.15.0
 annotated-types==0.7.0
-
-# Compression
-zstandard==0.25.0
 
 # ================================================
 # NOTAS DE INSTALACION
@@ -151,27 +124,19 @@ zstandard==0.25.0
 # Para instalar todas las dependencias:
 #   pip install -r requirements.txt
 #
-# Para instalar solo las dependencias core (sin testing/dev):
-#   pip install Django langchain langchain-ollama chromadb
-#
-# Para actualizar todas las dependencias:
-#   pip install -U -r requirements.txt
+# Para instalar solo las dependencias core:
+#   pip install Django langchain langchain-ollama google-api-python-client PyPDF2
 #
 # OLLAMA:
 #   Ollama NO requiere instalacion via pip.
-#   Ejecutar: instalar_ollama.bat (Windows)
-#   O descargar desde: https://ollama.com
+#   Descargar desde: https://ollama.com
+#
+# GOOGLE CUSTOM SEARCH:
+#   Configurar API key y Engine ID en perfil de usuario
+#   Mas info: https://developers.google.com/custom-search
 #
 # COMPATIBILIDAD:
 #   Python: 3.10, 3.11, 3.12
 #   Sistema Operativo: Windows, Linux, macOS
-#   Base de Datos: SQLite (dev), PostgreSQL (prod)
-#
-# IMPORTANTE - CHROMADB:
-#   NO actualizar ChromaDB a 1.x.x - requiere hnswlib >= 0.9.0
-#   Mantener chromadb==0.5.23 y hnswlib==0.8.0 (compatibles)
-#   Si instalaste ChromaDB 1.x por error, ejecuta:
-#     pip uninstall chromadb hnswlib -y
-#     pip install chromadb==0.5.23 hnswlib==0.8.0
 #
 # ================================================

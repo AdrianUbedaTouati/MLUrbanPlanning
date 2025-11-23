@@ -4,7 +4,6 @@ Django settings for TenderAI project.
 
 from pathlib import Path
 from decouple import config
-import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,7 +35,6 @@ INSTALLED_APPS = [
     'apps.authentication.apps.AuthenticationConfig',
     'apps.core.apps.CoreConfig',
     'apps.company.apps.CompanyConfig',
-    'apps.tenders.apps.TendersConfig',
     'apps.chat.apps.ChatConfig',
 ]
 
@@ -164,17 +162,6 @@ PASSWORD_RESET_COOLDOWN_SECONDS = config('PASSWORD_RESET_COOLDOWN_SECONDS', cast
 LLM_PROVIDER = config('LLM_PROVIDER', default='google')
 GOOGLE_API_KEY = config('GOOGLE_API_KEY', default='')
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
-DEFAULT_K_RETRIEVE = config('DEFAULT_K_RETRIEVE', cast=int, default=6)
-USE_GRADING = config('USE_GRADING', cast=bool, default=True)
-USE_XML_VERIFICATION = config('USE_XML_VERIFICATION', cast=bool, default=True)
-
-# ================================================
-# CHROMADB CONFIGURATION
-# ================================================
-# Desactivar telemetría de ChromaDB para evitar errores de posthog
-# y mejorar rendimiento (elimina latencia de timeouts de telemetría)
-os.environ['ANONYMIZED_TELEMETRY'] = 'False'
-os.environ['CHROMA_TELEMETRY_ENABLED'] = 'False'
 
 # Session Configuration
 SESSION_COOKIE_AGE = 1209600  # 2 semanas

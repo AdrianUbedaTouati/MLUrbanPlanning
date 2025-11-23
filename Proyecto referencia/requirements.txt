@@ -1,0 +1,177 @@
+# ================================================
+# TENDERAI PLATFORM - DEPENDENCIAS
+# Actualizado: Enero 2025
+# Version: 3.1.0 (Function Calling + Ollama Integration)
+# ================================================
+
+# ------------------------------------------------
+# Django Core
+# ------------------------------------------------
+Django==5.1.6
+django-cors-headers==4.8.0
+djangorestframework==3.16.1
+python-decouple==3.8
+gunicorn==23.0.0
+whitenoise==6.10.0
+
+# ------------------------------------------------
+# Database
+# ------------------------------------------------
+psycopg2-binary==2.9.9  # PostgreSQL adapter
+dj-database-url==2.2.0   # Database URL parsing
+
+# ------------------------------------------------
+# Authentication & Security
+# ------------------------------------------------
+django-allauth==0.63.3   # Enhanced authentication
+argon2-cffi==23.1.0      # Strong password hashing
+
+# ------------------------------------------------
+# Agent_IA Core - LangChain
+# IMPORTANTE: Versiones compatibles con Ollama
+# ------------------------------------------------
+# LangChain Core - Version compatible con todos los providers
+langchain-core>=0.3.72,<1.0.0      # Compatible con langchain 0.3.x
+langchain>=0.3.27,<0.4.0
+langchain-community>=0.3.0,<0.4.0
+langchain-text-splitters>=0.3.0
+
+# LangChain Providers
+langchain-openai>=0.3.35           # OpenAI GPT-4
+langchain-google-genai>=2.0.10     # Google Gemini
+langchain-nvidia-ai-endpoints>=0.3.18  # NVIDIA NIM
+langchain-ollama>=0.2.0,<1.0.0     # Ollama (Local) - Version compatible
+
+# Vector Store (IMPORTANTE: Version <0.2.0 compatible con ChromaDB 0.5.23)
+langchain-chroma>=0.1.0,<0.2.0
+
+# ------------------------------------------------
+# LLM APIs
+# ------------------------------------------------
+openai>=1.61.0          # OpenAI API client
+google-generativeai>=0.8.3  # Google Gemini API
+tiktoken>=0.8.0         # OpenAI tokenizer
+httpx>=0.28.0           # Required by Ollama
+ollama>=0.6.0           # Ollama Python SDK
+
+# ------------------------------------------------
+# Vector Database
+# ------------------------------------------------
+chromadb==0.5.23
+hnswlib==0.8.0          # Fast ANN search (used by ChromaDB)
+sentence-transformers>=3.3.1  # For embeddings
+
+# ------------------------------------------------
+# XML Processing & Data Validation
+# ------------------------------------------------
+lxml==5.3.0
+requests==2.32.3
+pydantic==2.12.2
+pydantic-settings==2.7.0
+python-dateutil==2.9.0.post0
+
+# ------------------------------------------------
+# Async Tasks & Background Jobs
+# ------------------------------------------------
+celery==5.4.0
+redis==5.0.8
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+
+# ------------------------------------------------
+# Media & File Processing
+# ------------------------------------------------
+Pillow==11.3.0
+
+# ------------------------------------------------
+# API & WebSockets
+# ------------------------------------------------
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+
+# ------------------------------------------------
+# Utilities
+# ------------------------------------------------
+python-dotenv==1.0.1
+tqdm==4.67.1
+PyYAML==6.0.2
+markdown>=3.4.1         # Markdown to HTML conversion for chat
+Pygments>=2.19.0        # Syntax highlighting for markdown code blocks
+
+# ------------------------------------------------
+# Monitoring & Logging
+# ------------------------------------------------
+sentry-sdk==2.19.2
+django-debug-toolbar==4.4.6
+
+# ------------------------------------------------
+# Testing
+# ------------------------------------------------
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+factory-boy==3.3.1
+faker==33.1.0
+
+# ------------------------------------------------
+# Code Quality
+# ------------------------------------------------
+black==24.10.0
+isort==5.13.2
+flake8==7.1.1
+mypy==1.13.0
+
+# ------------------------------------------------
+# Production
+# ------------------------------------------------
+django-storages==1.14.4  # S3 storage
+boto3==1.35.77           # AWS SDK
+
+# ------------------------------------------------
+# Additional Dependencies
+# ------------------------------------------------
+# JSON handling
+orjson==3.11.3
+
+# HTTP client
+httpcore==1.0.9
+
+# Type checking
+typing-extensions==4.15.0
+annotated-types==0.7.0
+
+# Compression
+zstandard==0.25.0
+
+# ================================================
+# NOTAS DE INSTALACION
+# ================================================
+#
+# Para instalar todas las dependencias:
+#   pip install -r requirements.txt
+#
+# Para instalar solo las dependencias core (sin testing/dev):
+#   pip install Django langchain langchain-ollama chromadb
+#
+# Para actualizar todas las dependencias:
+#   pip install -U -r requirements.txt
+#
+# OLLAMA:
+#   Ollama NO requiere instalacion via pip.
+#   Ejecutar: instalar_ollama.bat (Windows)
+#   O descargar desde: https://ollama.com
+#
+# COMPATIBILIDAD:
+#   Python: 3.10, 3.11, 3.12
+#   Sistema Operativo: Windows, Linux, macOS
+#   Base de Datos: SQLite (dev), PostgreSQL (prod)
+#
+# IMPORTANTE - CHROMADB:
+#   NO actualizar ChromaDB a 1.x.x - requiere hnswlib >= 0.9.0
+#   Mantener chromadb==0.5.23 y hnswlib==0.8.0 (compatibles)
+#   Si instalaste ChromaDB 1.x por error, ejecuta:
+#     pip uninstall chromadb hnswlib -y
+#     pip install chromadb==0.5.23 hnswlib==0.8.0
+#
+# ================================================
