@@ -543,12 +543,70 @@ def save_cv_text_view(request):
         # Guardar el texto del CV
         profile.curriculum_text = curriculum_text
         profile.cv_analyzed = True
+
+        # Generar resumen estructurado del CV
+        cv_summary = _generate_cv_summary(curriculum_text, request.user)
+        if cv_summary:
+            profile.cv_summary = cv_summary
+
         profile.save()
 
         messages.success(request, 'CV guardado correctamente.')
         return redirect('apps_core:profile')
 
     return redirect('apps_core:profile')
+
+
+def _generate_cv_summary(curriculum_text: str, user) -> dict:
+    """
+    Genera un resumen estructurado del CV usando LLM.
+    """
+    try:
+        # Obtener LLM del usuario
+        from .llm_providers import get_llm_for_user
+        llm = get_llm_for_user(user)
+
+        if not llm:
+            return {}
+
+        prompt = f"""Analiza este CV y genera un resumen estructurado en formato JSON.
+
+CV:
+{curriculum_text[:4000]}
+
+Genera un JSON con esta estructura exacta (sin explicaciones, solo el JSON):
+{{
+    "titulo_profesional": "título que mejor describe al candidato",
+    "años_experiencia": número entero de años totales,
+    "skills_principales": ["skill1", "skill2", "skill3", "skill4", "skill5"],
+    "skills_secundarias": ["skill1", "skill2", "skill3"],
+    "nivel": "Junior/Mid/Senior/Lead/Manager",
+    "tipos_rol": ["Backend", "Frontend", "Full Stack", etc.],
+    "sectores_experiencia": ["sector1", "sector2"],
+    "formacion": "título académico principal",
+    "certificaciones": ["cert1", "cert2"],
+    "idiomas": [{{"idioma": "nombre", "nivel": "nivel"}}],
+    "keywords_busqueda": ["keyword1", "keyword2", "keyword3"],
+    "logros_destacados": "logro más relevante en 1 frase"
+}}
+
+JSON:"""
+
+        response = llm.invoke(prompt)
+        response_text = response.content if hasattr(response, 'content') else str(response)
+
+        # Parsear JSON
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            summary = json.loads(json_match.group())
+            return summary
+
+        return {}
+
+    except Exception as e:
+        logger.error(f"Error generando resumen CV: {e}")
+        return {}
 
 
 @login_required

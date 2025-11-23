@@ -33,13 +33,15 @@ class ToolRegistry:
         logger.info("[REGISTRY] Registrando tools de búsqueda de empleo...")
 
         from ..agent_tools.get_user_profile import GetUserProfileTool
+        from ..agent_tools.get_full_cv import GetFullCVTool
         from ..agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool
         from ..agent_tools.recommend_companies import CompanyRecommendationTool
 
-        # Tool de contexto (solo si hay usuario)
+        # Tools de contexto (solo si hay usuario)
         if self.user:
             self.tools['get_user_profile'] = GetUserProfileTool(self.user)
-            logger.info("[REGISTRY] ✓ Tool de contexto registrada")
+            self.tools['get_full_cv'] = GetFullCVTool(self.user)
+            logger.info("[REGISTRY] ✓ Tools de contexto registradas")
 
         # Web search tool (necesaria para búsquedas)
         web_search_tool = None

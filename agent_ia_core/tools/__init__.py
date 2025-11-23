@@ -15,6 +15,7 @@ from .core.schema_converters import (
 
 # Exportar desde agent_tools
 from .agent_tools.get_user_profile import GetUserProfileTool
+from .agent_tools.get_full_cv import GetFullCVTool
 from .agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool
 from .agent_tools.recommend_companies import CompanyRecommendationTool
 from .agent_tools.web_search import GoogleWebSearchTool
@@ -32,6 +33,7 @@ __all__ = [
     'convert_tools_for_provider',
     # Agent Tools
     'GetUserProfileTool',
+    'GetFullCVTool',
     'JobSearchTool',
     'SearchRecentJobsTool',
     'CompanyRecommendationTool',

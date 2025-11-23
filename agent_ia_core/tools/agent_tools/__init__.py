@@ -2,6 +2,7 @@
 # Cada archivo tiene el nombre de la tool que expone
 
 from .get_user_profile import GetUserProfileTool
+from .get_full_cv import GetFullCVTool
 from .search_jobs import JobSearchTool, SearchRecentJobsTool
 from .recommend_companies import CompanyRecommendationTool
 from .web_search import GoogleWebSearchTool
@@ -12,6 +13,7 @@ from .linkedin import LinkedInRecruiterTool, LinkedInCompanyTool, ProfileSuggest
 
 __all__ = [
     'GetUserProfileTool',
+    'GetFullCVTool',
     'JobSearchTool',
     'SearchRecentJobsTool',
     'CompanyRecommendationTool',

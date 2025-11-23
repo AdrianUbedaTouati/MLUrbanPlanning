@@ -102,6 +102,14 @@ class UserProfile(models.Model):
         help_text='Resumen generado por IA basado en el CV'
     )
 
+    # Resumen estructurado del CV para búsquedas
+    cv_summary = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Resumen CV estructurado',
+        help_text='Resumen optimizado para búsqueda de empleo'
+    )
+
     # ============================================
     # PREFERENCIAS DE BÚSQUEDA
     # ============================================
