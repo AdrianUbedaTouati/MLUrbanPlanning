@@ -45,7 +45,8 @@
       "Bash(systemctl list-units:*)",
       "Bash(sudo chmod:*)",
       "Bash(git commit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(.venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []

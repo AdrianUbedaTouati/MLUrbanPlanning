@@ -7,7 +7,7 @@ Tools para obtener información de contexto del usuario:
 
 from typing import Dict, Any
 import logging
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

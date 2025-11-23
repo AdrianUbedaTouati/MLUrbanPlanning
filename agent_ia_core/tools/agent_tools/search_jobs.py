@@ -6,7 +6,7 @@ Tools para búsqueda de ofertas de empleo usando web search.
 import json
 import logging
 from typing import Any
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

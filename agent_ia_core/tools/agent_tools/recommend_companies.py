@@ -5,7 +5,7 @@ Tool para recomendar empresas ideales al usuario con contactos de reclutadores.
 
 import logging
 from typing import Any, Dict, List
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

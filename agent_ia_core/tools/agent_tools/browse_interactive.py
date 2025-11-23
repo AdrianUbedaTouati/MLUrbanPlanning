@@ -6,7 +6,7 @@ Permite navegar sitios con JavaScript, hacer clicks, llenar formularios, etc.
 
 from typing import Dict, Any, List, Optional
 import logging
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ Utiliza BeautifulSoup + Requests para scraping.
 
 from typing import Dict, Any
 import logging
-from .base import BaseTool
+from ..core.base import BaseTool
 import requests
 from bs4 import BeautifulSoup
 import re

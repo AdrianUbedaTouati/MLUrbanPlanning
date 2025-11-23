@@ -6,7 +6,7 @@ Tool para búsqueda de reclutadores y contactos en LinkedIn usando web search.
 import json
 import logging
 from typing import Any
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

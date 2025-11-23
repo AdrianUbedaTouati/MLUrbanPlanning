@@ -6,7 +6,7 @@ Permite al agente buscar información actualizada en internet.
 
 from typing import Dict, Any, List
 import logging
-from .base import BaseTool
+from ..core.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import logging
 import json
 
 sys.path.append(str(Path(__file__).parent))
-from tools.registry import ToolRegistry
+from .tools.core.registry import ToolRegistry
 
 # Imports de LLMs
 try:

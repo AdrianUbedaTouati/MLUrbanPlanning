@@ -1,38 +1,45 @@
-"""
-Tools para el sistema de Function Calling.
-Cada tool es una función que el LLM puede llamar para obtener información.
-"""
+# Tools Module
+#
+# Estructura:
+# - agent_tools/  → Tools que se pasan al agente (con nombres claros de función)
+# - core/         → Infraestructura, clases base, registry
 
-from .base import BaseTool
-from .cv_analyzer_tool import CVAnalyzerTool
-from .job_search_tool import (
-    JobSearchTool,
-    CompanySearchTool,
-    JobMatchTool
+# Exportar desde core
+from .core.base import BaseTool
+from .core.registry import ToolRegistry
+from .core.schema_converters import (
+    SchemaConverter,
+    ToolCallConverter,
+    convert_tools_for_provider,
 )
-from .linkedin_tool import (
-    LinkedInRecruiterTool,
-    LinkedInCompanyTool,
-    ProfileSuggestionsTool
-)
-from .context_tools import (
-    GetUserProfileTool,
-    GetSearchHistoryTool
-)
-from .web_search_tool import GoogleWebSearchTool
-from .registry import ToolRegistry
+
+# Exportar desde agent_tools
+from .agent_tools.get_user_profile import GetUserProfileTool
+from .agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool
+from .agent_tools.recommend_companies import CompanyRecommendationTool
+from .agent_tools.web_search import GoogleWebSearchTool
+from .agent_tools.browse_webpage import BrowseWebpageTool
+from .agent_tools.browse_interactive import BrowseInteractiveTool
+from .agent_tools.analyze_cv import CVAnalyzerTool
+from .agent_tools.linkedin import LinkedInRecruiterTool, LinkedInCompanyTool, ProfileSuggestionsTool
 
 __all__ = [
+    # Core
     'BaseTool',
-    'CVAnalyzerTool',
+    'ToolRegistry',
+    'SchemaConverter',
+    'ToolCallConverter',
+    'convert_tools_for_provider',
+    # Agent Tools
+    'GetUserProfileTool',
     'JobSearchTool',
-    'CompanySearchTool',
-    'JobMatchTool',
+    'SearchRecentJobsTool',
+    'CompanyRecommendationTool',
+    'GoogleWebSearchTool',
+    'BrowseWebpageTool',
+    'BrowseInteractiveTool',
+    'CVAnalyzerTool',
     'LinkedInRecruiterTool',
     'LinkedInCompanyTool',
     'ProfileSuggestionsTool',
-    'GetUserProfileTool',
-    'GetSearchHistoryTool',
-    'GoogleWebSearchTool',
-    'ToolRegistry'
 ]

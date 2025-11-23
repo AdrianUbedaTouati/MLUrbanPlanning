@@ -32,9 +32,9 @@ class ToolRegistry:
         """Registra todas las tools disponibles."""
         logger.info("[REGISTRY] Registrando tools de búsqueda de empleo...")
 
-        from .context_tools import GetUserProfileTool
-        from .job_search_tool import JobSearchTool, SearchRecentJobsTool
-        from .company_recommendation_tool import CompanyRecommendationTool
+        from ..agent_tools.get_user_profile import GetUserProfileTool
+        from ..agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool
+        from ..agent_tools.recommend_companies import CompanyRecommendationTool
 
         # Tool de contexto (solo si hay usuario)
         if self.user:
@@ -52,7 +52,7 @@ class ToolRegistry:
                 google_search_engine_id = getattr(self.user, 'google_search_engine_id', None)
 
                 if google_search_api_key and google_search_engine_id:
-                    from .web_search_tool import GoogleWebSearchTool
+                    from ..agent_tools.web_search import GoogleWebSearchTool
                     web_search_tool = GoogleWebSearchTool(
                         api_key=google_search_api_key,
                         engine_id=google_search_engine_id
@@ -61,7 +61,7 @@ class ToolRegistry:
                     logger.info("[REGISTRY] ✓ Web search tool habilitada")
 
                     # Browse Webpage
-                    from .browse_webpage_tool import BrowseWebpageTool
+                    from ..agent_tools.browse_webpage import BrowseWebpageTool
                     browse_max_chars = getattr(self.user, 'browse_max_chars', 10000)
                     browse_chunk_size = getattr(self.user, 'browse_chunk_size', 1250)
                     browse_tool = BrowseWebpageTool(
