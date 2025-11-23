@@ -51,6 +51,17 @@ class JobSearchTool(BaseTool):
             }
 
         try:
+            # Auto-rellenar location desde user_profile si no se proporciona
+            if not location and self.user_profile:
+                location = self.user_profile.get('city', '')
+                if location:
+                    results['data']['location'] = location
+
+            # Obtener modalidad de trabajo del usuario
+            work_mode = ''
+            if self.user_profile:
+                work_mode = self.user_profile.get('work_mode', 'any')
+
             # Construir queries específicas para cada portal
             base_query = query
             if location:
@@ -62,10 +73,20 @@ class JobSearchTool(BaseTool):
             if contract_type:
                 base_query += f" {contract_type}"
 
+            # AÑADIR MODALIDAD A LA BÚSQUEDA (filtro estricto)
+            work_mode_query = ""
+            if work_mode == 'remote':
+                work_mode_query = ' "100% remoto" OR "teletrabajo" OR "full remote"'
+            elif work_mode == 'onsite':
+                work_mode_query = ' "presencial"'
+            elif work_mode == 'hybrid':
+                work_mode_query = ' "híbrido" OR "flexible"'
+            # Si es 'any' o vacío, no añadimos filtro
+
             all_jobs = []
 
             # 1. Buscar en InfoJobs (más resultados)
-            infojobs_query = f"site:infojobs.net {base_query} empleo oferta"
+            infojobs_query = f"site:infojobs.net {base_query}{work_mode_query} empleo oferta"
             infojobs_result = self.web_search_tool.run(query=infojobs_query, limit=10)
             if infojobs_result.get('success') and infojobs_result.get('data', {}).get('results'):
                 for item in infojobs_result['data']['results']:
@@ -79,7 +100,7 @@ class JobSearchTool(BaseTool):
                 results['data']['sources_searched'].append('InfoJobs')
 
             # 2. Buscar en LinkedIn Jobs (más resultados)
-            linkedin_query = f"site:linkedin.com/jobs {base_query}"
+            linkedin_query = f"site:linkedin.com/jobs {base_query}{work_mode_query}"
             linkedin_result = self.web_search_tool.run(query=linkedin_query, limit=10)
             if linkedin_result.get('success') and linkedin_result.get('data', {}).get('results'):
                 for item in linkedin_result['data']['results']:
@@ -93,7 +114,7 @@ class JobSearchTool(BaseTool):
                 results['data']['sources_searched'].append('LinkedIn')
 
             # 3. Buscar en Indeed (más resultados)
-            indeed_query = f"site:indeed.es {base_query} empleo"
+            indeed_query = f"site:indeed.es {base_query}{work_mode_query} empleo"
             indeed_result = self.web_search_tool.run(query=indeed_query, limit=10)
             if indeed_result.get('success') and indeed_result.get('data', {}).get('results'):
                 for item in indeed_result['data']['results']:
@@ -336,14 +357,19 @@ SISTEMA DE PUNTUACIÓN (100 puntos máximo):
    - 5 pts: Match indirecto o sector relacionado
    - 0 pts: Sin match aparente
 
-2. **UBICACIÓN Y MODALIDAD (25 puntos)**
-   - 25 pts: Ubicación exacta preferida Y modalidad coincide con preferencia del candidato
-   - 20 pts: Misma provincia/área metropolitana con modalidad compatible
-   - 15 pts: Híbrido (si candidato prefiere híbrido) o remoto (si prefiere remoto)
-   - 10 pts: Misma comunidad autónoma
-   - 5 pts: España pero diferente región, o modalidad no coincide
-   - 0 pts: Internacional sin opción remota o modalidad incompatible
-   NOTA: Si modalidad preferida es "Indiferente", no penalizar por modalidad
+2. **UBICACIÓN Y MODALIDAD (25 puntos) - FILTRO ESTRICTO**
+   REGLAS OBLIGATORIAS:
+   - Si el candidato especifica CIUDAD: la oferta DEBE ser de esa ciudad O 100% remota. DESCARTAR ofertas de otras ciudades.
+   - Si modalidad = "Remoto": SOLO ofertas 100% remotas/teletrabajo. DESCARTAR presenciales e híbridas.
+   - Si modalidad = "Presencial": SOLO ofertas presenciales en la ciudad indicada. DESCARTAR remotas.
+   - Si modalidad = "Híbrido": ofertas híbridas o presenciales en la ciudad indicada.
+   - Si modalidad = "Indiferente": no filtrar por modalidad, cualquier modalidad es válida.
+   - Si NO hay ciudad especificada: cualquier ubicación en España es válida.
+
+   PUNTUACIÓN (solo para ofertas que pasen el filtro):
+   - 25 pts: Cumple perfectamente con ubicación Y modalidad
+   - 15 pts: Cumple parcialmente (ej: híbrido cuando prefiere remoto)
+   - 0 pts: No cumple - DESCARTAR de la selección
 
 3. **SALARIO Y BENEFICIOS (20 puntos)**
    - 20 pts: Salario mencionado y competitivo para el puesto

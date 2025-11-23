@@ -43,7 +43,9 @@
       "Bash(python -m py_compile:*)",
       "Bash(/var/www/BusquedaTrabajo/.venv/bin/python:*)",
       "Bash(systemctl list-units:*)",
-      "Bash(sudo chmod:*)"
+      "Bash(sudo chmod:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
