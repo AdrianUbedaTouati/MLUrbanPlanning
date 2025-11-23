@@ -34,7 +34,7 @@ class ToolRegistry:
 
         from ..agent_tools.get_user_profile import GetUserProfileTool
         from ..agent_tools.get_full_cv import GetFullCVTool
-        from ..agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool
+        from ..agent_tools.search_jobs import JobSearchTool, SearchRecentJobsTool, SearchJobsByRankingTool
         from ..agent_tools.recommend_companies import CompanyRecommendationTool
 
         # Tools de contexto (solo si hay usuario)
@@ -107,6 +107,16 @@ class ToolRegistry:
             user_profile=user_profile
         )
         logger.info("[REGISTRY] ✓ Tool search_recent_jobs registrada")
+
+        # Tool de búsqueda por ranking de puestos
+        self.tools['search_jobs_by_ranking'] = SearchJobsByRankingTool(
+            llm=self.llm,
+            web_search_tool=web_search_tool,
+            browse_tool=browse_tool,
+            user_profile=user_profile,
+            user=self.user
+        )
+        logger.info("[REGISTRY] ✓ Tool search_jobs_by_ranking registrada")
 
         # Tool de recomendación de empresas (incluye reclutadores y estrategia)
         self.tools['recommend_companies'] = CompanyRecommendationTool(

@@ -85,8 +85,8 @@ class JobSearchTool(BaseTool):
 
             all_jobs = []
 
-            # 1. Buscar en InfoJobs (más resultados)
-            infojobs_query = f"site:infojobs.net {base_query}{work_mode_query} empleo oferta"
+            # 1. Buscar en InfoJobs (ofertas individuales)
+            infojobs_query = f'site:infojobs.net/ofertas/trabajo "{base_query}"{work_mode_query}'
             infojobs_result = self.web_search_tool.run(query=infojobs_query, limit=10)
             if infojobs_result.get('success') and infojobs_result.get('data', {}).get('results'):
                 for item in infojobs_result['data']['results']:
@@ -99,8 +99,8 @@ class JobSearchTool(BaseTool):
                     })
                 results['data']['sources_searched'].append('InfoJobs')
 
-            # 2. Buscar en LinkedIn Jobs (más resultados)
-            linkedin_query = f"site:linkedin.com/jobs {base_query}{work_mode_query}"
+            # 2. Buscar en LinkedIn Jobs (ofertas individuales con /view/)
+            linkedin_query = f'site:linkedin.com/jobs/view "{base_query}"{work_mode_query}'
             linkedin_result = self.web_search_tool.run(query=linkedin_query, limit=10)
             if linkedin_result.get('success') and linkedin_result.get('data', {}).get('results'):
                 for item in linkedin_result['data']['results']:
@@ -159,12 +159,16 @@ class JobSearchTool(BaseTool):
             results['data']['duplicates_removed'] = len(all_jobs) - len(deduplicated_jobs)
             logger.info(f"[JOB_SEARCH] Deduplicadas: {len(all_jobs)} → {len(deduplicated_jobs)} ofertas")
 
+            # 5.5. Filtrar URLs de listados, mantener solo ofertas individuales
+            individual_jobs = self._filter_individual_jobs(deduplicated_jobs)
+            results['data']['listings_filtered'] = len(deduplicated_jobs) - len(individual_jobs)
+
             # 6. Usar LLM para filtrar y rankear las 15 mejores ofertas con scoring mejorado
-            if self.llm and len(deduplicated_jobs) > 15:
-                top_jobs = self._rank_and_filter_jobs(deduplicated_jobs, query, location, sector)
+            if self.llm and len(individual_jobs) > 15:
+                top_jobs = self._rank_and_filter_jobs(individual_jobs, query, location, sector)
             else:
                 # Sin LLM, devolver las primeras 15
-                top_jobs = deduplicated_jobs[:15]
+                top_jobs = individual_jobs[:15]
 
             # 6. Verificar que las ofertas estén activas (si browse_tool está disponible)
             if self.browse_tool and top_jobs:
@@ -313,6 +317,101 @@ class JobSearchTool(BaseTool):
 
         return unique_jobs
 
+    def _filter_individual_jobs(self, jobs: list) -> list:
+        """
+        Filtra URLs de listados de búsqueda y mantiene solo ofertas individuales.
+        """
+        import re
+
+        # Patrones de URLs que son LISTADOS (no ofertas individuales)
+        listing_patterns = [
+            # InfoJobs listados
+            r'infojobs\.net/trabajo(?:\?|$)',
+            r'infojobs\.net/trabajo-de-',
+            r'infojobs\.net/ofertas-empleo(?:\?|$)',
+            r'infojobs\.net/empleo-de-',
+            r'infojobs\.net/empleo-en-',
+            # LinkedIn listados
+            r'linkedin\.com/jobs/search',
+            r'linkedin\.com/jobs\?',
+            r'linkedin\.com/jobs$',
+            # Indeed listados
+            r'indeed\.es/jobs\?',
+            r'indeed\.es/empleos\?',
+            r'indeed\.es/q-',
+            r'indeed\.es/trabajo\?',
+            r'indeed\.es/l-',
+            # Tecnoempleo listados
+            r'tecnoempleo\.com/busqueda',
+            r'tecnoempleo\.com/ofertas-',
+            r'tecnoempleo\.com/empleo-',
+            # Otros portales
+            r'glassdoor\.es/Empleo/',
+            r'glassdoor\.es/Trabajo/',
+            r'trabajos\.com/trabajo/',
+            r'trabajos\.com/empleos/',
+            r'talent\.com/jobs/',
+            r'talent\.com/es/jobs\?',
+            r'trovit\.es/empleos/',
+            r'jobatus\.es/trabajo/',
+            r'getmanfred\.com/ofertas\?',
+        ]
+
+        # Patrones de URLs que son OFERTAS INDIVIDUALES
+        individual_patterns = [
+            # InfoJobs oferta individual (tiene ID numérico o path específico)
+            r'infojobs\.net/[^/]+/oferta/',
+            r'infojobs\.net/ofertas/trabajo/.+-\d+',
+            r'infojobs\.net/oferta/.+',
+            # LinkedIn oferta individual
+            r'linkedin\.com/jobs/view/\d+',
+            r'linkedin\.com/jobs/view/[a-zA-Z0-9-]+',
+            # Indeed oferta individual
+            r'indeed\.es/ver-empleo',
+            r'indeed\.es/viewjob',
+            r'indeed\.es/pagead/',
+            r'indeed\.es/rc/clk',
+            # Tecnoempleo oferta individual
+            r'tecnoempleo\.com/[^/]+/[^/]+/rf-\w+',
+            r'tecnoempleo\.com/oferta/',
+            # Getmanfred oferta individual
+            r'getmanfred\.com/offers/',
+            # Glassdoor oferta individual
+            r'glassdoor\.es/job-listing/',
+            # Páginas de empresa (careers)
+            r'/careers/',
+            r'/trabaja-con-nosotros/',
+            r'/empleo/',
+            r'/jobs/',
+            r'/job/',
+            r'/vacante/',
+        ]
+
+        filtered_jobs = []
+
+        for job in jobs:
+            url = job.get('url', '')
+
+            # Primero verificar si es un listado conocido
+            is_listing = any(re.search(pattern, url) for pattern in listing_patterns)
+
+            if is_listing:
+                logger.debug(f"[JOB_SEARCH] Descartada URL de listado: {url[:60]}...")
+                continue
+
+            # Verificar si parece una oferta individual
+            is_individual = any(re.search(pattern, url) for pattern in individual_patterns)
+
+            # Si no coincide con patrones conocidos, aceptarla por defecto
+            # (podría ser una página de empresa o portal menos conocido)
+            if is_individual or not is_listing:
+                filtered_jobs.append(job)
+            else:
+                logger.debug(f"[JOB_SEARCH] URL ambigua descartada: {url[:60]}...")
+
+        logger.info(f"[JOB_SEARCH] Filtradas {len(jobs) - len(filtered_jobs)} URLs de listados, quedan {len(filtered_jobs)} ofertas")
+        return filtered_jobs
+
     def _rank_and_filter_jobs(self, jobs: list, query: str, location: str, sector: str) -> list:
         """Usa el LLM para rankear y filtrar las mejores ofertas con scoring ponderado."""
 
@@ -454,6 +553,8 @@ SELECCIÓN (15 números ordenados por puntuación):"""
                 enriched_job = job.copy()
                 if check_result.get('job_details'):
                     enriched_job['verified_details'] = check_result['job_details']
+                if check_result.get('fit_analysis'):
+                    enriched_job['fit_analysis'] = check_result['fit_analysis']
                 enriched_job['verification'] = {
                     'status': 'active',
                     'confidence': check_result.get('confidence', 'media'),
@@ -480,6 +581,8 @@ SELECCIÓN (15 números ordenados por puntuación):"""
                             enriched_backup['replaced_inactive'] = True
                             if backup_check.get('job_details'):
                                 enriched_backup['verified_details'] = backup_check['job_details']
+                            if backup_check.get('fit_analysis'):
+                                enriched_backup['fit_analysis'] = backup_check['fit_analysis']
                             enriched_backup['verification'] = {
                                 'status': 'active',
                                 'confidence': backup_check.get('confidence', 'media'),
@@ -541,10 +644,18 @@ SELECCIÓN (15 números ordenados por puntuación):"""
     def _analyze_job_page_with_llm(self, url: str, content: str) -> dict:
         """Analiza la página de la oferta con LLM para determinar si está activa."""
 
+        # Obtener información del perfil del usuario para fit_analysis personalizado
+        user_context = ""
+        if self.user_profile:
+            city = self.user_profile.get('city', '')
+            work_mode = self.user_profile.get('work_mode', '')
+            if city or work_mode:
+                user_context = f"\nPERFIL DEL CANDIDATO:\n- Ciudad: {city or 'No especificada'}\n- Modalidad preferida: {work_mode or 'Indiferente'}\n"
+
         analysis_prompt = f"""Analiza esta página de oferta de empleo y responde en formato JSON estricto.
 
 URL: {url}
-
+{user_context}
 CONTENIDO DE LA PÁGINA:
 {content[:3500]}
 
@@ -552,6 +663,7 @@ INSTRUCCIONES:
 Analiza el contenido y determina:
 1. Si la oferta sigue ACTIVA y acepta candidaturas
 2. Extrae los detalles clave de la oferta
+3. Genera un análisis detallado de por qué esta oferta encaja con un candidato técnico
 
 RESPONDE ÚNICAMENTE con este JSON (sin texto adicional):
 {{
@@ -566,7 +678,8 @@ RESPONDE ÚNICAMENTE con este JSON (sin texto adicional):
         "contract_type": "tipo de contrato si se menciona o null",
         "requirements": ["requisito1", "requisito2"],
         "publish_date": "fecha de publicación si aparece o null"
-    }}
+    }},
+    "fit_analysis": "Análisis DETALLADO y ESPECÍFICO de por qué esta oferta encaja. DEBE incluir: 1) Tecnologías/herramientas específicas mencionadas que coinciden, 2) Nivel de experiencia requerido vs experiencia típica, 3) Responsabilidades concretas del puesto, 4) Aspectos diferenciadores de esta oferta. Mínimo 3-4 oraciones con datos concretos de la oferta."
 }}
 
 CRITERIOS PARA DETERMINAR SI ESTÁ ACTIVA:
@@ -575,6 +688,14 @@ CRITERIOS PARA DETERMINAR SI ESTÁ ACTIVA:
 - INACTIVA si: dice explícitamente que la vacante ya no está disponible
 - ACTIVA si: tiene botón de aplicar, formulario de candidatura, o instrucciones para aplicar
 - ACTIVA si: muestra detalles completos del puesto sin mencionar cierre
+
+IMPORTANTE para fit_analysis:
+- NO uses frases genéricas como "tu formación te hace ideal"
+- MENCIONA tecnologías específicas de la oferta (Python, React, AWS, etc.)
+- INDICA requisitos concretos (años de experiencia, certificaciones)
+- DESCRIBE responsabilidades reales del puesto
+- SÉ ESPECÍFICO con datos de la oferta, no generalidades
+- Si hay PERFIL DEL CANDIDATO, compara la ubicación/modalidad con lo que ofrece el puesto
 
 Responde SOLO con el JSON, sin explicaciones adicionales."""
 
@@ -595,7 +716,8 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
                     'is_active': analysis.get('is_active', True),
                     'reason': analysis.get('reason', ''),
                     'confidence': analysis.get('confidence', 'media'),
-                    'job_details': analysis.get('job_details', {})
+                    'job_details': analysis.get('job_details', {}),
+                    'fit_analysis': analysis.get('fit_analysis', '')
                 }
 
         except json.JSONDecodeError as e:
@@ -611,6 +733,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
 
         content_lower = content.lower()
 
+        # Indicadores de que la oferta está INACTIVA
         inactive_indicators = [
             'esta oferta ya no está disponible',
             'oferta caducada', 'oferta expirada',
@@ -620,7 +743,9 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
             'solicitudes cerradas', 'applications closed',
             'job not found', 'page not found', '404',
             'proceso cerrado', 'vacante cerrada',
-            'oferta finalizada', 'ha finalizado'
+            'oferta finalizada', 'ha finalizado',
+            'error 404', 'página no encontrada',
+            'contenido no disponible'
         ]
 
         for indicator in inactive_indicators:
@@ -631,6 +756,27 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
                     'job_details': {}
                 }
 
+        # Indicadores de que es una PÁGINA DE LISTADO (no una oferta individual)
+        listing_indicators = [
+            'mostrando resultados',
+            'ofertas encontradas',
+            'empleos encontrados',
+            'resultados de búsqueda',
+            'filtrar por',
+            'ordenar por fecha',
+            'páginas de resultados',
+            'ver más ofertas',
+            'siguiente página'
+        ]
+
+        listing_count = sum(1 for indicator in listing_indicators if indicator in content_lower)
+        if listing_count >= 2:
+            return {
+                'is_active': False,
+                'reason': 'Página de listado de búsqueda, no una oferta individual',
+                'job_details': {}
+            }
+
         return {
             'is_active': True,
             'reason': 'No se detectaron indicadores de inactividad',
@@ -638,7 +784,7 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
         }
 
     def _enrich_jobs_with_recruiters(self, jobs: list, query: str, location: str) -> list:
-        """Enriquece cada oferta con contacto del reclutador y razonamiento profundo."""
+        """Enriquece cada oferta con contacto del reclutador verificado."""
 
         enriched_jobs = []
 
@@ -646,14 +792,29 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
             enriched_job = job.copy()
 
             try:
-                # Extraer nombre de empresa del título o descripción
-                company_name = self._extract_company_name(job)
+                # Extraer nombre de empresa - priorizar verified_details
+                company_name = None
+
+                # 1. Primero de verified_details (más fiable)
+                if job.get('verified_details', {}).get('company'):
+                    company_name = job['verified_details']['company']
+                else:
+                    # 2. Extraer del título/descripción
+                    company_name = self._extract_company_name(job)
 
                 if company_name:
-                    # Buscar reclutador de esa empresa
-                    recruiter_info = self._find_job_recruiter(company_name, job.get('title', ''), location)
+                    # Buscar reclutador de esa empresa con verificación
+                    recruiter_info = self._find_verified_recruiter(company_name, location)
                     if recruiter_info:
                         enriched_job['recruiter'] = recruiter_info
+                        logger.info(f"[JOB_SEARCH] ✓ Reclutador encontrado para {company_name}: {recruiter_info.get('name')}")
+                    else:
+                        # Mensaje claro cuando no se encuentra reclutador verificado
+                        enriched_job['recruiter'] = {
+                            'verified': False,
+                            'message': f'No se encontró reclutador verificado para {company_name}'
+                        }
+                        logger.info(f"[JOB_SEARCH] ✗ No se encontró reclutador verificado para {company_name}")
 
             except Exception as e:
                 logger.warning(f"Error enriqueciendo oferta: {e}")
@@ -665,68 +826,133 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
     def _extract_company_name(self, job: dict) -> str:
         """Extrae el nombre de la empresa del título o descripción de la oferta."""
 
+        # 1. Primero verificar si ya tenemos verified_details
+        if job.get('verified_details', {}).get('company'):
+            return job['verified_details']['company']
+
         title = job.get('title', '')
         description = job.get('description', '')
 
         # Patrones comunes en títulos de ofertas
-        # "Software Engineer at Google" -> "Google"
-        # "Developer - Microsoft" -> "Microsoft"
         import re
 
-        # Patrón "at Company"
-        at_match = re.search(r'\bat\s+([A-Z][A-Za-z0-9\s&]+?)(?:\s*[-|]|$)', title)
+        # Patrón "at Company" - común en LinkedIn
+        at_match = re.search(r'\bat\s+([A-Z][A-Za-z0-9\s&\-\.]+?)(?:\s*[-|]|$)', title)
         if at_match:
             return at_match.group(1).strip()
 
-        # Patrón "Company -" o "Company |"
-        dash_match = re.search(r'^([A-Z][A-Za-z0-9\s&]+?)\s*[-|]', title)
+        # Patrón "- Company" o "| Company" al final
+        end_match = re.search(r'[-|]\s*([A-Z][A-Za-z0-9\s&\-\.]+?)$', title)
+        if end_match:
+            return end_match.group(1).strip()
+
+        # Patrón "Company -" o "Company |" al inicio
+        dash_match = re.search(r'^([A-Z][A-Za-z0-9\s&\-\.]+?)\s*[-|]', title)
         if dash_match:
             return dash_match.group(1).strip()
 
-        # Buscar en descripción
+        # Buscar en descripción con patrones más amplios
         company_patterns = [
-            r'empresa[:\s]+([A-Z][A-Za-z0-9\s&]+)',
-            r'company[:\s]+([A-Z][A-Za-z0-9\s&]+)',
+            r'empresa[:\s]+([A-Za-z0-9\s&\-\.]+)',
+            r'company[:\s]+([A-Za-z0-9\s&\-\.]+)',
+            r'en\s+([A-Z][A-Za-z0-9\s&\-\.]+?)\s+buscamos',
+            r'([A-Z][A-Za-z0-9\s&\-\.]+?)\s+está buscando',
         ]
 
         for pattern in company_patterns:
             match = re.search(pattern, description, re.IGNORECASE)
             if match:
-                return match.group(1).strip()
+                company = match.group(1).strip()
+                # Filtrar palabras genéricas
+                if company.lower() not in ['la', 'una', 'nuestra', 'esta']:
+                    return company
 
         return ""
 
-    def _find_job_recruiter(self, company_name: str, job_title: str, location: str) -> dict:
-        """Busca el reclutador o persona que publicó una oferta específica."""
+    def _find_verified_recruiter(self, company_name: str, location: str) -> dict:
+        """
+        Busca un reclutador VERIFICADO de la empresa.
+        Solo devuelve resultados si el snippet confirma que trabaja en esa empresa.
+        """
 
         if not self.web_search_tool or not company_name:
             return None
 
+        # Normalizar nombre de empresa para comparación
+        company_lower = company_name.lower().strip()
+        # Variantes comunes del nombre
+        company_variants = [
+            company_lower,
+            company_lower.replace(' ', ''),
+            company_lower.split()[0] if company_lower else ''  # Primera palabra
+        ]
+
         try:
-            # Búsqueda específica del reclutador
+            # Búsquedas más específicas
             recruiter_queries = [
-                f'site:linkedin.com/in "{company_name}" recruiter talent acquisition {location}',
-                f'site:linkedin.com/in "{company_name}" HR hiring manager {location}',
+                f'site:linkedin.com/in "{company_name}" "Talent Acquisition" OR "Recruiter" OR "RRHH"',
+                f'site:linkedin.com/in "{company_name}" "People" OR "HR" OR "Hiring"',
             ]
 
             for query in recruiter_queries:
-                result = self.web_search_tool.run(query=query, limit=3)
+                result = self.web_search_tool.run(query=query, limit=5)
                 if result.get('success') and result.get('data', {}).get('results'):
                     for item in result['data']['results']:
                         url = item.get('url', '')
-                        if 'linkedin.com/in/' in url:
-                            name = item.get('title', '').replace(' | LinkedIn', '').replace(' - LinkedIn', '')
-                            return {
-                                'name': name,
-                                'linkedin_url': url,
-                                'role': item.get('snippet', '')[:150],
-                                'company': company_name
-                            }
+                        title = item.get('title', '')
+                        snippet = item.get('snippet', '')
+
+                        # Verificar que es un perfil de LinkedIn
+                        if 'linkedin.com/in/' not in url:
+                            continue
+
+                        # VERIFICACIÓN: El snippet debe mencionar la empresa
+                        snippet_lower = snippet.lower()
+                        title_lower = title.lower()
+
+                        # Buscar variantes del nombre de empresa en el snippet o título
+                        company_confirmed = any(
+                            variant in snippet_lower or variant in title_lower
+                            for variant in company_variants if variant
+                        )
+
+                        if not company_confirmed:
+                            continue
+
+                        # Verificar que es un rol de reclutamiento
+                        recruiting_keywords = [
+                            'talent', 'recruiter', 'recruiting', 'rrhh', 'hr ',
+                            'people', 'hiring', 'acquisition', 'recursos humanos',
+                            'selección', 'headhunter'
+                        ]
+
+                        is_recruiter = any(kw in snippet_lower or kw in title_lower for kw in recruiting_keywords)
+
+                        if not is_recruiter:
+                            continue
+
+                        # Extraer nombre limpio
+                        name = title.replace(' | LinkedIn', '').replace(' - LinkedIn', '').strip()
+
+                        # Extraer rol del snippet
+                        role = snippet[:200] if snippet else ''
+
+                        return {
+                            'name': name,
+                            'linkedin_url': url,
+                            'role': role,
+                            'company': company_name,
+                            'verified': True
+                        }
 
         except Exception as e:
-            logger.warning(f"Error buscando reclutador para {company_name}: {e}")
+            logger.warning(f"Error buscando reclutador verificado para {company_name}: {e}")
 
         return None
+
+    def _find_job_recruiter(self, company_name: str, job_title: str, location: str) -> dict:
+        """Método legacy - redirige a _find_verified_recruiter."""
+        return self._find_verified_recruiter(company_name, location)
 
     def get_schema(self) -> dict:
         return {
@@ -757,6 +983,309 @@ Responde SOLO con el JSON, sin explicaciones adicionales."""
                     }
                 },
                 'required': ['query']
+            }
+        }
+
+
+class SearchJobsByRankingTool(BaseTool):
+    """Busca ofertas para cada puesto del ranking del usuario."""
+
+    name = "search_jobs_by_ranking"
+    description = """Busca ofertas de empleo basándose en el ranking de puestos recomendados del usuario.
+    Busca 10 ofertas por cada puesto del ranking y devuelve las 3 mejores para cada uno.
+    **USA ESTA TOOL cuando el usuario pida:** búsqueda basada en su perfil, ofertas para sus puestos recomendados,
+    o una búsqueda completa según su ranking."""
+
+    def __init__(self, llm=None, web_search_tool=None, browse_tool=None, user_profile=None, user=None):
+        self.llm = llm
+        self.web_search_tool = web_search_tool
+        self.browse_tool = browse_tool
+        self.user_profile = user_profile
+        self.user = user
+        super().__init__()
+
+    def run(self, location: str = "", top_n: int = 3) -> dict:
+        """Busca ofertas para cada puesto del ranking del usuario.
+
+        Args:
+            location: Ciudad o provincia para la búsqueda
+            top_n: Número de mejores ofertas a devolver por puesto (default: 3)
+        """
+
+        results = {
+            'success': True,
+            'data': {
+                'location': location,
+                'top_n': top_n,
+                'ranking_jobs': [],
+                'total_analyzed': 0,
+                'total_selected': 0
+            }
+        }
+
+        if not self.web_search_tool:
+            return {
+                'success': False,
+                'error': 'Web search no disponible. Configura Google Search API en tu perfil.'
+            }
+
+        if not self.llm:
+            return {
+                'success': False,
+                'error': 'LLM no disponible para análisis.'
+            }
+
+        try:
+            # Obtener ranking de puestos del usuario
+            ranking_positions = self._extract_ranking_positions()
+
+            if not ranking_positions:
+                return {
+                    'success': False,
+                    'error': 'No se encontró ranking de puestos. Asegúrate de tener un CV analizado.'
+                }
+
+            # Auto-rellenar location
+            if not location and self.user_profile:
+                location = self.user_profile.get('city', '')
+
+            # Buscar ofertas para cada puesto del ranking
+            for position in ranking_positions:
+                position_results = self._search_for_position(position, location, top_n)
+                if position_results:
+                    results['data']['ranking_jobs'].append(position_results)
+                    results['data']['total_analyzed'] += position_results.get('analyzed', 0)
+                    results['data']['total_selected'] += len(position_results.get('jobs', []))
+
+            if not results['data']['ranking_jobs']:
+                results['data']['message'] = 'No se encontraron ofertas para los puestos del ranking.'
+            else:
+                results['data']['message'] = f"Búsqueda completada: {results['data']['total_selected']} ofertas seleccionadas de {results['data']['total_analyzed']} analizadas."
+
+        except Exception as e:
+            logger.error(f"Error en búsqueda por ranking: {e}")
+            results['success'] = False
+            results['error'] = str(e)
+
+        return results
+
+    def _extract_ranking_positions(self) -> list:
+        """Extrae los puestos del ranking del perfil del usuario desde cv_summary."""
+
+        try:
+            from apps.company.models import UserProfile
+            import re
+
+            # Acceso directo al cv_summary del usuario
+            if self.user:
+                profile = UserProfile.objects.filter(user=self.user).first()
+                if profile and profile.cv_summary:
+                    cv_summary = profile.cv_summary
+
+                    # Extraer puestos del ranking del cv_summary
+                    # Buscar sección de ranking de puestos
+                    ranking_section = re.search(
+                        r'(?:ranking|puestos recomendados|posiciones recomendadas)[:\s]*(.+?)(?:\n\n|\Z)',
+                        cv_summary,
+                        re.IGNORECASE | re.DOTALL
+                    )
+
+                    if ranking_section:
+                        # Extraer nombres de puestos (líneas con números o bullets)
+                        positions_text = ranking_section.group(1)
+                        positions = re.findall(
+                            r'(?:\d+[\.\)]\s*|\-\s*|\*\s*)([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)(?:\n|$|:|\()',
+                            positions_text
+                        )
+                        if positions:
+                            return [p.strip() for p in positions if p.strip()]
+
+                    # Fallback: usar LLM para extraer del cv_summary
+                    if self.llm:
+                        prompt = f"""Extrae los nombres de los puestos del ranking de puestos recomendados de este CV summary:
+
+{cv_summary[:2000]}
+
+Devuelve SOLO una lista JSON con los nombres de los puestos.
+Formato: ["Puesto 1", "Puesto 2", "Puesto 3"]
+
+Si no hay ranking, devuelve: []"""
+
+                        response = self.llm.invoke(prompt)
+                        response_text = response.content if hasattr(response, 'content') else str(response)
+
+                        json_match = re.search(r'\[.*?\]', response_text, re.DOTALL)
+                        if json_match:
+                            return json.loads(json_match.group())
+
+            # Fallback si no hay user: usar LLM con contexto de conversación
+            if self.llm:
+                prompt = """Basándote en el contexto de la conversación, extrae los nombres de los puestos
+del ranking de puestos recomendados del usuario.
+
+Devuelve SOLO una lista JSON con los nombres de TODOS los puestos del ranking.
+Formato: ["Puesto 1", "Puesto 2", "Puesto 3", ...]
+
+Si no hay ranking disponible, devuelve: []"""
+
+                response = self.llm.invoke(prompt)
+                response_text = response.content if hasattr(response, 'content') else str(response)
+
+                json_match = re.search(r'\[.*?\]', response_text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group())
+
+            return []
+
+        except Exception as e:
+            logger.warning(f"Error extrayendo puestos del ranking: {e}")
+            return []
+
+    def _search_for_position(self, position: str, location: str, top_n: int = 3) -> dict:
+        """Busca ofertas para un puesto específico y devuelve las top_n mejores."""
+
+        try:
+            all_jobs = []
+
+            # Búsquedas mejoradas para obtener ofertas INDIVIDUALES (no listados)
+            # Usar términos que filtren páginas de ofertas específicas
+            searches = [
+                # InfoJobs: buscar en URLs de ofertas específicas
+                (f'site:infojobs.net/ofertas/trabajo "{position}" {location}', "InfoJobs", 4),
+                # LinkedIn: URLs con /view/ son ofertas individuales
+                (f'site:linkedin.com/jobs/view "{position}" {location}', "LinkedIn", 3),
+                # Indeed: usar viewjob para ofertas específicas
+                (f'site:indeed.es "{position}" {location} empleo', "Indeed", 3),
+            ]
+
+            for query, source, limit in searches:
+                result = self.web_search_tool.run(query=query, limit=limit)
+                if result.get('success') and result.get('data', {}).get('results'):
+                    for item in result['data']['results']:
+                        all_jobs.append({
+                            'source': source,
+                            'title': item.get('title', ''),
+                            'description': item.get('snippet', ''),
+                            'url': item.get('url', ''),
+                            'portal': source.lower()
+                        })
+
+            if not all_jobs:
+                return {
+                    'position': position,
+                    'jobs': [],
+                    'analyzed': 0,
+                    'message': f'No se encontraron ofertas para {position}'
+                }
+
+            # Filtrar URLs de listados usando el método de JobSearchTool
+            job_search_tool = JobSearchTool(
+                llm=self.llm,
+                web_search_tool=self.web_search_tool,
+                browse_tool=self.browse_tool,
+                user_profile=self.user_profile
+            )
+            filtered_jobs = job_search_tool._filter_individual_jobs(all_jobs)
+
+            if not filtered_jobs:
+                return {
+                    'position': position,
+                    'jobs': [],
+                    'analyzed': len(all_jobs),
+                    'message': f'No se encontraron ofertas individuales para {position} (todas eran listados)'
+                }
+
+            # Seleccionar las top_n mejores usando LLM
+            top_jobs = self._select_top_jobs(filtered_jobs, position, location, top_n)
+
+            return {
+                'position': position,
+                'jobs': top_jobs,
+                'analyzed': len(all_jobs),
+                'selected': len(top_jobs)
+            }
+
+        except Exception as e:
+            logger.warning(f"Error buscando ofertas para {position}: {e}")
+            return {
+                'position': position,
+                'jobs': [],
+                'analyzed': 0,
+                'error': str(e)
+            }
+
+    def _select_top_jobs(self, jobs: list, position: str, location: str, top_n: int = 3) -> list:
+        """Usa el LLM para seleccionar las top_n mejores ofertas."""
+
+        if len(jobs) <= top_n:
+            return jobs
+
+        jobs_text = ""
+        for i, job in enumerate(jobs):
+            jobs_text += f"[{i+1}] {job['title']}\n    {job['description'][:150]}\n    URL: {job['url']}\n"
+
+        prompt = f"""Selecciona las {top_n} MEJORES ofertas para el puesto "{position}" en {location or 'España'}.
+
+OFERTAS:
+{jobs_text}
+
+CRITERIOS:
+1. Relevancia con el puesto buscado
+2. Calidad de la descripción
+3. Empresa reconocida
+
+Devuelve SOLO los {top_n} números de las mejores ofertas, separados por comas.
+Ejemplo: 2,5,1
+
+SELECCIÓN:"""
+
+        try:
+            response = self.llm.invoke(prompt)
+            selection = response.content if hasattr(response, 'content') else str(response)
+
+            import re
+            numbers = re.findall(r'\d+', selection)
+            selected = []
+
+            for num in numbers:
+                idx = int(num) - 1
+                if 0 <= idx < len(jobs) and jobs[idx] not in selected:
+                    selected.append(jobs[idx])
+                if len(selected) >= top_n:
+                    break
+
+            # Completar si faltan
+            if len(selected) < top_n:
+                for job in jobs:
+                    if job not in selected:
+                        selected.append(job)
+                        if len(selected) >= top_n:
+                            break
+
+            return selected
+
+        except Exception as e:
+            logger.warning(f"Error seleccionando ofertas: {e}")
+            return jobs[:top_n]
+
+    def get_schema(self) -> dict:
+        return {
+            'name': self.name,
+            'description': self.description,
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'location': {
+                        'type': 'string',
+                        'description': 'Ciudad o provincia para la búsqueda (opcional, usa la del perfil si no se especifica)'
+                    },
+                    'top_n': {
+                        'type': 'integer',
+                        'description': 'Número de mejores ofertas a devolver por cada puesto del ranking (default: 3)',
+                        'default': 3
+                    }
+                },
+                'required': []
             }
         }
 
@@ -867,19 +1396,22 @@ class SearchRecentJobsTool(BaseTool):
                     seen_titles.append(title_norm)
                     unique_jobs.append(job)
 
-            # Rankear por recencia usando LLM
-            if self.llm and len(unique_jobs) > 15:
-                top_jobs = self._rank_recent_jobs(unique_jobs, query, location)
-            else:
-                top_jobs = unique_jobs[:15]
-
-            # Verificar y enriquecer (reutilizar métodos de JobSearchTool)
+            # Reutilizar métodos de JobSearchTool
             job_search_tool = JobSearchTool(
                 llm=self.llm,
                 web_search_tool=self.web_search_tool,
                 browse_tool=self.browse_tool,
                 user_profile=self.user_profile
             )
+
+            # Filtrar URLs de listados
+            individual_jobs = job_search_tool._filter_individual_jobs(unique_jobs)
+
+            # Rankear por recencia usando LLM
+            if self.llm and len(individual_jobs) > 15:
+                top_jobs = self._rank_recent_jobs(individual_jobs, query, location)
+            else:
+                top_jobs = individual_jobs[:15]
 
             if self.browse_tool:
                 verified_jobs = job_search_tool._verify_active_jobs(top_jobs, unique_jobs)

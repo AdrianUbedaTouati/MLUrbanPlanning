@@ -26,6 +26,7 @@ class GetFullCVTool(BaseTool):
 
     def __init__(self, user):
         self.user = user
+        super().__init__()
 
     def run(self) -> dict:
         """Retorna el CV completo del usuario."""
@@ -59,3 +60,10 @@ class GetFullCVTool(BaseTool):
                 'success': False,
                 'error': f'Error al obtener el CV: {str(e)}'
             }
+
+    def get_schema(self) -> dict:
+        return {
+            'name': self.name,
+            'description': self.description,
+            'parameters': self.parameters
+        }

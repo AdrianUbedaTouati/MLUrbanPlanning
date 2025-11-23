@@ -6,6 +6,7 @@ Soporta Ollama, OpenAI y Google Gemini.
 
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+from datetime import datetime
 import sys
 import logging
 import json
@@ -237,7 +238,12 @@ class FunctionCallingAgent:
         messages = []
 
         # System prompt para búsqueda de empleo
+        now = datetime.now()
+        fecha_hora = now.strftime("%d/%m/%Y a las %H:%M")
+
         system_prompt_parts = [
+            f"Fecha y hora actual: {fecha_hora}",
+            "",
             "Eres un asistente experto en búsqueda de empleo y orientación profesional.",
             "Tu objetivo es ayudar a los usuarios a encontrar ofertas de trabajo, empresas y contactos de reclutadores.",
             "",
@@ -277,9 +283,9 @@ class FunctionCallingAgent:
             "- Empresa (usa 'verified_details.company' si está disponible)",
             "- Ubicación (usa 'verified_details.location' si está disponible)",
             "- Salario (usa 'verified_details.salary' si está disponible)",
-            "- Por qué encaja con el perfil (usa 'fit_analysis' - debe ser ESPECÍFICO mencionando habilidades concretas)",
+            "- Por qué encaja: USA EL CAMPO 'fit_analysis' que contiene análisis detallado con tecnologías específicas, requisitos concretos y responsabilidades del puesto. NO generes texto genérico.",
             "- Link directo a la oferta",
-            "- Contacto del reclutador (si está disponible en 'recruiter': nombre y LinkedIn)",
+            "- Contacto del reclutador: SOLO si 'recruiter.verified' es true, muestra nombre y LinkedIn. El campo 'recruiter.role' indica su puesto actual en la empresa.",
             "- Estado de verificación (usa 'verification.confidence' para indicar si está verificada)",
             "",
             "EJEMPLOS DE USO:",
