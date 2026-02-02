@@ -13,38 +13,24 @@
 </p>
 
 <p align="center">
-  <a href="https://vocesalviento.com">vocesalviento.com</a>
+  <a href="https://vocesalviento.com">https://vocesalviento.com</a>
 </p>
 
 ---
 
-## Description Generale
+## Application en Ligne
 
-MLUrbanPlanning est une plateforme web qui aide les candidats a trouver des offres d'emploi grace a des **agents d'intelligence artificielle** qui analysent le CV de l'utilisateur, recherchent des offres sur le web et generent des recommandations personnalisees. Le systeme utilise le **Function Calling** avec jusqu'a 15 iterations automatiques pour resoudre des requetes complexes.
+L'application est **deployee et accessible publiquement** a l'adresse :
 
-### Fonctionnalites principales
+> **https://vocesalviento.com**
 
-- **Analyse de CV avec IA** - Extraction automatique des competences, experience, formation et langues depuis un PDF ou texte
-- **Recherche intelligente d'emploi** - Agent qui recherche des offres sur le web et les filtre selon le profil du candidat
-- **Chat interactif avec Function Calling** - Conversation naturelle avec l'agent qui execute des outils automatiquement
-- **Multi-fournisseur LLM** - Support pour Google Gemini, OpenAI, NVIDIA et Ollama (100% local et prive)
-- **Analyse de compatibilite** - Score de compatibilite entre le profil du candidat et les offres trouvees
-- **Navigation web interactive** - Playwright pour naviguer sur des portails d'emploi complexes
-- **Bilingue** - Interface disponible en francais et en espagnol
-
----
-
-## URL Publique
-
-L'application est deployee et accessible a l'adresse :
-
-**https://vocesalviento.com**
+Vous pouvez la tester directement depuis votre navigateur, sans aucune installation locale necessaire.
 
 ---
 
 ## Utilisateur de Test
 
-La plateforme dispose d'un utilisateur pre-configure avec les APIs et un profil complet pret a tester :
+Un utilisateur est deja pre-configure avec les cles API et un profil complet :
 
 | Champ | Valeur |
 |-------|--------|
@@ -56,7 +42,146 @@ La plateforme dispose d'un utilisateur pre-configure avec les APIs et un profil 
 | **API Google Search** | Configuree |
 | **Profil CV** | Complet avec competences, experience et preferences |
 
-> L'utilisateur dispose deja des cles API OpenAI et Google Search configurees, ainsi qu'un profil de candidat avec un CV analyse et des preferences de recherche definies.
+---
+
+## Guide de Test Pas a Pas
+
+Voici les etapes recommandees pour tester la plateforme de bout en bout :
+
+### Etape 1 - Se connecter et configurer le profil
+
+1. Accedez a **https://vocesalviento.com** et connectez-vous avec `pepe2012` / `pepe2012`.
+2. Allez dans **Mon Profil** (icone utilisateur en haut a droite).
+3. Renseignez votre **nom et prenom**, votre **localisation** (ex: Madrid, Barcelona, Paris).
+4. Dans la section **Preferences de recherche**, configurez la **modalite de travail** sur **Indiferente** (ou laissez vide) pour obtenir un maximum d'offres dans les resultats.
+5. Enregistrez le profil.
+
+### Etape 2 - Telecharger et analyser le CV
+
+1. Depuis votre profil, allez a la section **Mon Curriculum**.
+2. Vous pouvez soit coller le texte de votre CV, soit telecharger un fichier PDF.
+3. Si vous telechargez un **PDF**, le systeme utilise l'extraction de texte (PyPDF2) ou, si le PDF est une image scannee, **GPT-4 Vision (OCR)** pour lire le contenu.
+4. Une fois le texte du CV charge, cliquez sur **Analyser le CV**. L'IA (OpenAI ou le fournisseur configure) analysera le contenu et extraira automatiquement :
+   - Les **competences techniques** (langages, frameworks, outils)
+   - L'**experience professionnelle** (postes, durees)
+   - La **formation** (diplomes, certifications)
+   - Les **langues parlees**
+   - Un **resume professionnel** structure
+5. Cliquez ensuite sur **Enregistrer le CV** pour sauvegarder le texte et le resume dans votre profil.
+
+### Etape 3 - Consulter le ranking de postes recommandes
+
+Apres l'analyse du CV, le systeme genere automatiquement un **ranking de postes recommandes** : une liste ordonnee des metiers les plus adaptes a votre profil, basee sur vos competences, votre experience et votre formation. Ce ranking est visible dans votre profil et sera utilise par l'agent IA pour personnaliser les recherches d'emploi.
+
+### Etape 4 - Ouvrir un chat et chercher des offres
+
+1. Allez dans **Chat IA** > **Nouvelle Conversation**.
+2. Decrivez vos preferences en langage naturel. Par exemple :
+   - *"Cherche des offres de developpeur Python a Madrid"*
+   - *"Je veux des postes en teletravail dans la data science"*
+   - *"Trouve des offres de marketing digital a Barcelona, contrat indefini"*
+3. L'agent IA va automatiquement :
+   - Charger votre profil et votre CV
+   - Rechercher des offres sur le web (Google, portails d'emploi)
+   - Filtrer et classer les resultats selon votre profil
+   - Verifier que les offres sont **actives** en naviguant sur les pages
+   - Generer une **analyse de compatibilite** (fit analysis) pour chaque offre
+4. Les resultats incluent : titre du poste, entreprise, localisation, lien direct, score de compatibilite et details specifiques.
+
+---
+
+## Fonctionnement de l'Agent IA
+
+### Architecture Function Calling
+
+Le coeur du systeme est un **agent a Function Calling** base sur LangChain. Contrairement a un simple chatbot, l'agent peut **executer des outils de maniere autonome** en boucle, jusqu'a 15 iterations par requete.
+
+Le cycle de fonctionnement est le suivant :
+
+```
+1. L'utilisateur envoie un message
+2. L'agent charge automatiquement le profil utilisateur (1ere iteration)
+3. Le LLM analyse le message et decide quel outil appeler
+4. L'outil s'execute et retourne un resultat
+5. Le LLM analyse le resultat et decide :
+   - Appeler un autre outil (retour a l'etape 3)
+   - Ou generer la reponse finale
+6. Reponse envoyee a l'utilisateur
+```
+
+L'agent utilise un **raisonnement en chaine** : a chaque iteration, le LLM voit tout l'historique (messages + resultats d'outils) et decide de la prochaine action. Il n'y a pas de script fixe : l'agent s'adapte a la requete.
+
+### Outils (Tools) de l'Agent
+
+L'agent dispose de **8 outils** qu'il peut combiner librement :
+
+| Outil | Fonction |
+|-------|----------|
+| `get_user_profile` | Recupere le profil complet du candidat (CV, competences, preferences, ranking) |
+| `get_full_cv` | Retourne le texte integral du curriculum |
+| `search_jobs` | Recherche d'offres d'emploi via le web. Analyse ~60 offres, retourne les 15 meilleures avec verification et score de compatibilite |
+| `search_recent_jobs` | Recherche d'offres publiees dans les dernieres 24-48h |
+| `search_jobs_by_ranking` | Recherche 10 offres pour chaque poste du ranking CV, retourne le top 3 de chaque |
+| `recommend_companies` | Recommande des entreprises par secteur/localisation, inclut les contacts recruteurs |
+| `web_search` | Recherche Google Custom Search pour des requetes generiques |
+| `browse_webpage` | Extrait le contenu d'une page web pour verifier qu'une offre est active et extraire les details |
+
+### Systeme de Scoring et Compatibilite
+
+Chaque offre trouvee est evaluee selon un **algorithme de scoring sur 100 points** :
+
+| Critere | Points | Description |
+|---------|--------|-------------|
+| **Correspondance technique** | 35 pts | Alignement entre les competences du candidat et les technologies demandees |
+| **Localisation et modalite** | 25 pts | Filtre strict : la ville et le mode de travail (remote/presentiel/hybride) doivent correspondre |
+| **Salaire et avantages** | 20 pts | Salaire mentionne et competitif par rapport aux attentes |
+| **Qualite de l'offre** | 10 pts | Clarte de la description, reputation de l'entreprise |
+| **Type de contrat** | 10 pts | Indefini > stable > temporaire |
+
+De plus, chaque offre inclut un **fit_analysis** : une analyse specifique qui detaille les technologies mentionnees, les annees d'experience requises, les responsabilites concretes et la correspondance avec le profil du candidat.
+
+### Verification des Offres
+
+L'agent ne se contente pas de lister des resultats de recherche. Il **navigue sur les pages des offres** (via `browse_webpage`) pour :
+- Verifier que l'offre est **encore active**
+- Extraire les **details reels** du poste (technologies, salaire, modalite)
+- Generer l'analyse de compatibilite basee sur le contenu reel
+- Attribuer un **niveau de confiance** (haute/moyenne/basse) a la verification
+
+### Cycle de Revision (optionnel)
+
+Apres la generation de la reponse initiale, le systeme peut executer un **cycle de revision** :
+1. Un `ResponseReviewer` evalue la qualite de la reponse (score 0-100)
+2. Si la qualite est insuffisante, une deuxieme requete est lancee avec du feedback
+3. La reponse amelioree est fusionnee et renvoyee a l'utilisateur
+
+### Multi-Fournisseur LLM
+
+Chaque utilisateur configure son fournisseur d'IA depuis son profil :
+
+| Fournisseur | Modele par defaut | Cle API | Cout |
+|-------------|-------------------|---------|------|
+| **Ollama** | qwen2.5:7b | Non requise | Gratuit (local) |
+| **Google Gemini** | gemini-2.5-flash | Oui | Payant |
+| **OpenAI** | gpt-4o-mini | Oui | Payant |
+| **NVIDIA** | llama-3.1-8b | Oui | Payant |
+
+---
+
+## Description Generale
+
+MLUrbanPlanning est une plateforme web qui aide les candidats a trouver des offres d'emploi grace a des **agents d'intelligence artificielle** qui analysent le CV de l'utilisateur, recherchent des offres sur le web et generent des recommandations personnalisees. Le systeme utilise le **Function Calling** avec jusqu'a 15 iterations automatiques pour resoudre des requetes complexes.
+
+### Fonctionnalites principales
+
+- **Analyse de CV avec IA** - Extraction automatique des competences, experience, formation et langues depuis un PDF ou texte. Support OCR via GPT-4 Vision pour les PDF scannes.
+- **Ranking de postes** - Classification automatique des metiers les plus adaptes au profil du candidat.
+- **Recherche intelligente d'emploi** - Agent qui recherche des offres sur le web, les filtre, les verifie et les classe selon le profil.
+- **Chat interactif avec Function Calling** - Conversation naturelle avec l'agent qui execute des outils automatiquement (jusqu'a 15 iterations).
+- **Multi-fournisseur LLM** - Support pour Google Gemini, OpenAI, NVIDIA et Ollama (100% local et prive).
+- **Analyse de compatibilite** - Score sur 100 et analyse detaillee pour chaque offre.
+- **Navigation web interactive** - Verification des offres en temps reel via Playwright.
+- **Bilingue** - Interface disponible en francais et en espagnol.
 
 ---
 
@@ -70,33 +195,7 @@ La plateforme dispose d'un utilisateur pre-configure avec les APIs et un profil 
 | **Frontend** | Bootstrap 5, JavaScript (AJAX) |
 | **Base de donnees** | SQLite (developpement) / PostgreSQL (production) |
 | **Web Scraping** | Playwright (navigation interactive) |
-| **Serveur** | Nginx + HTTPS (Let's Encrypt) |
-
----
-
-## Architecture de l'Agent
-
-Le systeme utilise un **Function Calling Agent** qui decide de maniere autonome quels outils executer :
-
-```
-Utilisateur : "Cherche des offres de data science a Paris"
-
-  -> L'agent analyse la requete
-  -> Execute : get_user_profile() -> obtient le CV et les preferences
-  -> Execute : search_jobs(query="data science", location="Paris")
-  -> Analyse ~60 offres, selectionne le top 15
-  -> Genere une analyse de compatibilite avec un score
-  -> Reponse finale avec les offres classees
-```
-
-### Outils disponibles
-
-| Categorie | Outils | Description |
-|-----------|--------|-------------|
-| **Profil** | `get_user_profile`, `get_full_cv` | Contexte du candidat |
-| **Recherche** | `search_jobs`, `web_search` | Recherche d'offres et web |
-| **Analyse** | `analyze_cv`, `recommend_companies` | Analyse de CV et recommandations |
-| **Navigation** | `browse_webpage`, `browse_interactive` | Extraction web et Playwright |
+| **Serveur** | Nginx + Gunicorn + HTTPS (Let's Encrypt) |
 
 ---
 
@@ -111,10 +210,10 @@ MLUrbanPlanning/
 │   ├── chat/                   # Sessions de chat et messages
 │   └── core/                   # Tableau de bord, accueil, profil
 ├── agent_ia_core/              # Moteur IA
-│   ├── agent_function_calling.py   # Agent principal
-│   ├── config.py                   # Configuration
+│   ├── agent_function_calling.py   # Agent principal (boucle FC)
+│   ├── config.py                   # Configuration et prompts
 │   ├── tools/
-│   │   ├── agent_tools/            # Outils de l'agent
+│   │   ├── agent_tools/            # 8 outils de l'agent
 │   │   └── core/                   # Registry et classes de base
 │   └── schema/                     # Validation des donnees
 ├── templates/                  # Templates HTML
@@ -152,28 +251,14 @@ Accedez a `http://127.0.0.1:8000`
 
 ---
 
-## Configuration du LLM
-
-Chaque utilisateur configure son fournisseur d'IA depuis **Mon Profil > Modifier le Profil** :
-
-| Fournisseur | Modele par defaut | Cle API | Cout |
-|-------------|-------------------|---------|------|
-| **Ollama** | qwen2.5:7b | Non requise | Gratuit (local) |
-| **Google Gemini** | gemini-2.5-flash | Oui | Payant |
-| **OpenAI** | gpt-4o-mini | Oui | Payant |
-| **NVIDIA** | llama-3.1-8b | Oui | Payant |
-
----
-
 ## Interface
 
 L'interface suit un design minimaliste inspire d'Apple avec :
 
-- Chat interactif avec AJAX (sans rechargement)
+- Chat interactif avec AJAX (sans rechargement de page)
 - Indicateur de saisie anime pendant que l'IA repond
-- Metadonnees visibles : tokens utilises, outils executes
+- Metadonnees visibles par message : tokens utilises, outils executes, cout
 - Design responsive pour mobile et desktop
-- Support du mode sombre
 
 ---
 
