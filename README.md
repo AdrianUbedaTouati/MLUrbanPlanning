@@ -1,4 +1,4 @@
-# MLUrbanPlanning - AI Job Search Platform
+# MLUrbanPlanning - Plateforme IA de Recherche d'Emploi
 
 <p align="center">
   <img src="https://img.shields.io/badge/Django-5.1.6-092E20?style=for-the-badge&logo=django&logoColor=white" />
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>Plataforma inteligente de busqueda de empleo potenciada por agentes IA con Function Calling</b>
+  <b>Plateforme intelligente de recherche d'emploi propulsee par des agents IA avec Function Calling</b>
 </p>
 
 <p align="center">
@@ -18,171 +18,165 @@
 
 ---
 
-## Descripcion General
+## Description Generale
 
-MLUrbanPlanning es una plataforma web que ayuda a candidatos a encontrar ofertas de empleo mediante **agentes de IA** que analizan el CV del usuario, buscan ofertas en la web y generan recomendaciones personalizadas. El sistema utiliza **Function Calling** con hasta 15 iteraciones automaticas para resolver consultas complejas.
+MLUrbanPlanning est une plateforme web qui aide les candidats a trouver des offres d'emploi grace a des **agents d'intelligence artificielle** qui analysent le CV de l'utilisateur, recherchent des offres sur le web et generent des recommandations personnalisees. Le systeme utilise le **Function Calling** avec jusqu'a 15 iterations automatiques pour resoudre des requetes complexes.
 
-### Funcionalidades principales
+### Fonctionnalites principales
 
-- **Analisis de CV con IA** - Extraccion automatica de skills, experiencia, educacion e idiomas desde PDF o texto
-- **Busqueda inteligente de empleo** - Agente que busca ofertas en la web y las filtra segun el perfil del candidato
-- **Chat interactivo con Function Calling** - Conversacion natural con el agente que ejecuta herramientas automaticamente
-- **Multi-proveedor LLM** - Soporte para Google Gemini, OpenAI, NVIDIA y Ollama (100% local y privado)
-- **Fit Analysis** - Puntuacion de compatibilidad entre el perfil del candidato y las ofertas encontradas
-- **Navegacion web interactiva** - Playwright para navegar portales de empleo complejos
+- **Analyse de CV avec IA** - Extraction automatique des competences, experience, formation et langues depuis un PDF ou texte
+- **Recherche intelligente d'emploi** - Agent qui recherche des offres sur le web et les filtre selon le profil du candidat
+- **Chat interactif avec Function Calling** - Conversation naturelle avec l'agent qui execute des outils automatiquement
+- **Multi-fournisseur LLM** - Support pour Google Gemini, OpenAI, NVIDIA et Ollama (100% local et prive)
+- **Analyse de compatibilite** - Score de compatibilite entre le profil du candidat et les offres trouvees
+- **Navigation web interactive** - Playwright pour naviguer sur des portails d'emploi complexes
+- **Bilingue** - Interface disponible en francais et en espagnol
 
 ---
 
-## URL Publica
+## URL Publique
 
-La aplicacion esta desplegada y accesible en:
+L'application est deployee et accessible a l'adresse :
 
 **https://vocesalviento.com**
 
 ---
 
-## Usuario de Prueba
+## Utilisateur de Test
 
-La plataforma tiene un usuario pre-configurado con APIs y perfil completo listo para probar:
+La plateforme dispose d'un utilisateur pre-configure avec les APIs et un profil complet pret a tester :
 
-| Campo | Valor |
-|-------|-------|
-| **Usuario** | `pepe2012` |
-| **Email** | `annndriancito2012@gmail.com` |
-| **Proveedor LLM** | OpenAI |
-| **API Key LLM** | Configurada |
-| **Google Search API** | Configurada |
-| **Perfil CV** | Completo con skills, experiencia y preferencias |
+| Champ | Valeur |
+|-------|--------|
+| **Nom d'utilisateur** | `pepe2012` |
+| **Mot de passe** | `pepe2012` |
+| **E-mail** | `annndriancito2012@gmail.com` |
+| **Fournisseur LLM** | OpenAI |
+| **Cle API LLM** | Configuree |
+| **API Google Search** | Configuree |
+| **Profil CV** | Complet avec competences, experience et preferences |
 
-> El usuario ya tiene configuradas las API keys de OpenAI y Google Search, ademas de un perfil de candidato con CV analizado y preferencias de busqueda definidas.
+> L'utilisateur dispose deja des cles API OpenAI et Google Search configurees, ainsi qu'un profil de candidat avec un CV analyse et des preferences de recherche definies.
 
 ---
 
-## Stack Tecnologico
+## Stack Technologique
 
-| Componente | Tecnologia |
-|------------|------------|
+| Composant | Technologie |
+|-----------|-------------|
 | **Backend** | Django 5.1.6, Python 3.12 |
-| **IA / Agentes** | LangChain 0.3+, Function Calling Agent |
+| **IA / Agents** | LangChain 0.3+, Function Calling Agent |
 | **LLMs** | Google Gemini 2.5 Flash, OpenAI GPT-4o, NVIDIA NIM, Ollama |
 | **Frontend** | Bootstrap 5, JavaScript (AJAX) |
-| **Base de datos** | SQLite (desarrollo) / PostgreSQL (produccion) |
-| **Web Scraping** | Playwright (navegacion interactiva) |
-| **Servidor** | Nginx + HTTPS (Let's Encrypt) |
+| **Base de donnees** | SQLite (developpement) / PostgreSQL (production) |
+| **Web Scraping** | Playwright (navigation interactive) |
+| **Serveur** | Nginx + HTTPS (Let's Encrypt) |
 
 ---
 
-## Arquitectura del Agente
+## Architecture de l'Agent
 
-El sistema utiliza un **Function Calling Agent** que decide autonomamente que herramientas ejecutar:
+Le systeme utilise un **Function Calling Agent** qui decide de maniere autonome quels outils executer :
 
 ```
-Usuario: "Busca ofertas de data science en Madrid"
+Utilisateur : "Cherche des offres de data science a Paris"
 
-  -> Agente analiza la consulta
-  -> Ejecuta: get_user_profile() -> obtiene CV y preferencias
-  -> Ejecuta: search_jobs(query="data science", location="Madrid")
-  -> Analiza ~60 ofertas, selecciona top 15
-  -> Genera fit_analysis con puntuacion de compatibilidad
-  -> Respuesta final con ofertas rankeadas
+  -> L'agent analyse la requete
+  -> Execute : get_user_profile() -> obtient le CV et les preferences
+  -> Execute : search_jobs(query="data science", location="Paris")
+  -> Analyse ~60 offres, selectionne le top 15
+  -> Genere une analyse de compatibilite avec un score
+  -> Reponse finale avec les offres classees
 ```
 
-### Herramientas disponibles
+### Outils disponibles
 
-| Categoria | Herramientas | Descripcion |
-|-----------|-------------|-------------|
-| **Perfil** | `get_user_profile`, `get_full_cv` | Contexto del candidato |
-| **Busqueda** | `search_jobs`, `web_search` | Busqueda de ofertas y web |
-| **Analisis** | `analyze_cv`, `recommend_companies` | Analisis de CV y recomendaciones |
-| **Navegacion** | `browse_webpage`, `browse_interactive` | Extraccion web y Playwright |
+| Categorie | Outils | Description |
+|-----------|--------|-------------|
+| **Profil** | `get_user_profile`, `get_full_cv` | Contexte du candidat |
+| **Recherche** | `search_jobs`, `web_search` | Recherche d'offres et web |
+| **Analyse** | `analyze_cv`, `recommend_companies` | Analyse de CV et recommandations |
+| **Navigation** | `browse_webpage`, `browse_interactive` | Extraction web et Playwright |
 
 ---
 
-## Estructura del Proyecto
+## Structure du Projet
 
 ```
 MLUrbanPlanning/
-├── config/                     # Settings y URLs de Django
+├── config/                     # Settings et URLs Django
 ├── apps/
-│   ├── authentication/         # Usuarios, login, API keys
-│   ├── company/                # Perfil candidato, CV, preferencias
-│   ├── chat/                   # Sesiones de chat y mensajes
-│   └── core/                   # Dashboard, home, perfil
-├── agent_ia_core/              # Motor de IA
-│   ├── agent_function_calling.py   # Agente principal
-│   ├── config.py                   # Configuracion
+│   ├── authentication/         # Utilisateurs, connexion, cles API
+│   ├── company/                # Profil candidat, CV, preferences
+│   ├── chat/                   # Sessions de chat et messages
+│   └── core/                   # Tableau de bord, accueil, profil
+├── agent_ia_core/              # Moteur IA
+│   ├── agent_function_calling.py   # Agent principal
+│   ├── config.py                   # Configuration
 │   ├── tools/
-│   │   ├── agent_tools/            # Herramientas del agente
-│   │   └── core/                   # Registry y base classes
-│   └── schema/                     # Validacion de datos
+│   │   ├── agent_tools/            # Outils de l'agent
+│   │   └── core/                   # Registry et classes de base
+│   └── schema/                     # Validation des donnees
 ├── templates/                  # Templates HTML
-├── static/                     # CSS, JS (diseno Apple-inspired)
-├── data/                       # Base de datos y registros
-├── media/                      # CVs subidos por usuarios
+├── static/                     # CSS, JS (design inspire d'Apple)
+├── data/                       # Base de donnees et registres
+├── media/                      # CVs telecharges par les utilisateurs
 └── manage.py
 ```
 
 ---
 
-## Instalacion Local
+## Installation Locale
 
 ```bash
-# Clonar repositorio
+# Cloner le depot
 git clone https://github.com/AdrianUbedaTouati/MLUrbanPlanning.git
 cd MLUrbanPlanning
 
-# Entorno virtual
+# Environnement virtuel
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Dependencias
+# Dependances
 pip install -r requirements.txt
 
-# Variables de entorno
-cp .env.example .env   # Editar con tus API keys
+# Variables d'environnement
+cp .env.example .env   # Editer avec vos cles API
 
-# Migraciones y servidor
+# Migrations et serveur
 python manage.py migrate
 python manage.py runserver
 ```
 
-Accede a `http://127.0.0.1:8000`
+Accedez a `http://127.0.0.1:8000`
 
 ---
 
-## Configuracion de LLM
+## Configuration du LLM
 
-Cada usuario configura su proveedor de IA desde **Mi Perfil > Editar Perfil**:
+Chaque utilisateur configure son fournisseur d'IA depuis **Mon Profil > Modifier le Profil** :
 
-| Proveedor | Modelo por defecto | API Key | Coste |
-|-----------|-------------------|---------|-------|
-| **Ollama** | qwen2.5:7b | No necesita | Gratis (local) |
-| **Google Gemini** | gemini-2.5-flash | Si | Pago |
-| **OpenAI** | gpt-4o-mini | Si | Pago |
-| **NVIDIA** | llama-3.1-8b | Si | Pago |
-
----
-
-## Capturas
-
-La interfaz sigue un diseno minimalista inspirado en Apple con:
-
-- Chat interactivo con AJAX (sin recargas)
-- Typing indicator animado mientras la IA responde
-- Metadata visible: tokens usados, herramientas ejecutadas
-- Responsive design para movil y desktop
-- Soporte para dark mode
+| Fournisseur | Modele par defaut | Cle API | Cout |
+|-------------|-------------------|---------|------|
+| **Ollama** | qwen2.5:7b | Non requise | Gratuit (local) |
+| **Google Gemini** | gemini-2.5-flash | Oui | Payant |
+| **OpenAI** | gpt-4o-mini | Oui | Payant |
+| **NVIDIA** | llama-3.1-8b | Oui | Payant |
 
 ---
 
-## Autor
+## Interface
 
-**Adrian Ubeda Touati**
+L'interface suit un design minimaliste inspire d'Apple avec :
 
-- GitHub: [@AdrianUbedaTouati](https://github.com/AdrianUbedaTouati)
+- Chat interactif avec AJAX (sans rechargement)
+- Indicateur de saisie anime pendant que l'IA repond
+- Metadonnees visibles : tokens utilises, outils executes
+- Design responsive pour mobile et desktop
+- Support du mode sombre
 
 ---
 
-## Licencia
+## Licence
 
-Proyecto academico - Todos los derechos reservados.
+Projet academique - Tous droits reserves.

@@ -79,19 +79,19 @@ class UserProfileView(LoginRequiredMixin, View):
 
             profile.save()
 
-            messages.success(request, 'Perfil actualizado correctamente.')
+            messages.success(request, 'Profil mis a jour correctement.')
             return redirect('apps_company:profile')
 
         except json.JSONDecodeError as e:
-            messages.error(request, f'Error al procesar los datos: {str(e)}')
+            messages.error(request, f'Erreur lors du traitement des donnees : {str(e)}')
             return redirect('apps_company:profile')
 
         except ValueError as e:
-            messages.error(request, f'Error en los datos numéricos: {str(e)}')
+            messages.error(request, f'Erreur dans les donnees numeriques : {str(e)}')
             return redirect('apps_company:profile')
 
         except Exception as e:
-            messages.error(request, f'Error al guardar el perfil: {str(e)}')
+            messages.error(request, f'Erreur lors de la sauvegarde du profil : {str(e)}')
             return redirect('apps_company:profile')
 
 
@@ -107,20 +107,20 @@ class AnalyzeCVView(LoginRequiredMixin, View):
         if not cv_text:
             return JsonResponse({
                 'success': False,
-                'error': 'El texto del CV no puede estar vacío.'
+                'error': 'Le texte du CV ne peut pas etre vide.'
             }, status=400)
 
         if len(cv_text) < 100:
             return JsonResponse({
                 'success': False,
-                'error': 'El CV es demasiado corto. Proporciona más información sobre tu experiencia.'
+                'error': 'Le CV est trop court. Fournissez plus d\'informations sur votre experience.'
             }, status=400)
 
         # Verificar API key
         if not request.user.llm_api_key and request.user.llm_provider != 'ollama':
             return JsonResponse({
                 'success': False,
-                'error': 'No tienes configurada una API key. Configúrala en tu perfil de usuario.'
+                'error': 'Vous n\'avez pas configure de cle API. Configurez-la dans votre profil utilisateur.'
             }, status=400)
 
         try:
@@ -185,7 +185,7 @@ class AnalyzeCVView(LoginRequiredMixin, View):
             return JsonResponse({
                 'success': True,
                 'data': extracted_data,
-                'message': 'CV analizado correctamente. Tu perfil ha sido actualizado.'
+                'message': 'CV analyse correctement. Votre profil a ete mis a jour.'
             })
 
         except Exception as e:
@@ -194,7 +194,7 @@ class AnalyzeCVView(LoginRequiredMixin, View):
 
             return JsonResponse({
                 'success': False,
-                'error': f'Error al analizar el CV: {str(e)}'
+                'error': f'Erreur lors de l\'analyse du CV : {str(e)}'
             }, status=500)
 
 
@@ -206,7 +206,7 @@ class ExtractPDFTextView(LoginRequiredMixin, View):
         if 'pdf_file' not in request.FILES:
             return JsonResponse({
                 'success': False,
-                'error': 'No se ha subido ningun archivo.'
+                'error': 'Aucun fichier n\'a ete telecharge.'
             }, status=400)
 
         pdf_file = request.FILES['pdf_file']
@@ -214,7 +214,7 @@ class ExtractPDFTextView(LoginRequiredMixin, View):
         if not pdf_file.name.lower().endswith('.pdf'):
             return JsonResponse({
                 'success': False,
-                'error': 'El archivo debe ser un PDF.'
+                'error': 'Le fichier doit etre un PDF.'
             }, status=400)
 
         try:
@@ -235,7 +235,7 @@ class ExtractPDFTextView(LoginRequiredMixin, View):
                 except ImportError:
                     return JsonResponse({
                         'success': False,
-                        'error': 'No hay libreria PDF instalada. Instala PyPDF2 o pdfminer.six'
+                        'error': 'Aucune librairie PDF installee. Installez PyPDF2 ou pdfminer.six'
                     }, status=500)
 
             text = text.strip()
@@ -243,7 +243,7 @@ class ExtractPDFTextView(LoginRequiredMixin, View):
             if not text:
                 return JsonResponse({
                     'success': False,
-                    'error': 'No se pudo extraer texto del PDF. Puede que sea una imagen escaneada.'
+                    'error': 'Le texte n\'a pas pu etre extrait du PDF. Il peut s\'agir d\'une image scannee.'
                 }, status=400)
 
             return JsonResponse({
@@ -254,7 +254,7 @@ class ExtractPDFTextView(LoginRequiredMixin, View):
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'error': f'Error al procesar el PDF: {str(e)}'
+                'error': f'Erreur lors du traitement du PDF : {str(e)}'
             }, status=500)
 
 

@@ -1,6 +1,6 @@
 ﻿{% extends 'authentication/base_auth.html' %}
 
-{% block title %}Reenviar Confirmación - BasePage{% endblock %}
+{% block title %}Renvoyer la Confirmation - BasePage{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,28 +8,28 @@
         <div class="col-md-6 col-lg-5">
             <div class="card shadow">
                 <div class="card-body p-5">
-                    <h2 class="text-center mb-4">Reenviar Email de Confirmación</h2>
+                    <h2 class="text-center mb-4">Renvoyer l'E-mail de Confirmation</h2>
 
                     {% if user.is_authenticated %}
                         {% if user.email_verified %}
                             <div class="alert alert-info">
-                                <i class="bi bi-check-circle"></i> Tu cuenta ya está confirmada.
+                                <i class="bi bi-check-circle"></i> Votre compte est deja confirme.
                             </div>
                             <div class="text-center">
                                 <a href="{% url 'apps_authentication:profile' %}" class="btn btn-primary">
-                                    <i class="bi bi-person"></i> Ir al perfil
+                                    <i class="bi bi-person"></i> Aller au profil
                                 </a>
                             </div>
                         {% else %}
                             <p class="text-center text-muted mb-4">
-                                Haz clic en el botón para recibir un nuevo email de confirmación en <strong>{{ user.email }}</strong>
+                                Cliquez sur le bouton pour recevoir un nouvel e-mail de confirmation a <strong>{{ user.email }}</strong>
                             </p>
 
                             <form method="post">
                                 {% csrf_token %}
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-envelope"></i> Reenviar Email de Confirmación
+                                        <i class="bi bi-envelope"></i> Renvoyer l'E-mail de Confirmation
                                     </button>
                                 </div>
                             </form>
@@ -38,15 +38,15 @@
 
                             <div class="text-center">
                                 <p class="small text-muted">
-                                    ¿Email incorrecto?
-                                    <a href="{% url 'apps_authentication:logout' %}">Cerrar sesión</a>
-                                    y regístrate con el email correcto.
+                                    E-mail incorrect ?
+                                    <a href="{% url 'apps_authentication:logout' %}">Se deconnecter</a>
+                                    et inscrivez-vous avec le bon e-mail.
                                 </p>
                             </div>
                         {% endif %}
                     {% else %}
                         <p class="text-center text-muted mb-4">
-                            Ingresa tu email para recibir un nuevo enlace de confirmación.
+                            Entrez votre e-mail pour recevoir un nouveau lien de confirmation.
                         </p>
 
                         <form method="post">
@@ -59,7 +59,7 @@
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-envelope"></i> Enviar Email de Confirmación
+                                    <i class="bi bi-envelope"></i> Envoyer l'E-mail de Confirmation
                                 </button>
                             </div>
                         </form>
@@ -69,7 +69,7 @@
                         <div class="text-center">
                             <p>
                                 <a href="{% url 'apps_authentication:login' %}" class="text-decoration-none">
-                                    Volver al login
+                                    Retour a la connexion
                                 </a>
                             </p>
                         </div>

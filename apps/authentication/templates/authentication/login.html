@@ -1,6 +1,6 @@
-﻿{% extends 'authentication/base_auth.html' %}
+{% extends 'authentication/base_auth.html' %}
 
-{% block title %}Iniciar Sesión - BasePage{% endblock %}
+{% block title %}Connexion - JobSearchAI{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,7 +8,7 @@
         <div class="col-md-6 col-lg-5">
             <div class="card shadow">
                 <div class="card-body p-5">
-                    <h2 class="text-center mb-4">Iniciar Sesión</h2>
+                    <h2 class="text-center mb-4">Se connecter</h2>
 
                     <form method="post">
                         {% csrf_token %}
@@ -57,20 +57,20 @@
 
                         <div class="d-grid mb-3">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                                <i class="bi bi-box-arrow-in-right"></i> Se connecter
                             </button>
                         </div>
 
                         <div class="text-center">
                             <p class="mb-2">
                                 <a href="{% url 'apps_authentication:password_reset_request' %}" class="text-decoration-none">
-                                    ¿Olvidaste tu contraseña?
+                                    Mot de passe oublie ?
                                 </a>
                             </p>
                             <p>
-                                ¿No tienes cuenta?
+                                Pas encore de compte ?
                                 <a href="{% url 'apps_authentication:register' %}" class="text-decoration-none">
-                                    Regístrate aquí
+                                    Inscrivez-vous ici
                                 </a>
                             </p>
                         </div>

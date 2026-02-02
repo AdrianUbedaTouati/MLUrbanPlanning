@@ -1,7 +1,7 @@
 ﻿{% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Mis Conversaciones - TenderAI{% endblock %}
+{% block title %}Mes Conversations - JobSearchAI{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'chat/css/chat.css' %}">
@@ -272,13 +272,13 @@
     <div class="sessions-header">
         <h1 class="sessions-title">
             <i class="bi bi-chat-dots-fill"></i>
-            <span>Conversaciones</span>
+            <span>Conversations</span>
         </h1>
         <form method="post" action="{% url 'apps_chat:session_create' %}">
             {% csrf_token %}
             <button type="submit" class="btn-new-chat">
                 <i class="bi bi-plus-circle-fill"></i>
-                Nueva Conversación
+                Nouvelle Conversation
             </button>
         </form>
     </div>
@@ -287,11 +287,11 @@
     <div class="alert alert-info d-flex align-items-center mb-4" role="alert" style="border-radius: 16px; border-left: 4px solid #0d6efd;">
         <i class="bi bi-info-circle-fill me-3" style="font-size: 2rem;"></i>
         <div>
-            <h5 class="alert-heading mb-2"><strong>Completa tu perfil</strong></h5>
+            <h5 class="alert-heading mb-2"><strong>Completez votre profil</strong></h5>
             <p class="mb-0">
-                Para mejores resultados, completa tu perfil y sube tu CV.
+                Pour de meilleurs resultats, completez votre profil et telechargez votre CV.
                 <a href="{% url 'apps_company:profile' %}" class="alert-link fw-bold">
-                    <i class="bi bi-arrow-right-circle"></i> Ir a mi perfil
+                    <i class="bi bi-arrow-right-circle"></i> Aller a mon profil
                 </a>
             </p>
         </div>
@@ -306,7 +306,7 @@
                     <div class="session-card-header">
                         <div style="flex: 1;">
                             <h3 class="session-card-title">
-                                {{ session.title|default:"Nueva conversación"|truncatechars:100 }}
+                                {{ session.title|default:"Nouvelle conversation"|truncatechars:100 }}
                             </h3>
                             {% if session.last_message_optimized %}
                             <p class="session-card-preview">
@@ -320,18 +320,18 @@
                             </span>
                             <a href="{% url 'apps_chat:session_detail' session.id %}"
                                class="session-card-btn"
-                               title="Abrir conversación"
+                               title="Ouvrir la conversation"
                                onclick="event.stopPropagation();">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                             <form method="post"
                                   action="{% url 'apps_chat:session_delete' session.id %}"
                                   style="display: inline;"
-                                  onsubmit="event.stopPropagation(); return confirm('¿Estás seguro de que quieres eliminar esta conversación?');">
+                                  onsubmit="event.stopPropagation(); return confirm('Etes-vous sur de vouloir supprimer cette conversation ?');">
                                 {% csrf_token %}
                                 <button type="submit"
                                         class="session-card-btn delete-btn"
-                                        title="Eliminar conversación">
+                                        title="Supprimer la conversation">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
@@ -341,7 +341,7 @@
                 <div class="session-card-meta">
                     <span class="session-card-meta-item">
                         <i class="bi bi-chat-left-text-fill"></i>
-                        {{ session.message_count_optimized }} mensaje{{ session.message_count_optimized|pluralize }}
+                        {{ session.message_count_optimized }} message{{ session.message_count_optimized|pluralize:"s" }}
                     </span>
                     <span class="session-card-meta-item">
                         <i class="bi bi-clock-fill"></i>
@@ -349,7 +349,7 @@
                     </span>
                     {% if session.is_archived %}
                     <span class="badge badge-warning">
-                        <i class="bi bi-archive-fill"></i> Archivada
+                        <i class="bi bi-archive-fill"></i> Archivee
                     </span>
                     {% endif %}
                 </div>
@@ -357,29 +357,29 @@
             {% endfor %}
         </div>
 
-        <!-- Paginación -->
+        <!-- Pagination -->
         {% if is_paginated %}
         <div class="pagination-wrapper">
-            <nav aria-label="Paginación">
+            <nav aria-label="Pagination">
                 <ul class="pagination">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                            <i class="bi bi-chevron-left"></i> Anterior
+                            <i class="bi bi-chevron-left"></i> Precedent
                         </a>
                     </li>
                     {% endif %}
 
                     <li class="page-item active">
                         <span class="page-link">
-                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                            Page {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
                         </span>
                     </li>
 
                     {% if page_obj.has_next %}
                     <li class="page-item">
                         <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                            Siguiente <i class="bi bi-chevron-right"></i>
+                            Suivant <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>
                     {% endif %}
@@ -394,15 +394,15 @@
             <div class="empty-state-icon">
                 <i class="bi bi-chat-dots"></i>
             </div>
-            <h2 class="empty-state-title">No tienes conversaciones aún</h2>
+            <h2 class="empty-state-title">Vous n'avez pas encore de conversations</h2>
             <p class="empty-state-text">
-                Crea tu primera conversación y comienza a consultar con el asistente IA especializado en licitaciones públicas. Puedes hacer preguntas generales o buscar información en documentos específicos.
+                Creez votre premiere conversation et commencez a consulter l'assistant IA specialise dans la recherche d'emploi.
             </p>
             <form method="post" action="{% url 'apps_chat:session_create' %}">
                 {% csrf_token %}
                 <button type="submit" class="btn-new-chat" style="width: auto; padding: 16px 40px; font-size: 16px;">
                     <i class="bi bi-plus-circle-fill"></i>
-                    Crear Primera Conversación
+                    Creer la Premiere Conversation
                 </button>
             </form>
         </div>

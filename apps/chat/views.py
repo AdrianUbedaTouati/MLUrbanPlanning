@@ -81,8 +81,8 @@ class ChatMessageCreateView(LoginRequiredMixin, View):
 
         if not user_message_content:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'El mensaje no puede estar vacío.'})
-            messages.error(request, 'El mensaje no puede estar vacío.')
+                return JsonResponse({'success': False, 'error': 'Le message ne peut pas etre vide.'})
+            messages.error(request, 'Le message ne peut pas etre vide.')
             return redirect('apps_chat:session_detail', session_id=session_id)
 
         # Log de inicio
@@ -208,8 +208,8 @@ class ChatSessionArchiveView(LoginRequiredMixin, View):
         session.is_archived = not session.is_archived
         session.save()
 
-        action = 'archivada' if session.is_archived else 'desarchivada'
-        messages.success(request, f'Sesión {action} correctamente.')
+        action = 'archivee' if session.is_archived else 'desarchivee'
+        messages.success(request, f'Session {action} correctement.')
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'is_archived': session.is_archived})
@@ -224,7 +224,7 @@ class ChatSessionDeleteView(LoginRequiredMixin, View):
         session = get_object_or_404(ChatSession, id=session_id, user=request.user)
 
         session.delete()
-        messages.success(request, 'Sesión eliminada correctamente.')
+        messages.success(request, 'Session supprimee correctement.')
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True})

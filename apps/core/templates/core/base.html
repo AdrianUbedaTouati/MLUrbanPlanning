@@ -1,11 +1,13 @@
-﻿<!DOCTYPE html>
-<html lang="es">
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}JobSearchAI - Plataforma de Búsqueda de Empleo{% endblock %}</title>
+    <title>{% block title %}JobSearchAI - Plateforme de Recherche d'Emploi{% endblock %}</title>
 
-    <meta name="description" content="JobSearchAI - Plataforma inteligente de búsqueda de empleo con IA">
+    <meta name="description" content="JobSearchAI - Plateforme intelligente de recherche d'emploi avec IA">
     <meta name="theme-color" content="#007AFF">
 
     <!-- Bootstrap CSS -->
@@ -13,7 +15,6 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-    {% load static %}
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
 
     {% block extra_css %}{% endblock %}
@@ -32,7 +33,7 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'apps_core:home' %}">
-                            <i class="bi bi-house"></i> Inicio
+                            <i class="bi bi-house"></i> {% trans "Accueil" %}
                         </a>
                     </li>
                     {% if user.is_authenticated %}
@@ -48,13 +49,13 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
                                     <a class="dropdown-item" href="{% url 'apps_core:profile' %}">
-                                        <i class="bi bi-gear"></i> Configuración
+                                        <i class="bi bi-gear"></i> {% trans "Configuration" %}
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'apps_authentication:logout' %}">
-                                        <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                                        <i class="bi bi-box-arrow-right"></i> {% trans "Se deconnecter" %}
                                     </a>
                                 </li>
                             </ul>
@@ -62,15 +63,43 @@
                     {% else %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'apps_authentication:login' %}">
-                                <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+                                <i class="bi bi-box-arrow-in-right"></i> {% trans "Se connecter" %}
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link btn btn-light text-primary ms-2" href="{% url 'apps_authentication:register' %}">
-                                <i class="bi bi-person-plus"></i> Registrarse
+                                <i class="bi bi-person-plus"></i> {% trans "S'inscrire" %}
                             </a>
                         </li>
                     {% endif %}
+                    <!-- Language Switcher -->
+                    <li class="nav-item dropdown ms-2">
+                        <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-globe"></i> {% if LANGUAGE_CODE == 'fr' %}FR{% else %}ES{% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <form action="{% url 'set_language' %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <input type="hidden" name="language" value="fr">
+                                    <button type="submit" class="dropdown-item{% if LANGUAGE_CODE == 'fr' %} active{% endif %}">
+                                        Francais
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form action="{% url 'set_language' %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                    <input type="hidden" name="language" value="es">
+                                    <button type="submit" class="dropdown-item{% if LANGUAGE_CODE == 'es' %} active{% endif %}">
+                                        Espanol
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -99,7 +128,7 @@
             <div class="row">
                 <div class="col-md-6 text-center text-md-start">
                     <p class="mb-0">
-                        <strong>TenderAI</strong> &copy; 2025 - Plataforma inteligente de licitaciones públicas
+                        <strong>JobSearchAI</strong> &copy; 2025 - {% trans "Plateforme intelligente de recherche d'emploi" %}
                     </p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
@@ -114,7 +143,6 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Core JS -->
-    {% load static %}
     <script src="{% static 'core/js/main.js' %}"></script>
 
     {% block extra_js %}{% endblock %}

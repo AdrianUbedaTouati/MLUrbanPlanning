@@ -1,7 +1,7 @@
 ﻿{% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}{{ session.title|default:"Chat con IA" }} - TenderAI{% endblock %}
+{% block title %}{{ session.title|default:"Chat avec IA" }} - JobSearchAI{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'chat/css/chat.css' %}?v=3.0">
@@ -16,13 +16,13 @@
             <div class="chat-header">
                 <div>
                     <h1 class="chat-header-title">
-                        {{ session.title|default:"Nueva Conversación" }}
+                        {{ session.title|default:"Nouvelle Conversation" }}
                     </h1>
                 </div>
                 <div class="chat-header-actions">
                     <a href="{% url 'apps_chat:session_list' %}"
                        class="btn-icon"
-                       title="Ver todas las conversaciones"
+                       title="Voir toutes les conversations"
                        data-bs-toggle="tooltip">
                         <i class="bi bi-list"></i>
                     </a>
@@ -32,7 +32,7 @@
                         {% csrf_token %}
                         <button type="submit"
                                 class="btn-icon"
-                                title="Archivar conversación"
+                                title="Archiver la conversation"
                                 data-bs-toggle="tooltip">
                             <i class="bi bi-archive"></i>
                         </button>
@@ -40,11 +40,11 @@
                     <form method="post"
                           action="{% url 'apps_chat:session_delete' session.id %}"
                           class="d-inline"
-                          onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta conversación?');">
+                          onsubmit="return confirm('Etes-vous sur de vouloir supprimer cette conversation ?');">
                         {% csrf_token %}
                         <button type="submit"
                                 class="btn-icon"
-                                title="Eliminar conversación"
+                                title="Supprimer la conversation"
                                 data-bs-toggle="tooltip">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -63,10 +63,10 @@
                     <div class="chat-empty-icon">
                         <i class="bi bi-chat-dots"></i>
                     </div>
-                    <h3 class="chat-empty-title">Comienza una conversación</h3>
+                    <h3 class="chat-empty-title">Commencez une conversation</h3>
                     <p class="chat-empty-text">
-                        Puedes saludarme, hacerme preguntas generales sobre licitaciones públicas, o consultar información específica de documentos indexados.
-                        Estoy aquí para ayudarte con análisis de licitaciones, explicar conceptos, o simplemente charlar.
+                        Vous pouvez me saluer, me poser des questions sur la recherche d'emploi, ou consulter des informations specifiques.
+                        Je suis la pour vous aider avec l'analyse d'offres, expliquer des concepts, ou simplement discuter.
                     </p>
                 </div>
                 {% endif %}
@@ -83,14 +83,14 @@
                         <textarea class="chat-input"
                                   name="message"
                                   id="messageInput"
-                                  placeholder="Pregúntame sobre licitaciones o chatea conmigo..."
+                                  placeholder="Posez-moi des questions sur la recherche d'emploi ou discutez avec moi..."
                                   rows="1"
                                   required
                                   autocomplete="off"></textarea>
                         <button type="submit"
                                 class="btn-send"
                                 id="sendButton"
-                                title="Enviar mensaje (Enter)"
+                                title="Envoyer le message (Enter)"
                                 data-bs-toggle="tooltip">
                             <i class="bi bi-send-fill"></i>
                         </button>
@@ -99,7 +99,7 @@
                 <div class="text-center mt-2">
                     <small class="text-muted">
                         <i class="bi bi-info-circle"></i>
-                        Presiona Enter para enviar, Shift+Enter para nueva línea
+                        Appuyez sur Entree pour envoyer, Shift+Entree pour une nouvelle ligne
                     </small>
                 </div>
             </div>

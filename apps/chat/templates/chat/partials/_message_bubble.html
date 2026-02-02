@@ -18,7 +18,7 @@
             {% if msg.metadata.tools_used %}
             <div class="message-metadata mt-1">
                 <i class="bi bi-tools"></i>
-                <span>Herramientas:
+                <span>Outils :
                     {% for tool in msg.metadata.tools_used %}
                         <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px; font-size: 11px;">{{ tool }}</code>{% if not forloop.last %}, {% endif %}
                     {% endfor %}
@@ -28,7 +28,7 @@
             {% if msg.metadata.route %}
             <div class="message-metadata mt-1">
                 <i class="bi bi-diagram-3"></i>
-                <span>Ruta: {{ msg.metadata.route }}</span>
+                <span>Route : {{ msg.metadata.route }}</span>
             </div>
             {% endif %}
             <!-- Token and Cost Info -->
@@ -40,7 +40,7 @@
             </div>
             {% elif msg.metadata.total_tokens and msg.metadata.provider == 'ollama' %}
             <div class="message-cost-info" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                <i class="bi bi-check-circle-fill"></i> {{ msg.metadata.total_tokens }} tokens • Gratis
+                <i class="bi bi-check-circle-fill"></i> {{ msg.metadata.total_tokens }} tokens • Gratuit
             </div>
             {% endif %}
         {% endif %}

@@ -1,7 +1,7 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Mi Perfil Profesional{% endblock %}
+{% block title %}Mon Profil Professionnel{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -275,14 +275,14 @@
     <div class="profile-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h2>Mi Perfil Profesional</h2>
-                <p class="subtitle">Completa tu perfil para recibir recomendaciones personalizadas de empleo</p>
+                <h2>Mon Profil Professionnel</h2>
+                <p class="subtitle">Completez votre profil pour recevoir des recommandations personnalisees d'emploi</p>
             </div>
             <div>
                 {% if profile.is_complete %}
-                <span class="status-badge status-complete">✓ Perfil completo</span>
+                <span class="status-badge status-complete">✓ Profil complet</span>
                 {% else %}
-                <span class="status-badge status-incomplete">⚠ Perfil incompleto</span>
+                <span class="status-badge status-incomplete">⚠ Profil incomplet</span>
                 {% endif %}
             </div>
         </div>
@@ -299,45 +299,45 @@
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <!-- Información Personal -->
+        <!-- Informations Personnelles -->
         <div class="profile-card">
-            <h2>Información Personal</h2>
-            <p class="subtitle">Datos básicos de contacto</p>
+            <h2>Informations Personnelles</h2>
+            <p class="subtitle">Coordonnees de base</p>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Nombre completo *</label>
+                    <label class="form-label">Nom complet *</label>
                     <input type="text" name="full_name" class="form-input"
                            value="{{ profile.full_name }}" required
-                           placeholder="Tu nombre completo">
+                           placeholder="Votre nom complet">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Teléfono</label>
+                    <label class="form-label">Telephone</label>
                     <input type="tel" name="phone" class="form-input"
                            value="{{ profile.phone }}"
-                           placeholder="+34 600 000 000">
+                           placeholder="+33 6 00 00 00 00">
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Ciudad / Provincia</label>
+                <label class="form-label">Ville / Region</label>
                 <input type="text" name="location" class="form-input"
                        value="{{ profile.location }}"
-                       placeholder="Ej: Alicante, Madrid, Barcelona">
-                <p class="help-text">Tu ubicación actual</p>
+                       placeholder="Ex : Paris, Lyon, Marseille">
+                <p class="help-text">Votre localisation actuelle</p>
             </div>
         </div>
 
         <!-- Curriculum Vitae -->
         <div class="profile-card">
             <h2>Curriculum Vitae</h2>
-            <p class="subtitle">Sube tu CV y la IA extraerá la información automáticamente</p>
+            <p class="subtitle">Telechargez votre CV et l'IA extraira les informations automatiquement</p>
 
             <div class="cv-section">
                 {% if profile.cv_analyzed and profile.curriculum_text %}
                 <div class="analyzed-data" style="margin-bottom: 20px;">
-                    <h4>✓ CV Analizado</h4>
+                    <h4>✓ CV Analyse</h4>
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
                         <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.9em;">{{ profile.curriculum_text }}</pre>
                     </div>
@@ -345,58 +345,58 @@
                 {% endif %}
 
                 <div class="form-group">
-                    <label class="form-label">{% if profile.cv_analyzed %}Actualizar CV{% else %}Subir CV{% endif %} (PDF o imagen)</label>
+                    <label class="form-label">{% if profile.cv_analyzed %}Mettre a jour le CV{% else %}Telecharger le CV{% endif %} (PDF ou image)</label>
                     <input type="file" name="cv_file" id="cv_file_input" class="form-input" accept="image/*,.pdf">
                 {% if profile.curriculum_file %}
-                <p class="help-text">Archivo actual: {{ profile.curriculum_file.name }}</p>
+                <p class="help-text">Fichier actuel : {{ profile.curriculum_file.name }}</p>
                 {% endif %}
-                <p class="help-text">Sube un PDF y pulsa "Analizar CV con IA" para extraer y analizar automáticamente</p>
+                <p class="help-text">Telechargez un PDF et cliquez sur "Analyser le CV avec IA" pour extraire et analyser automatiquement</p>
             </div>
         </div>
 
-        <!-- Preferencias de Búsqueda -->
+        <!-- Preferences de Recherche -->
         <div class="profile-card">
-            <h2>Preferencias de Búsqueda</h2>
-            <p class="subtitle">¿Qué tipo de trabajo estás buscando?</p>
+            <h2>Preferences de Recherche</h2>
+            <p class="subtitle">Quel type de travail recherchez-vous ?</p>
 
             <div class="form-group">
-                <label class="form-label">Ubicaciones preferidas</label>
+                <label class="form-label">Localisations preferees</label>
                 <div class="tags-container" id="locations_container">
                     <input type="text" class="tags-input" id="locations_input"
-                           placeholder="Escribe y pulsa Enter...">
+                           placeholder="Ecrivez et appuyez sur Entree...">
                 </div>
                 <input type="hidden" name="preferred_locations" id="preferred_locations"
                        value='{{ preferred_locations_json|default:"[]" }}'>
-                <p class="help-text">Ciudades donde te gustaría trabajar (ej: Alicante, Remoto, Madrid)</p>
+                <p class="help-text">Villes ou vous aimeriez travailler (ex : Paris, Teletravail, Lyon)</p>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Sectores de interés</label>
+                <label class="form-label">Secteurs d'interet</label>
                 <div class="tags-container" id="sectors_container">
                     <input type="text" class="tags-input" id="sectors_input"
-                           placeholder="Escribe y pulsa Enter...">
+                           placeholder="Ecrivez et appuyez sur Entree...">
                 </div>
                 <input type="hidden" name="preferred_sectors" id="preferred_sectors"
                        value='{{ preferred_sectors_json|default:"[]" }}'>
-                <p class="help-text">Sectores donde quieres trabajar (ej: Informática/IT, Marketing)</p>
+                <p class="help-text">Secteurs dans lesquels vous souhaitez travailler (ex : Informatique/IT, Marketing)</p>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Tipo de trabajo</label>
+                    <label class="form-label">Type de travail</label>
                     <div class="tags-container" id="job_types_container">
                         <input type="text" class="tags-input" id="job_types_input"
-                               placeholder="Remoto, Presencial, Híbrido...">
+                               placeholder="Teletravail, Presentiel, Hybride...">
                     </div>
                     <input type="hidden" name="job_types" id="job_types"
                            value='{{ job_types_json|default:"[]" }}'>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Tipo de contrato</label>
+                    <label class="form-label">Type de contrat</label>
                     <div class="tags-container" id="contract_types_container">
                         <input type="text" class="tags-input" id="contract_types_input"
-                               placeholder="Indefinido, Temporal...">
+                               placeholder="CDI, CDD...">
                     </div>
                     <input type="hidden" name="contract_types" id="contract_types"
                            value='{{ contract_types_json|default:"[]" }}'>
@@ -405,14 +405,14 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Salario mínimo (€/año)</label>
+                    <label class="form-label">Salaire minimum (€/an)</label>
                     <input type="number" name="salary_min" class="form-input"
                            value="{{ profile.salary_min|default:'' }}"
                            placeholder="20000">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Salario máximo (€/año)</label>
+                    <label class="form-label">Salaire maximum (€/an)</label>
                     <input type="number" name="salary_max" class="form-input"
                            value="{{ profile.salary_max|default:'' }}"
                            placeholder="50000">
@@ -420,27 +420,27 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Disponibilidad</label>
+                <label class="form-label">Disponibilite</label>
                 <select name="availability" class="form-select">
-                    <option value="">Selecciona...</option>
-                    <option value="Inmediata" {% if profile.availability == 'Inmediata' %}selected{% endif %}>Inmediata</option>
-                    <option value="15 días" {% if profile.availability == '15 días' %}selected{% endif %}>15 días</option>
-                    <option value="1 mes" {% if profile.availability == '1 mes' %}selected{% endif %}>1 mes</option>
-                    <option value="2 meses" {% if profile.availability == '2 meses' %}selected{% endif %}>2 meses o más</option>
+                    <option value="">Selectionnez...</option>
+                    <option value="Inmediata" {% if profile.availability == 'Inmediata' %}selected{% endif %}>Immediate</option>
+                    <option value="15 días" {% if profile.availability == '15 días' %}selected{% endif %}>15 jours</option>
+                    <option value="1 mes" {% if profile.availability == '1 mes' %}selected{% endif %}>1 mois</option>
+                    <option value="2 meses" {% if profile.availability == '2 meses' %}selected{% endif %}>2 mois ou plus</option>
                 </select>
             </div>
         </div>
 
-        <!-- Redes Profesionales -->
+        <!-- Reseaux Professionnels -->
         <div class="profile-card">
-            <h2>Redes Profesionales</h2>
-            <p class="subtitle">Tus perfiles online</p>
+            <h2>Reseaux Professionnels</h2>
+            <p class="subtitle">Vos profils en ligne</p>
 
             <div class="form-group">
                 <label class="form-label">LinkedIn</label>
                 <input type="url" name="linkedin_url" class="form-input"
                        value="{{ profile.linkedin_url }}"
-                       placeholder="https://www.linkedin.com/in/tu-perfil">
+                       placeholder="https://www.linkedin.com/in/votre-profil">
             </div>
 
             <div class="form-row">
@@ -448,14 +448,14 @@
                     <label class="form-label">GitHub</label>
                     <input type="url" name="github_url" class="form-input"
                            value="{{ profile.github_url }}"
-                           placeholder="https://github.com/tu-usuario">
+                           placeholder="https://github.com/votre-utilisateur">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Portfolio / Web</label>
                     <input type="url" name="portfolio_url" class="form-input"
                            value="{{ profile.portfolio_url }}"
-                           placeholder="https://tu-portfolio.com">
+                           placeholder="https://votre-portfolio.com">
                 </div>
             </div>
         </div>
@@ -463,7 +463,7 @@
         <!-- Submit -->
         <div style="text-align: center; margin-top: 24px;">
             <button type="submit" class="btn btn-primary" style="min-width: 200px;">
-                💾 Guardar Perfil
+                💾 Enregistrer le Profil
             </button>
         </div>
     </form>
@@ -549,7 +549,7 @@ document.getElementById('analyze_cv_btn').addEventListener('click', function() {
     const hasText = cvText && cvText.length >= 50;
 
     if (!hasPdf && !hasText) {
-        alert('Por favor, sube un PDF o escribe al menos 50 caracteres sobre tu experiencia profesional.');
+        alert('Veuillez telecharger un PDF ou ecrire au moins 50 caracteres sur votre experience professionnelle.');
         return;
     }
 
@@ -560,11 +560,11 @@ document.getElementById('analyze_cv_btn').addEventListener('click', function() {
 
     btn.disabled = true;
     spinner.style.display = 'inline-block';
-    resultDiv.innerHTML = '<p>Analizando tu CV...</p>';
+    resultDiv.innerHTML = '<p>Analyse de votre CV en cours...</p>';
 
     // If PDF, first extract text then analyze
     if (hasPdf) {
-        resultDiv.innerHTML = '<p>Extrayendo texto del PDF...</p>';
+        resultDiv.innerHTML = '<p>Extraction du texte du PDF...</p>';
 
         const formData = new FormData();
         formData.append('pdf_file', file);
@@ -582,7 +582,7 @@ document.getElementById('analyze_cv_btn').addEventListener('click', function() {
             if (data.success) {
                 // Put extracted text in textarea
                 cvTextArea.value = data.text;
-                resultDiv.innerHTML = '<p>Analizando CV con IA...</p>';
+                resultDiv.innerHTML = '<p>Analyse du CV avec IA...</p>';
                 // Now analyze the extracted text
                 return analyzeText(data.text);
             } else {
@@ -597,7 +597,7 @@ document.getElementById('analyze_cv_btn').addEventListener('click', function() {
         .catch(error => {
             btn.disabled = false;
             spinner.style.display = 'none';
-            resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            resultDiv.innerHTML = `<div class="alert alert-error">Erreur : ${error.message}</div>`;
         });
     } else {
         // Just analyze the text
@@ -610,7 +610,7 @@ document.getElementById('analyze_cv_btn').addEventListener('click', function() {
         .catch(error => {
             btn.disabled = false;
             spinner.style.display = 'none';
-            resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            resultDiv.innerHTML = `<div class="alert alert-error">Erreur : ${error.message}</div>`;
         });
     }
 });
@@ -635,10 +635,10 @@ function analyzeText(text) {
 }
 
 function showAnalysisResult(data, resultDiv) {
-    let html = '<div class="analyzed-data"><h4>✓ CV Analizado correctamente</h4>';
+    let html = '<div class="analyzed-data"><h4>✓ CV analyse correctement</h4>';
 
     if (data.data.skills && data.data.skills.length > 0) {
-        html += '<p><strong>Habilidades detectadas:</strong></p><div>';
+        html += '<p><strong>Competences detectees :</strong></p><div>';
         data.data.skills.forEach(skill => {
             html += `<span class="skill-tag">${skill}</span>`;
         });
@@ -646,14 +646,14 @@ function showAnalysisResult(data, resultDiv) {
     }
 
     if (data.data.professional_summary) {
-        html += `<p style="margin-top: 12px;"><strong>Resumen:</strong> ${data.data.professional_summary}</p>`;
+        html += `<p style="margin-top: 12px;"><strong>Resume :</strong> ${data.data.professional_summary}</p>`;
     }
 
     if (data.data.suggested_job_titles && data.data.suggested_job_titles.length > 0) {
-        html += `<p style="margin-top: 12px;"><strong>Puestos sugeridos:</strong> ${data.data.suggested_job_titles.join(', ')}</p>`;
+        html += `<p style="margin-top: 12px;"><strong>Postes suggeres :</strong> ${data.data.suggested_job_titles.join(', ')}</p>`;
     }
 
-    html += '<p style="margin-top: 12px; color: #28a745;"><strong>Tu perfil ha sido actualizado. Guarda los cambios.</strong></p>';
+    html += '<p style="margin-top: 12px; color: #28a745;"><strong>Votre profil a ete mis a jour. Enregistrez les modifications.</strong></p>';
     html += '</div>';
 
     resultDiv.innerHTML = html;

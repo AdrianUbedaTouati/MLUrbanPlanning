@@ -1,6 +1,6 @@
 {% extends 'core/base.html' %}
 
-{% block title %}Analizar CV - BasePage{% endblock %}
+{% block title %}Analyser le CV - BasePage{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -9,18 +9,18 @@
             <div class="card shadow">
                 <div class="card-body p-5">
                     <h2 class="text-center mb-4">
-                        <i class="bi bi-file-earmark-person"></i> Analizar CV con IA Vision
+                        <i class="bi bi-file-earmark-person"></i> Analyser le CV avec IA Vision
                     </h2>
 
-                    <!-- Formulario de subida -->
+                    <!-- Formulaire de telechargement -->
                     <div id="upload-section">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i>
-                            <strong>Cómo funciona:</strong>
+                            <strong>Comment ca fonctionne :</strong>
                             <ol class="mb-0 mt-2">
-                                <li>Sube una imagen (JPG, PNG) o PDF de tu CV</li>
-                                <li>GPT-4 Vision analizará el documento y extraerá tu información</li>
-                                <li>Se generará un resumen profesional automáticamente</li>
+                                <li>Telechargez une image (JPG, PNG) ou un PDF de votre CV</li>
+                                <li>GPT-4 Vision analysera le document et extraira vos informations</li>
+                                <li>Un resume professionnel sera genere automatiquement</li>
                             </ol>
                         </div>
 
@@ -46,56 +46,56 @@
 
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle"></i>
-                                <strong>Nota:</strong> La imagen se subirá al servidor para que GPT-4 Vision pueda analizarla.
-                                Asegúrate de que la imagen sea legible y contenga toda la información de tu CV.
+                                <strong>Note :</strong> L'image sera telechargee sur le serveur pour que GPT-4 Vision puisse l'analyser.
+                                Assurez-vous que l'image est lisible et contient toutes les informations de votre CV.
                             </div>
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
-                                    <i class="bi bi-cpu"></i> Analizar CV
+                                    <i class="bi bi-cpu"></i> Analyser le CV
                                 </button>
                                 <a href="{% url 'apps_core:profile' %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left"></i> Volver al Perfil
+                                    <i class="bi bi-arrow-left"></i> Retour au Profil
                                 </a>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Sección de progreso -->
+                    <!-- Section de progression -->
                     <div id="progress-section" style="display: none;">
                         <div class="text-center mb-4">
                             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                                <span class="visually-hidden">Procesando...</span>
+                                <span class="visually-hidden">Traitement...</span>
                             </div>
                         </div>
 
-                        <h4 class="text-center mb-4" id="progress-title">Procesando tu CV...</h4>
+                        <h4 class="text-center mb-4" id="progress-title">Traitement de votre CV...</h4>
 
-                        <!-- Pasos del proceso -->
+                        <!-- Etapes du processus -->
                         <div class="list-group mb-4">
                             <div class="list-group-item d-flex align-items-center" id="step-1">
                                 <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
                                 <i class="bi bi-circle me-3 step-pending"></i>
                                 <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
-                                <span>Subiendo archivo...</span>
+                                <span>Telechargement du fichier...</span>
                             </div>
                             <div class="list-group-item d-flex align-items-center" id="step-2">
                                 <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
                                 <i class="bi bi-circle me-3 step-pending"></i>
                                 <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
-                                <span>Procesando imagen...</span>
+                                <span>Traitement de l'image...</span>
                             </div>
                             <div class="list-group-item d-flex align-items-center" id="step-3">
                                 <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
                                 <i class="bi bi-circle me-3 step-pending"></i>
                                 <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
-                                <span>GPT-4 Vision extrayendo información...</span>
+                                <span>GPT-4 Vision extrait les informations...</span>
                             </div>
                             <div class="list-group-item d-flex align-items-center" id="step-4">
                                 <span class="spinner-border spinner-border-sm me-3 text-primary step-spinner" style="display: none;"></span>
                                 <i class="bi bi-circle me-3 step-pending"></i>
                                 <i class="bi bi-check-circle-fill me-3 text-success step-done" style="display: none;"></i>
-                                <span>Generando resumen profesional...</span>
+                                <span>Generation du resume professionnel...</span>
                             </div>
                         </div>
 
@@ -105,20 +105,20 @@
                         </div>
 
                         <p class="text-muted text-center" id="progress-message">
-                            Este proceso puede tardar unos segundos...
+                            Ce processus peut prendre quelques secondes...
                         </p>
                     </div>
 
-                    <!-- Sección de error -->
+                    <!-- Section d'erreur -->
                     <div id="error-section" style="display: none;">
                         <div class="alert alert-danger">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <strong>Error al analizar el CV</strong>
+                            <strong>Erreur lors de l'analyse du CV</strong>
                             <p class="mb-0 mt-2" id="error-message"></p>
                         </div>
                         <div class="d-grid">
                             <button class="btn btn-primary" onclick="location.reload()">
-                                <i class="bi bi-arrow-repeat"></i> Intentar de nuevo
+                                <i class="bi bi-arrow-repeat"></i> Reessayer
                             </button>
                         </div>
                     </div>
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('error-message');
 
     function setStep(stepNum) {
-        // Marcar pasos anteriores como completados
+        // Marquer les etapes precedentes comme terminees
         for (let i = 1; i < stepNum; i++) {
             const step = document.getElementById('step-' + i);
             step.querySelector('.step-spinner').style.display = 'none';
@@ -148,14 +148,14 @@ document.addEventListener('DOMContentLoaded', function() {
             step.querySelector('.step-done').style.display = 'inline';
         }
 
-        // Marcar paso actual como en progreso
+        // Marquer l'etape actuelle comme en cours
         const currentStep = document.getElementById('step-' + stepNum);
         if (currentStep) {
             currentStep.querySelector('.step-spinner').style.display = 'inline-block';
             currentStep.querySelector('.step-pending').style.display = 'none';
         }
 
-        // Actualizar barra de progreso
+        // Mettre a jour la barre de progression
         const progress = (stepNum - 1) * 25;
         progressBar.style.width = progress + '%';
         progressBar.textContent = progress + '%';
@@ -177,33 +177,33 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Mostrar sección de progreso
+        // Afficher la section de progression
         uploadSection.style.display = 'none';
         progressSection.style.display = 'block';
 
-        // Iniciar paso 1
+        // Demarrer l'etape 1
         setStep(1);
-        progressMessage.textContent = 'Subiendo tu archivo al servidor...';
+        progressMessage.textContent = 'Telechargement de votre fichier sur le serveur...';
 
         const formData = new FormData(form);
 
-        // Simular progreso mientras se envía
+        // Simuler la progression pendant l'envoi
         setTimeout(() => {
             setStep(2);
-            progressMessage.textContent = 'Procesando y preparando la imagen...';
+            progressMessage.textContent = 'Traitement et preparation de l\'image...';
         }, 1000);
 
         setTimeout(() => {
             setStep(3);
-            progressMessage.textContent = 'GPT-4 Vision está analizando tu CV...';
+            progressMessage.textContent = 'GPT-4 Vision analyse votre CV...';
         }, 2500);
 
         setTimeout(() => {
             setStep(4);
-            progressMessage.textContent = 'Generando tu resumen profesional...';
+            progressMessage.textContent = 'Generation de votre resume professionnel...';
         }, 5000);
 
-        // Enviar formulario via AJAX
+        // Envoyer le formulaire via AJAX
         fetch('{% url "apps_core:analyze_cv_ajax" %}', {
             method: 'POST',
             body: formData,
@@ -215,8 +215,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 completeAllSteps();
-                progressTitle.textContent = '¡Análisis completado!';
-                progressMessage.textContent = 'Redirigiendo a tu perfil...';
+                progressTitle.textContent = 'Analyse terminee !';
+                progressMessage.textContent = 'Redirection vers votre profil...';
 
                 setTimeout(() => {
                     window.location.href = '{% url "apps_core:profile" %}';
@@ -224,13 +224,13 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 progressSection.style.display = 'none';
                 errorSection.style.display = 'block';
-                errorMessage.textContent = data.error || 'Error desconocido al procesar el CV.';
+                errorMessage.textContent = data.error || 'Erreur inconnue lors du traitement du CV.';
             }
         })
         .catch(error => {
             progressSection.style.display = 'none';
             errorSection.style.display = 'block';
-            errorMessage.textContent = 'Error de conexión. Por favor, inténtalo de nuevo.';
+            errorMessage.textContent = 'Erreur de connexion. Veuillez reessayer.';
             console.error('Error:', error);
         });
     });

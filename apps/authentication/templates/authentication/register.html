@@ -1,6 +1,6 @@
-﻿{% extends 'authentication/base_auth.html' %}
+{% extends 'authentication/base_auth.html' %}
 
-{% block title %}Registro - BasePage{% endblock %}
+{% block title %}Inscription - JobSearchAI{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,7 +8,7 @@
         <div class="col-md-6 col-lg-5">
             <div class="card shadow">
                 <div class="card-body p-5">
-                    <h2 class="text-center mb-4">Crear Cuenta</h2>
+                    <h2 class="text-center mb-4">Creer un Compte</h2>
 
                     <form method="post">
                         {% csrf_token %}
@@ -61,7 +61,7 @@
                             <div class="form-text">
                                 <small>
                                     <i class="bi bi-info-circle"></i>
-                                    La contraseña debe tener al menos 8 caracteres, incluir una letra mayúscula y un carácter especial (!@#$%^&*(),.?":{}|<>).
+                                    Le mot de passe doit contenir au moins 8 caracteres, inclure une lettre majuscule et un caractere special (!@#$%^&*(),.?":{}|<>).
                                 </small>
                             </div>
                         </div>
@@ -85,15 +85,15 @@
 
                         <div class="d-grid mb-3">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-person-plus"></i> Registrarse
+                                <i class="bi bi-person-plus"></i> S'inscrire
                             </button>
                         </div>
 
                         <div class="text-center">
                             <p>
-                                ¿Ya tienes cuenta?
+                                Vous avez deja un compte ?
                                 <a href="{% url 'apps_authentication:login' %}" class="text-decoration-none">
-                                    Inicia sesión aquí
+                                    Connectez-vous ici
                                 </a>
                             </p>
                         </div>

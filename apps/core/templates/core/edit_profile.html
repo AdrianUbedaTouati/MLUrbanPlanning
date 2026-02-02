@@ -1,13 +1,13 @@
 {% extends 'core/base.html' %}
 
-{% block title %}Mi Perfil - BasePage{% endblock %}
+{% block title %}Mon Profil - BasePage{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <!-- Header -->
     <div class="text-center mb-4">
-        <h2 class="fw-bold"><i class="bi bi-person-gear text-primary"></i> Mi Perfil</h2>
-        <p class="text-muted">Configura tu cuenta, CV y preferencias de búsqueda</p>
+        <h2 class="fw-bold"><i class="bi bi-person-gear text-primary"></i> Mon Profil</h2>
+        <p class="text-muted">Configurez votre compte, CV et preferences de recherche</p>
     </div>
 
     {% if messages %}
@@ -23,12 +23,12 @@
     </div>
     {% endif %}
 
-    <!-- Sección 1: Configuración de Cuenta e IA -->
+    <!-- Section 1 : Configuration du Compte et IA -->
     <div class="row justify-content-center mb-4">
         <div class="col-lg-10">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-gear-fill"></i> Configuración</h5>
+                    <h5 class="mb-0"><i class="bi bi-gear-fill"></i> Configuration</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
@@ -39,9 +39,9 @@
                         {% endif %}
 
                         <div class="row">
-                            <!-- Datos Personales -->
+                            <!-- Donnees Personnelles -->
                             <div class="col-md-6 mb-4">
-                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle"></i> Datos Personales</h6>
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-circle"></i> Donnees Personnelles</h6>
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <label class="form-label small">{{ form.first_name.label }}</label>
@@ -74,12 +74,12 @@
                                 </div>
                             </div>
 
-                            <!-- Configuración IA -->
+                            <!-- Configuration IA -->
                             <div class="col-md-6 mb-4">
-                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-robot"></i> Inteligencia Artificial</h6>
+                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-robot"></i> Intelligence Artificielle</h6>
                                 <div class="bg-light rounded p-3">
                                     <div class="mb-2">
-                                        <label class="form-label small">Proveedor</label>
+                                        <label class="form-label small">Fournisseur</label>
                                         {{ form.llm_provider }}
                                     </div>
 
@@ -89,31 +89,31 @@
                                     </div>
 
                                     <div class="mb-2" id="openai_model_section" style="display:none;">
-                                        <label class="form-label small">Modelo</label>
+                                        <label class="form-label small">Modele</label>
                                         {{ form.openai_model }}
                                     </div>
 
                                     <div id="ollama_models_section" style="display:none;">
                                         <div class="mb-2">
-                                            <label class="form-label small">Modelo Chat</label>
+                                            <label class="form-label small">Modele Chat</label>
                                             <select name="ollama_model" class="form-select form-select-sm" id="ollama_chat_select">
-                                                <option value="">Cargando...</option>
+                                                <option value="">Chargement...</option>
                                             </select>
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small">Embeddings</label>
                                             <select name="ollama_embedding_model" class="form-select form-select-sm" id="ollama_embed_select">
-                                                <option value="">Cargando...</option>
+                                                <option value="">Chargement...</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <!-- Búsqueda Web -->
+                                    <!-- Recherche Web -->
                                     <div class="border-top pt-2 mt-2">
                                         <div class="form-check">
                                             {{ form.use_web_search }}
                                             <label class="form-check-label small" for="use_web_search_checkbox">
-                                                <i class="bi bi-globe text-info"></i> Búsqueda Web
+                                                <i class="bi bi-globe text-info"></i> Recherche Web
                                             </label>
                                         </div>
                                         <div id="google_search_credentials" style="display: none;" class="mt-2">
@@ -133,10 +133,10 @@
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'apps_authentication:password_reset_request' %}" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-key"></i> Cambiar Contraseña
+                                <i class="bi bi-key"></i> Changer le Mot de Passe
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i> Guardar Configuración
+                                <i class="bi bi-check-lg"></i> Enregistrer la Configuration
                             </button>
                         </div>
                     </form>
@@ -145,7 +145,7 @@
         </div>
     </div>
 
-    <!-- Sección 2: CV y Preferencias -->
+    <!-- Section 2 : CV et Preferences -->
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="row g-4">
@@ -153,70 +153,70 @@
                 <div class="col-md-7">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="bi bi-file-earmark-person"></i> Mi Curriculum</h5>
+                            <h5 class="mb-0"><i class="bi bi-file-earmark-person"></i> Mon Curriculum</h5>
                         </div>
                         <div class="card-body">
-                            <!-- Subir CV -->
+                            <!-- Telecharger CV -->
                             <div class="mb-4">
-                                <h6 class="fw-bold small mb-2"><i class="bi bi-upload text-success"></i> Subir CV</h6>
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-upload text-success"></i> Telecharger le CV</h6>
                                 {% if user.llm_provider == 'openai' and user.llm_api_key %}
                                 <form method="post" action="{% url 'apps_core:analyze_cv' %}" enctype="multipart/form-data" id="cv_form">
                                     {% csrf_token %}
                                     <div class="input-group input-group-sm mb-1">
                                         <input type="file" name="cv_file" class="form-control" accept="image/*,.pdf" required>
                                         <button type="submit" class="btn btn-success" id="cv_submit_btn">
-                                            <i class="bi bi-cpu"></i> Analizar
+                                            <i class="bi bi-cpu"></i> Analyser
                                         </button>
                                     </div>
-                                    <small class="text-muted">PDF o imagen - La IA leerá tu CV y lo transcribirá abajo</small>
+                                    <small class="text-muted">PDF ou image - L'IA lira votre CV et le transcrira ci-dessous</small>
                                 </form>
                                 {% else %}
                                 <div class="alert alert-warning small py-2 mb-0">
                                     <i class="bi bi-exclamation-triangle"></i>
-                                    Configura <strong>OpenAI</strong> como proveedor de IA para analizar tu CV.
+                                    Configurez <strong>OpenAI</strong> comme fournisseur d'IA pour analyser votre CV.
                                 </div>
                                 {% endif %}
                             </div>
 
-                            <!-- Mi CV en texto -->
+                            <!-- Mon CV en texte -->
                             <div>
-                                <h6 class="fw-bold small mb-2"><i class="bi bi-file-text text-primary"></i> Mi CV</h6>
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-file-text text-primary"></i> Mon CV</h6>
                                 <p class="text-muted small mb-2">
-                                    Este texto es tu curriculum. Puedes escribirlo directamente o dejar que la IA lo extraiga al subir un archivo.
+                                    Ce texte est votre curriculum. Vous pouvez l'ecrire directement ou laisser l'IA l'extraire en telechargeant un fichier.
                                 </p>
                                 <form method="post" action="{% url 'apps_core:save_cv_text' %}">
                                     {% csrf_token %}
-                                    <textarea name="curriculum_text" class="form-control form-control-sm mb-2" rows="8" placeholder="Escribe tu experiencia profesional:
+                                    <textarea name="curriculum_text" class="form-control form-control-sm mb-2" rows="8" placeholder="Ecrivez votre experience professionnelle :
 
-• Datos personales
-• Experiencia laboral
-• Formación académica
-• Habilidades técnicas
-• Idiomas
-• Qué tipo de trabajo buscas...">{{ user.job_profile.curriculum_text|default:'' }}</textarea>
+• Donnees personnelles
+• Experience professionnelle
+• Formation academique
+• Competences techniques
+• Langues
+• Quel type de travail recherchez-vous...">{{ user.job_profile.curriculum_text|default:'' }}</textarea>
                                     <div class="d-flex justify-content-between align-items-center">
                                         {% if user.job_profile and user.job_profile.cv_analyzed %}
-                                        <small class="text-success"><i class="bi bi-check-circle"></i> Guardado {{ user.job_profile.updated_at|date:"d/m/Y" }}</small>
+                                        <small class="text-success"><i class="bi bi-check-circle"></i> Enregistre {{ user.job_profile.updated_at|date:"d/m/Y" }}</small>
                                         {% else %}
-                                        <small class="text-muted">Sin guardar</small>
+                                        <small class="text-muted">Non enregistre</small>
                                         {% endif %}
                                         <button type="submit" class="btn btn-success btn-sm">
-                                            <i class="bi bi-save"></i> Guardar CV
+                                            <i class="bi bi-save"></i> Enregistrer le CV
                                         </button>
                                     </div>
                                 </form>
                             </div>
 
-                            <!-- Resumen del CV para búsquedas -->
+                            <!-- Resume du CV pour recherches -->
                             {% if user.job_profile and user.job_profile.cv_summary %}
                             <div class="mt-3 pt-3 border-top">
-                                <h6 class="fw-bold small mb-2"><i class="bi bi-trophy text-warning"></i> Ranking de puestos recomendados</h6>
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-trophy text-warning"></i> Classement des postes recommandes</h6>
                                 <div class="bg-white border rounded p-3 cv-summary-content" style="max-height: 500px; overflow-y: auto;">
                                     <div class="cv-ranking-content">
                                         {{ user.job_profile.cv_summary|safe }}
                                     </div>
                                 </div>
-                                <small class="text-muted mt-2 d-block">Este ranking se usa para buscar ofertas relevantes para ti</small>
+                                <small class="text-muted mt-2 d-block">Ce classement est utilise pour rechercher des offres pertinentes pour vous</small>
                             </div>
                             <style>
                                 .cv-ranking-content h3 { font-size: 1rem; font-weight: bold; color: #0d6efd; margin-top: 1rem; }
@@ -230,58 +230,58 @@
                     </div>
                 </div>
 
-                <!-- Preferencias y Redes -->
+                <!-- Preferences et Reseaux -->
                 <div class="col-md-5">
-                    <!-- Preferencias de Búsqueda -->
+                    <!-- Preferences de Recherche -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-info text-white py-2">
-                            <h6 class="mb-0"><i class="bi bi-search-heart"></i> Preferencias</h6>
+                            <h6 class="mb-0"><i class="bi bi-search-heart"></i> Preferences</h6>
                         </div>
                         <div class="card-body py-3">
                             <form method="post" action="{% url 'apps_core:save_preferences' %}" id="preferences_form">
                                 {% csrf_token %}
 
                                 <div class="mb-2">
-                                    <label class="form-label small mb-1">Ubicaciones</label>
+                                    <label class="form-label small mb-1">Localisations</label>
                                     <div class="tags-container" id="locations_container">
-                                        <input type="text" class="tags-input" id="locations_input" placeholder="Enter para añadir...">
+                                        <input type="text" class="tags-input" id="locations_input" placeholder="Entree pour ajouter...">
                                     </div>
                                     <input type="hidden" name="preferred_locations" id="preferred_locations" value='{{ preferred_locations_json|default:"[]" }}'>
                                 </div>
 
                                 <div class="mb-2">
-                                    <label class="form-label small mb-1">Sectores</label>
+                                    <label class="form-label small mb-1">Secteurs</label>
                                     <div class="tags-container" id="sectors_container">
-                                        <input type="text" class="tags-input" id="sectors_input" placeholder="Enter para añadir...">
+                                        <input type="text" class="tags-input" id="sectors_input" placeholder="Entree pour ajouter...">
                                     </div>
                                     <input type="hidden" name="preferred_sectors" id="preferred_sectors" value='{{ preferred_sectors_json|default:"[]" }}'>
                                 </div>
 
                                 <div class="row g-2 mb-2">
                                     <div class="col-6">
-                                        <label class="form-label small mb-1">Tipo trabajo</label>
+                                        <label class="form-label small mb-1">Type de travail</label>
                                         <div class="tags-container" id="job_types_container">
-                                            <input type="text" class="tags-input" id="job_types_input" placeholder="Remoto...">
+                                            <input type="text" class="tags-input" id="job_types_input" placeholder="Teletravail...">
                                         </div>
                                         <input type="hidden" name="job_types" id="job_types" value='{{ job_types_json|default:"[]" }}'>
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label small mb-1">Salario mín €</label>
+                                        <label class="form-label small mb-1">Salaire min €</label>
                                         <input type="number" name="salary_min" class="form-control form-control-sm" value="{{ user.job_profile.salary_min|default:'' }}" placeholder="20000">
                                     </div>
                                 </div>
 
                                 <button type="submit" class="btn btn-info btn-sm w-100">
-                                    <i class="bi bi-save"></i> Guardar
+                                    <i class="bi bi-save"></i> Enregistrer
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    <!-- Redes Profesionales -->
+                    <!-- Reseaux Professionnels -->
                     <div class="card shadow-sm">
                         <div class="card-header bg-dark text-white py-2">
-                            <h6 class="mb-0"><i class="bi bi-share"></i> Redes</h6>
+                            <h6 class="mb-0"><i class="bi bi-share"></i> Reseaux</h6>
                         </div>
                         <div class="card-body py-3">
                             <form method="post" action="{% url 'apps_core:save_social' %}" id="social_form">
@@ -299,12 +299,12 @@
                                     </div>
                                     <div class="col-6">
                                         <label class="form-label small mb-1"><i class="bi bi-globe2"></i> Web</label>
-                                        <input type="url" name="portfolio_url" class="form-control form-control-sm" value="{{ user.job_profile.portfolio_url|default:'' }}" placeholder="tu-web.com">
+                                        <input type="url" name="portfolio_url" class="form-control form-control-sm" value="{{ user.job_profile.portfolio_url|default:'' }}" placeholder="votre-site.com">
                                     </div>
                                 </div>
 
                                 <button type="submit" class="btn btn-dark btn-sm w-100">
-                                    <i class="bi bi-save"></i> Guardar
+                                    <i class="bi bi-save"></i> Enregistrer
                                 </button>
                             </form>
                         </div>
@@ -391,8 +391,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } catch (error) {
-            chatSelect.innerHTML = '<option value="">Error</option>';
-            embedSelect.innerHTML = '<option value="">Error</option>';
+            chatSelect.innerHTML = '<option value="">Erreur</option>';
+            embedSelect.innerHTML = '<option value="">Erreur</option>';
         }
     }
 
@@ -441,13 +441,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cvForm && cvBtn) {
         cvForm.addEventListener('submit', function() {
             cvBtn.disabled = true;
-            cvBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
+            cvBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyse...';
 
             // Show processing message
             const processingAlert = document.createElement('div');
             processingAlert.id = 'cv_processing_alert';
             processingAlert.className = 'alert alert-info mt-2 py-2 small';
-            processingAlert.innerHTML = '<i class="bi bi-hourglass-split"></i> <strong>Procesando CV...</strong> La IA está extrayendo el texto. Esto puede tardar hasta 1 minuto.';
+            processingAlert.innerHTML = '<i class="bi bi-hourglass-split"></i> <strong>Traitement du CV...</strong> L\'IA extrait le texte. Cela peut prendre jusqu\'a 1 minute.';
             cvForm.parentNode.appendChild(processingAlert);
         });
     }

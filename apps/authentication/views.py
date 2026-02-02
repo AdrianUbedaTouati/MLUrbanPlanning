@@ -38,7 +38,7 @@ def register_view(request):
 
             if settings.EMAIL_VERIFICATION_REQUIRED:
                 # Enviar email de verificación
-                subject = 'Confirma tu cuenta'
+                subject = 'Confirmez votre compte'
                 html_message = render_to_string('authentication/email/verify_email.html', {
                     'user': user,
                     'domain': settings.SITE_URL.replace('http://', '').replace('https://', ''),
@@ -56,11 +56,11 @@ def register_view(request):
                         html_message=html_message,
                         fail_silently=False,
                     )
-                    messages.success(request, 'Registro exitoso! Por favor revisa tu correo para confirmar tu cuenta.')
+                    messages.success(request, 'Inscription reussie ! Veuillez verifier votre e-mail pour confirmer votre compte.')
                 except Exception as e:
-                    messages.warning(request, 'Registro exitoso pero no se pudo enviar el email de confirmación. Contacta al administrador.')
+                    messages.warning(request, 'Inscription reussie mais l\'e-mail de confirmation n\'a pas pu etre envoye. Contactez l\'administrateur.')
             else:
-                messages.success(request, 'Registro exitoso! Ya puedes iniciar sesión.')
+                messages.success(request, 'Inscription reussie ! Vous pouvez maintenant vous connecter.')
 
             return redirect('apps_authentication:login')
     else:
@@ -87,7 +87,7 @@ def login_view(request):
             else:
                 request.session.set_expiry(1209600)  # 2 weeks
 
-            messages.success(request, f'Bienvenido, {user.username}!')
+            messages.success(request, f'Bienvenue, {user.username} !')
 
             # Redirect to next URL or home
             next_url = request.GET.get('next', '/')
@@ -112,7 +112,7 @@ def login_view(request):
 @login_required
 def logout_view(request):
     logout(request)
-    messages.info(request, 'Has cerrado sesión exitosamente.')
+    messages.info(request, 'Vous avez ete deconnecte avec succes.')
     return redirect('apps_authentication:login')
 
 
@@ -128,7 +128,7 @@ def password_reset_request_view(request):
             if not email:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Por favor proporciona un email.'
+                    'message': 'Veuillez fournir un e-mail.'
                 })
 
             try:
@@ -138,7 +138,7 @@ def password_reset_request_view(request):
                 reset_token = PasswordResetToken.objects.create(user=user)
 
                 # Send reset email
-                subject = 'Restablecer contraseña'
+                subject = 'Reinitialiser le mot de passe'
                 html_message = render_to_string('authentication/email/password_reset.html', {
                     'user': user,
                     'domain': settings.SITE_URL.replace('http://', '').replace('https://', ''),
@@ -158,18 +158,18 @@ def password_reset_request_view(request):
 
                 return JsonResponse({
                     'success': True,
-                    'message': f'Enlace de recuperación enviado a {user.email}. Por favor revisa tu bandeja de entrada.'
+                    'message': f'Lien de recuperation envoye a {user.email}. Veuillez verifier votre boite de reception.'
                 })
 
             except User.DoesNotExist:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No existe una cuenta con ese correo electrónico.'
+                    'message': 'Aucun compte n\'existe avec cette adresse e-mail.'
                 })
             except Exception as e:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Error al enviar el email. Por favor intenta más tarde.'
+                    'message': 'Erreur lors de l\'envoi de l\'e-mail. Veuillez reessayer plus tard.'
                 })
         else:
             # Formulario normal (sin AJAX)
@@ -182,7 +182,7 @@ def password_reset_request_view(request):
                 reset_token = PasswordResetToken.objects.create(user=user)
 
                 # Send reset email
-                subject = 'Restablecer contraseña'
+                subject = 'Reinitialiser le mot de passe'
                 html_message = render_to_string('authentication/email/password_reset.html', {
                     'user': user,
                     'domain': settings.SITE_URL.replace('http://', '').replace('https://', ''),
@@ -202,7 +202,7 @@ def password_reset_request_view(request):
 
                 messages.success(
                     request,
-                    'Se ha enviado un enlace de recuperación a tu correo electrónico.'
+                    'Un lien de recuperation a ete envoye a votre adresse e-mail.'
                 )
                 return redirect('apps_authentication:login')
     else:
@@ -216,7 +216,7 @@ def password_reset_confirm_view(request, token):
         reset_token = PasswordResetToken.objects.get(token=token)
 
         if not reset_token.is_valid():
-            messages.error(request, 'El enlace de recuperación ha expirado o ya fue usado.')
+            messages.error(request, 'Le lien de recuperation a expire ou a deja ete utilise.')
             return redirect('apps_authentication:password_reset_request')
 
         if request.method == 'POST':
@@ -230,7 +230,7 @@ def password_reset_confirm_view(request, token):
                 reset_token.used = True
                 reset_token.save()
 
-                messages.success(request, 'Tu contraseña ha sido actualizada exitosamente.')
+                messages.success(request, 'Votre mot de passe a ete mis a jour avec succes.')
                 return redirect('apps_authentication:login')
         else:
             form = SetNewPasswordForm()
@@ -241,7 +241,7 @@ def password_reset_confirm_view(request, token):
         })
 
     except PasswordResetToken.DoesNotExist:
-        messages.error(request, 'Enlace de recuperación inválido.')
+        messages.error(request, 'Lien de recuperation invalide.')
         return redirect('apps_authentication:password_reset_request')
 
 
@@ -259,7 +259,7 @@ def verify_email_view(request, token):
             })
         else:
             # Si ya estaba verificado, también mostrar página de éxito
-            messages.info(request, 'Tu correo ya estaba confirmado.')
+            messages.info(request, 'Votre e-mail etait deja confirme.')
             return render(request, 'authentication/email_verified_success.html', {
                 'user': user,
                 'first_time': False
@@ -293,9 +293,9 @@ def resend_verification_view(request):
                 if is_ajax:
                     return JsonResponse({
                         'success': False,
-                        'message': 'Por favor proporciona un email o nombre de usuario.'
+                        'message': 'Veuillez fournir un e-mail ou un nom d\'utilisateur.'
                     })
-                messages.error(request, 'Por favor proporciona un email o nombre de usuario.')
+                messages.error(request, 'Veuillez fournir un e-mail ou un nom d\'utilisateur.')
                 return redirect('apps_authentication:resend_verification')
 
             # Buscar usuario por email O username
@@ -308,9 +308,9 @@ def resend_verification_view(request):
                 if is_ajax:
                     return JsonResponse({
                         'success': False,
-                        'message': 'No existe una cuenta con ese email o nombre de usuario.'
+                        'message': 'Aucun compte n\'existe avec cet e-mail ou nom d\'utilisateur.'
                     })
-                messages.error(request, 'No existe una cuenta con ese email o nombre de usuario.')
+                messages.error(request, 'Aucun compte n\'existe avec cet e-mail ou nom d\'utilisateur.')
                 return redirect('apps_authentication:resend_verification')
 
         # Si el usuario ya está verificado
@@ -318,13 +318,13 @@ def resend_verification_view(request):
             if is_ajax:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Tu cuenta ya está confirmada.'
+                    'message': 'Votre compte est deja confirme.'
                 })
-            messages.info(request, 'Tu cuenta ya está confirmada.')
+            messages.info(request, 'Votre compte est deja confirme.')
             return redirect('apps_authentication:login')
 
         # Enviar email de verificación
-        subject = 'Confirma tu cuenta'
+        subject = 'Confirmez votre compte'
         html_message = render_to_string('authentication/email/verify_email.html', {
             'user': user,
             'domain': settings.SITE_URL.replace('http://', '').replace('https://', ''),
@@ -346,17 +346,17 @@ def resend_verification_view(request):
             if is_ajax:
                 return JsonResponse({
                     'success': True,
-                    'message': f'Email de confirmación enviado a {user.email}. Por favor revisa tu bandeja de entrada.'
+                    'message': f'E-mail de confirmation envoye a {user.email}. Veuillez verifier votre boite de reception.'
                 })
 
-            messages.success(request, f'Email de confirmación enviado a {user.email}')
+            messages.success(request, f'E-mail de confirmation envoye a {user.email}')
         except Exception as e:
             if is_ajax:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Error al enviar el email. Por favor intenta más tarde.'
+                    'message': 'Erreur lors de l\'envoi de l\'e-mail. Veuillez reessayer plus tard.'
                 })
-            messages.error(request, 'Error al enviar el email. Por favor intenta más tarde.')
+            messages.error(request, 'Erreur lors de l\'envoi de l\'e-mail. Veuillez reessayer plus tard.')
 
         return redirect('apps_authentication:login')
 

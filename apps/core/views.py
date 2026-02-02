@@ -81,7 +81,7 @@ def edit_profile_view(request):
                 user.verification_token = uuid.uuid4()
 
                 # Enviar nuevo email de verificación
-                subject = 'Confirma tu nuevo correo'
+                subject = 'Confirmez votre nouvel e-mail'
                 html_message = render_to_string('authentication/email/verify_email.html', {
                     'user': user,
                     'domain': settings.SITE_URL.replace('http://', '').replace('https://', ''),
@@ -99,12 +99,12 @@ def edit_profile_view(request):
                         html_message=html_message,
                         fail_silently=False,
                     )
-                    messages.warning(request, 'Tu correo ha cambiado. Por favor revisa tu bandeja de entrada para confirmar el nuevo correo.')
+                    messages.warning(request, 'Votre e-mail a change. Veuillez verifier votre boite de reception pour confirmer le nouvel e-mail.')
                 except Exception as e:
-                    messages.warning(request, 'Perfil actualizado pero no se pudo enviar el email de confirmación.')
+                    messages.warning(request, 'Profil mis a jour mais l\'e-mail de confirmation n\'a pas pu etre envoye.')
 
             user.save()
-            messages.success(request, 'Tu perfil ha sido actualizado exitosamente.')
+            messages.success(request, 'Votre profil a ete mis a jour avec succes.')
             return redirect('apps_core:profile')
     else:
         form = EditProfileForm(instance=request.user)
@@ -247,7 +247,7 @@ def analyze_cv_image_view(request):
         if form.is_valid():
             # Verificar que el usuario tiene API key de OpenAI configurada
             if not request.user.llm_api_key or request.user.llm_provider != 'openai':
-                messages.error(request, 'Debes configurar tu API key de OpenAI en tu perfil para usar esta función.')
+                messages.error(request, 'Vous devez configurer votre cle API OpenAI dans votre profil pour utiliser cette fonction.')
                 return redirect('apps_core:profile')
 
             # Obtener o crear el perfil del usuario
@@ -273,10 +273,10 @@ def analyze_cv_image_view(request):
                         image_data = base64.b64encode(img_buffer.read()).decode('utf-8')
                         media_type = "image/png"
                     else:
-                        messages.error(request, 'No se pudo procesar el PDF.')
+                        messages.error(request, 'Le PDF n\'a pas pu etre traite.')
                         return redirect('apps_core:profile')
                 except Exception as e:
-                    messages.error(request, f'Error al procesar PDF: {str(e)}')
+                    messages.error(request, f'Erreur lors du traitement du PDF : {str(e)}')
                     return redirect('apps_core:profile')
             else:
                 # Es una imagen - codificar en base64
@@ -339,10 +339,10 @@ Devuelve el texto de forma legible y bien estructurada, NO en formato JSON. El o
                 profile.cv_analyzed = True
                 profile.save()
 
-                messages.success(request, 'CV analizado correctamente. El texto ha sido extraído.')
+                messages.success(request, 'CV analyse correctement. Le texte a ete extrait.')
 
             except Exception as e:
-                messages.error(request, f'Error al analizar el CV: {str(e)}')
+                messages.error(request, f'Erreur lors de l\'analyse du CV : {str(e)}')
 
             return redirect('apps_core:profile')
     else:
@@ -358,7 +358,7 @@ def analyze_cv_ajax_view(request):
     Devuelve JSON con el resultado.
     """
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'success': False, 'error': 'Methode non autorisee'}, status=405)
 
     form = CVImageUploadForm(request.POST, request.FILES)
     if not form.is_valid():
@@ -369,7 +369,7 @@ def analyze_cv_ajax_view(request):
     if not request.user.llm_api_key or request.user.llm_provider != 'openai':
         return JsonResponse({
             'success': False,
-            'error': 'Debes configurar tu API key de OpenAI en tu perfil para usar esta función.'
+            'error': 'Vous devez configurer votre cle API OpenAI dans votre profil pour utiliser cette fonction.'
         })
 
     # Obtener o crear el perfil del usuario
@@ -399,7 +399,7 @@ def analyze_cv_ajax_view(request):
 
                 image_url = request.build_absolute_uri(profile.cv_image.url)
             else:
-                return JsonResponse({'success': False, 'error': 'No se pudo procesar el PDF.'})
+                return JsonResponse({'success': False, 'error': 'Le PDF n\'a pas pu etre traite.'})
         else:
             # Es una imagen - guardarla y usar URL
             profile.cv_image = cv_file
@@ -509,19 +509,19 @@ El resumen debe ser en primera persona y profesional, adecuado para presentarse 
 
         return JsonResponse({
             'success': True,
-            'message': 'CV analizado correctamente',
+            'message': 'CV analyse correctement',
             'data': extracted_data
         })
 
     except json.JSONDecodeError as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error al procesar la respuesta de la IA: {str(e)}'
+            'error': f'Erreur lors du traitement de la reponse de l\'IA : {str(e)}'
         })
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error al analizar el CV: {str(e)}'
+            'error': f'Erreur lors de l\'analyse du CV : {str(e)}'
         })
 
 
@@ -534,7 +534,7 @@ def save_cv_text_view(request):
         curriculum_text = request.POST.get('curriculum_text', '').strip()
 
         if not curriculum_text:
-            messages.error(request, 'El texto del CV no puede estar vacío.')
+            messages.error(request, 'Le texte du CV ne peut pas etre vide.')
             return redirect('apps_core:profile')
 
         # Obtener o crear el perfil del usuario
@@ -554,7 +554,7 @@ def save_cv_text_view(request):
 
         profile.save()
 
-        messages.success(request, 'CV guardado correctamente.')
+        messages.success(request, 'CV enregistre correctement.')
         return redirect('apps_core:profile')
 
     return redirect('apps_core:profile')
@@ -636,7 +636,7 @@ def save_preferences_view(request):
             profile.availability = availability
 
         profile.save()
-        messages.success(request, 'Preferencias guardadas correctamente.')
+        messages.success(request, 'Preferences enregistrees correctement.')
         return redirect('apps_core:profile')
 
     return redirect('apps_core:profile')
@@ -659,7 +659,7 @@ def save_social_view(request):
         profile.portfolio_url = request.POST.get('portfolio_url', '').strip()
 
         profile.save()
-        messages.success(request, 'Redes profesionales guardadas correctamente.')
+        messages.success(request, 'Reseaux professionnels enregistres correctement.')
         return redirect('apps_core:profile')
 
     return redirect('apps_core:profile')
