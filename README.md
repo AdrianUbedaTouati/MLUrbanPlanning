@@ -262,6 +262,20 @@ L'interface suit un design minimaliste inspire d'Apple avec :
 
 ---
 
+## Axes d'Amelioration
+
+La recherche d'emploi est fonctionnelle mais pourrait etre significativement amelioree avec davantage de temps de developpement. Parmi les pistes identifiees :
+
+- **Scraping plus profond** : integrer directement les API de portails d'emploi (InfoJobs, LinkedIn Jobs, Indeed) au lieu de passer par Google Search, pour obtenir des resultats plus fiables et structures.
+- **Filtrage avance** : affiner les filtres de localisation, salaire et modalite avec des criteres plus precis et combinables.
+- **Historique et suivi** : permettre a l'utilisateur de sauvegarder des offres, marquer des favoris et suivre l'evolution de ses candidatures.
+- **Notifications** : alertes automatiques lorsque de nouvelles offres correspondant au profil sont publiees.
+- **Amelioration du scoring** : entrainer un modele de matching plus sophistique entre le profil du candidat et les offres, au-dela du scoring actuel par regles.
+
+Par manque de temps, ces ameliorations n'ont pas pu etre implementees dans cette version.
+
+---
+
 ## Licence
 
 Projet academique - Tous droits reserves.
